@@ -690,7 +690,16 @@ function updateModeBadge() {
   modeBadge.textContent = arrow;
 }
 
-wordInput.addEventListener('input', () => { checkPreview(); broadcastTyping(); });
+wordInput.addEventListener('input', () => {
+  checkPreview();
+  broadcastTyping();
+  // 일부 브라우저는 한글 IME 조합 중엔 캔버스 리페인트를 미뤄뒀다가 조합이 끝나야 반영하는
+  // 경우가 있어서(draw()는 정상 호출되는데 화면엔 안 나타남), rAF로 한 번 더 강제로 그려서
+  // 조합 도중에도 미리보기가 즉시 눈에 보이게 함.
+  requestAnimationFrame(draw);
+});
+wordInput.addEventListener('compositionupdate', () => requestAnimationFrame(draw));
+wordInput.addEventListener('compositionend', () => { checkPreview(); requestAnimationFrame(draw); });
 wordInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { submit(); return; }
   if (e.key === 'Escape') { closePopup(); return; }
