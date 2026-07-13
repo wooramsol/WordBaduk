@@ -49,6 +49,7 @@
     opacity: .35; cursor: not-allowed; text-decoration: line-through;
     background: #eee; color: #888; border-color: #ddd;
   }
+  #popup .hint { font-size: 11px; color: #9a927d; margin: -3px 0 8px; line-height: 1.4; }
   #wordInput {
     width: 100%; padding: 8px 10px; font-size: 16px; border: 1px solid #cfc7b5;
     border-radius: 8px; outline: none;
@@ -93,7 +94,8 @@
 <div id="infoPanel" class="hidden">
   <b>WordVine(낱말넝쿨)</b>
   <div>모두가 함께 가꾸는 낱말넝쿨입니다.<br>
-  칸을 클릭해서 낱말을 이어주세요.</div>
+  칸을 클릭해서 낱말을 이어주세요.<br>
+  <span style="color:#8a7a4f">방향키로 칸 이동, Tab으로 가로/세로 전환</span></div>
   <div id="stats">낱말수 0개, 접속자 1명</div>
   <div id="credit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
 </div>
@@ -104,6 +106,7 @@
     <button id="dirH">가로 →</button>
     <button id="dirV">세로 ↓</button>
   </div>
+  <div class="hint">Tab: 가로/세로 전환 · 방향키: 칸 이동</div>
   <input id="wordInput" placeholder="단어 입력" autocomplete="off">
   <div id="popupMsg"></div>
   <div class="actions">
@@ -315,6 +318,14 @@ function draw() {
   for (let x = x0; x <= x1; x++) { const [sx] = worldToScreen(x, 0); ctx.moveTo(sx, 0); ctx.lineTo(sx, innerHeight); }
   for (let y = y0; y <= y1; y++) { const [, sy] = worldToScreen(0, y); ctx.moveTo(0, sy); ctx.lineTo(innerWidth, sy); }
   ctx.stroke();
+
+  // 선택 칸의 진행 방향(가로/세로) 전체 줄을 은은하게 하이라이트
+  if (sel) {
+    const [selSx, selSy] = worldToScreen(sel.x, sel.y);
+    ctx.fillStyle = 'rgba(59,110,165,.07)';
+    if (sel.dir === 'h') ctx.fillRect(0, selSy, innerWidth, cellSize);
+    else ctx.fillRect(selSx, 0, cellSize, innerHeight);
+  }
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -575,6 +586,7 @@ wordInput.addEventListener('input', checkPreview);
 wordInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { submit(); return; }
   if (e.key === 'Escape') { closePopup(); return; }
+  if (e.key === 'Tab') { e.preventDefault(); toggleDir(); return; }
   if (e.isComposing || e.keyCode === 229) return; // 한글 조합 중엔 방향키를 가로채지 않음
   if (e.key === 'ArrowUp') { e.preventDefault(); moveSel(0, -1); }
   else if (e.key === 'ArrowDown') { e.preventDefault(); moveSel(0, 1); }
@@ -591,6 +603,17 @@ function moveSel(dx, dy) {
   const nx = sel.x + dx, ny = sel.y + dy;
   const [sx, sy] = worldToScreen(nx, ny);
   openPopup(nx, ny, sx + cellSize / 2, sy + cellSize / 2);
+}
+
+// Tab으로 가로/세로 전환 (반대 방향이 이미 막혀 있으면 무시)
+function toggleDir() {
+  if (!sel) return;
+  const nextDir = sel.dir === 'h' ? 'v' : 'h';
+  if (nextDir === 'h' && dirH.disabled) return;
+  if (nextDir === 'v' && dirV.disabled) return;
+  sel.dir = nextDir;
+  updateDirBtns();
+  checkPreview();
 }
 
 const getLocalCell = (x, y) => cells.get(K(x, y)) || null;
