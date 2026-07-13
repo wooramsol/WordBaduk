@@ -26,6 +26,13 @@
   }
   #infoPanel b { color: #1a1a1a; font-size: 15px; }
   #infoPanel.hidden { display: none; }
+  /* 반복 테스트를 위한 임시 초기화 버튼 — 테스트 끝나면 이 스타일/버튼 통째로 지워도 됨 */
+  #resetBoardBtn {
+    display: block; margin: 10px 0 2px; padding: 5px 10px; font-size: 11px;
+    border: 1px solid #e2a8a8; border-radius: 8px; background: #fbeaea; color: #b23c3c;
+    cursor: pointer;
+  }
+  #resetBoardBtn:hover { background: #f6d6d6; }
   #credit { margin-top: 8px; font-size: 12px; }
   #credit a { color: #a08c5a; text-decoration: none; }
   #credit a:hover { text-decoration: underline; }
@@ -91,10 +98,11 @@
 <div id="brand">낱말바둑?</div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
-  <div>모두가 함께하는 낱말바둑입니다.<br>
-  바둑처럼 글자로 영역을 완전히 둘러싸면 그 땅을 차지해요.<br>
-  칸을 클릭하고 바로 타이핑하세요.<br>
+  <div>모두가 함께하는 오픈낱말바둑입니다.<br>
+  낱말로 영역을 둘러싸면 칸을 차지합니다.<br>
+  칸을 클릭해서 타이핑하세요.<br>
   <span style="color:#8a7a4f">방향키로 칸 이동, Tab으로 가로/세로 전환</span></div>
+  <button id="resetBoardBtn" type="button">전체 낱말 초기화 (테스트용)</button>
   <div id="credit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
 </div>
 <div id="topRight">
@@ -343,14 +351,11 @@ function cellBox(sx, sy, fill, stroke, lw) {
 
 // 유저 ID -> 과일 이름 + 그 과일다운 고정 색상(hue) 매핑. 익명 ID 문자열 대신
 // 알아보기 쉬운 과일 이름으로 표시하고, 포획 영역/리더보드/실시간 하이라이트 색상도 여기서 통일.
+// 색상이 서로 비슷해 헷갈리는 과일은 빼고, 색상환에서 최대한 고르게 떨어진 것만 남김
 const FRUITS = [
-  { name: '사과', hue: 355 }, { name: '딸기', hue: 340 }, { name: '체리', hue: 350 },
-  { name: '석류', hue: 5 }, { name: '수박', hue: 150 }, { name: '자몽', hue: 15 },
-  { name: '복숭아', hue: 18 }, { name: '오렌지', hue: 28 }, { name: '망고', hue: 33 },
-  { name: '파인애플', hue: 45 }, { name: '레몬', hue: 55 }, { name: '바나나', hue: 48 },
-  { name: '라임', hue: 90 }, { name: '키위', hue: 85 }, { name: '멜론', hue: 95 },
-  { name: '청포도', hue: 100 }, { name: '블루베리', hue: 225 }, { name: '포도', hue: 275 },
-  { name: '자두', hue: 285 }, { name: '무화과', hue: 300 },
+  { name: '사과', hue: 355 }, { name: '오렌지', hue: 28 }, { name: '바나나', hue: 55 },
+  { name: '키위', hue: 95 }, { name: '수박', hue: 160 }, { name: '블루베리', hue: 225 },
+  { name: '포도', hue: 275 }, { name: '자두', hue: 310 },
 ];
 function hashStr(str) {
   let h = 0;
@@ -883,6 +888,17 @@ function showToast(msg) {
 const brand = document.getElementById('brand');
 const infoPanel = document.getElementById('infoPanel');
 brand.onclick = () => infoPanel.classList.toggle('hidden');
+
+// 반복 테스트를 위한 임시 초기화 버튼 — 보드 전체를 비움(단어/포획 영역 모두). 테스트 끝나면
+// 버튼(HTML)과 이 핸들러, 위쪽 #resetBoardBtn CSS까지 통째로 지워도 됨.
+const resetBoardBtn = document.getElementById('resetBoardBtn');
+resetBoardBtn.onclick = () => {
+  if (!boardRef) { showToast('아직 연결 중이에요. 잠시 후 다시 시도해 주세요.'); return; }
+  if (!confirm('정말 모든 낱말을 초기화할까요?\n테스트용 기능이며 지금 접속 중인 모든 사람에게 영향을 줍니다.')) return;
+  boardRef.set({ cells: {}, words: [], version: 0 });
+  closePopup();
+  showToast('보드를 초기화했어요.');
+};
 if (innerWidth > 640) infoPanel.classList.remove('hidden'); // 데스크톱은 기본 표시
 
 // ---------- Firebase 실시간 동기화 ----------
