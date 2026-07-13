@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>무한 십자낱말</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+  body { background: #f5f1e8; }
+  #board { display: block; cursor: grab; }
+  #board.dragging { cursor: grabbing; }
+
+  #hud {
+    position: fixed; top: 12px; left: 12px; z-index: 10;
+    background: rgba(255,255,255,.92); border: 1px solid #d8d2c4;
+    border-radius: 10px; padding: 10px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    font-size: 13px; color: #444; line-height: 1.6; max-width: 270px;
+  }
+  #hud b { color: #1a1a1a; font-size: 15px; }
+  #stats { margin-top: 4px; color: #6b5e3f; }
+  #status { position: fixed; top: 12px; right: 12px; z-index: 10; font-size: 12px;
+    padding: 5px 10px; border-radius: 20px; background: #e5e0d3; color: #777; }
+  #status.on { background: #dcefdb; color: #2c6e2f; }
+
+  #popup {
+    position: fixed; z-index: 20; display: none;
+    background: #fff; border: 1px solid #cfc7b5; border-radius: 12px;
+    padding: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.18); width: 250px;
+  }
+  #popup .dirs { display: flex; gap: 6px; margin-bottom: 8px; }
+  #popup .dirs button {
+    flex: 1; padding: 6px 0; border: 1px solid #cfc7b5; background: #f7f4ec;
+    border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  #popup .dirs button.sel { background: #3b6ea5; color: #fff; border-color: #3b6ea5; }
+  #popup .dirs button:disabled {
+    opacity: .35; cursor: not-allowed; text-decoration: line-through;
+    background: #eee; color: #888; border-color: #ddd;
+  }
+  #wordInput {
+    width: 100%; padding: 8px 10px; font-size: 16px; border: 1px solid #cfc7b5;
+    border-radius: 8px; outline: none;
+  }
+  #wordInput:focus { border-color: #3b6ea5; }
+  #popup .actions { display: flex; gap: 6px; margin-top: 8px; }
+  #popup .actions button {
+    flex: 1; padding: 7px 0; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  #submitBtn { background: #3b6ea5; color: #fff; }
+  #submitBtn:disabled { background: #b8c4d2; cursor: not-allowed; }
+  #cancelBtn { background: #eee7d8; color: #555; }
+  #popupMsg { font-size: 12px; margin-top: 6px; min-height: 16px; color: #b23b3b; }
+  #popupMsg.ok { color: #2c6e2f; }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: rgba(40,40,40,.92); color: #fff; padding: 9px 18px;
+    border-radius: 20px; font-size: 13px; z-index: 30; display: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="board"></canvas>
+
+<div id="hud">
+  <b>무한 십자낱말</b>
+  <div>칸을 클릭해 단어를 이어보세요.<br>
+  가로↔세로로만 교차, 사전 단어만 인정.<br>
+  붙어 있는 글자는 합쳐 읽거나 따로 읽을 수 있어요.<br>
+  드래그: 이동 · 휠: 확대/축소</div>
+  <div id="stats">단어 0개 · 접속 1명</div>
+</div>
+<div id="status">연결 중…</div>
+
+<div id="popup">
+  <div class="dirs">
+    <button id="dirH">가로 →</button>
+    <button id="dirV">세로 ↓</button>
+  </div>
+  <input id="wordInput" placeholder="단어 입력 (일부만 입력해도 OK)" autocomplete="off">
+  <div id="popupMsg"></div>
+  <div class="actions">
+    <button id="submitBtn">놓기</button>
+    <button id="cancelBtn">취소</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ---------- 상태 ----------
+const cells = new Map();            // "x,y" -> { ch, dirs:[], fresh }
+const K = (x, y) => x + ',' + y;
+let wordCount = 0, userCount = 1, version = -1;
+const clientId = (() => {
+  try {
+    let id = localStorage.getItem('wv-id');
+    if (!id) { id = '유저' + Math.random().toString(36).slice(2, 6); localStorage.setItem('wv-id', id); }
+    return id;
+  } catch { return '유저' + Math.random().toString(36).slice(2, 6); }
+})();
+
+let camX = -6, camY = -5, cellSize = 48;
+
+let sel = null;                     // { x, y, dir }
+let preview = null;                 // { startX, startY, word, conflictTyped }
+let placing = false;
+
+// ---------- 두음법칙 (서버와 동일) ----------
+const Y_VOWELS = new Set([2, 6, 7, 12, 17, 20]); // ㅑ ㅕ ㅖ ㅛ ㅠ ㅣ
+function dueumVariants(ch) {
+  const code = ch.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return [];
+  const ini = Math.floor(code / 588);
+  const rest = code % 588;
+  const vow = Math.floor(rest / 28);
+  const make = i => String.fromCharCode(0xac00 + i * 588 + rest);
+  if (ini === 5) return [Y_VOWELS.has(vow) ? make(11) : make(2)]; // ㄹ → ㅇ/ㄴ
+  if (ini === 2 && Y_VOWELS.has(vow)) return [make(11)];          // ㄴ → ㅇ
+  return [];
+}
+
+// ---------- 캔버스 ----------
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+
+function resize() {
+  canvas.width = innerWidth * dpr;
+  canvas.height = innerHeight * dpr;
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+  draw();
+}
+addEventListener('resize', resize);
+
+function worldToScreen(wx, wy) { return [(wx - camX) * cellSize, (wy - camY) * cellSize]; }
+function screenToCell(sx, sy) { return [Math.floor(sx / cellSize + camX), Math.floor(sy / cellSize + camY)]; }
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function cellBox(sx, sy, fill, stroke, lw) {
+  ctx.fillStyle = fill;
+  roundRect(sx + 1.5, sy + 1.5, cellSize - 3, cellSize - 3, 5);
+  ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = lw;
+  roundRect(sx + 1.5, sy + 1.5, cellSize - 3, cellSize - 3, 5);
+  ctx.stroke();
+}
+
+// 가로·세로 모두 이미 사용된 칸 (더 이상 어떤 단어도 시작 불가)
+function isBlocked(x, y) {
+  const c = cells.get(K(x, y));
+  return !!c && c.dirs.includes('h') && c.dirs.includes('v');
+}
+
+// 이 칸에서 dir 방향 단어를 놓을 수 있는지
+// (분리 판독이 가능하므로, 칸 자체가 같은 방향 단어에 속한 경우만 불가)
+function dirAvailable(x, y, dir) {
+  const c = cells.get(K(x, y));
+  return !(c && c.dirs.includes(dir));
+}
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+  const x0 = Math.floor(camX), y0 = Math.floor(camY);
+  const x1 = Math.ceil(camX + innerWidth / cellSize), y1 = Math.ceil(camY + innerHeight / cellSize);
+
+  // 격자
+  ctx.strokeStyle = '#e3ddd0'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x++) { const [sx] = worldToScreen(x, 0); ctx.moveTo(sx, 0); ctx.lineTo(sx, innerHeight); }
+  for (let y = y0; y <= y1; y++) { const [, sy] = worldToScreen(0, y); ctx.moveTo(0, sy); ctx.lineTo(innerWidth, sy); }
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = Math.floor(cellSize * 0.55) + 'px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  const now = Date.now();
+
+  // 채워진 셀
+  for (const [k, c] of cells) {
+    const [x, y] = k.split(',').map(Number);
+    if (x < x0 - 1 || x > x1 || y < y0 - 1 || y > y1) continue;
+    const [sx, sy] = worldToScreen(x, y);
+    const age = now - (c.fresh || 0);
+    const blocked = isBlocked(x, y);
+    const fill = age < 2000
+      ? `rgba(255, 224, 130, ${Math.max(0.15, 0.9 - age / 2500)})`
+      : (blocked ? '#eae5d8' : '#fffdf7');
+    cellBox(sx, sy, fill, blocked ? '#c9c1af' : '#b8ae98', 1.5);
+    ctx.fillStyle = blocked ? '#97907f' : '#222';
+    ctx.fillText(c.ch, sx + cellSize / 2, sy + cellSize / 2 + 1);
+  }
+
+  // 미리보기 (채택된 판독 구간)
+  if (sel && preview) {
+    const dx = sel.dir === 'h' ? 1 : 0, dy = sel.dir === 'v' ? 1 : 0;
+    for (let i = 0; i < preview.word.length; i++) {
+      const cx = preview.startX + dx * i, cy = preview.startY + dy * i;
+      const [sx, sy] = worldToScreen(cx, cy);
+      const existing = cells.get(K(cx, cy));
+      if (existing) {
+        cellBox(sx, sy, 'rgba(90,180,110,.18)', '#3e8e52', 2);
+      } else {
+        cellBox(sx, sy, 'rgba(80,140,220,.25)', '#3b6ea5', 2);
+        const ch = preview.word[i];
+        if (ch) { ctx.fillStyle = '#3b6ea5'; ctx.fillText(ch, sx + cellSize / 2, sy + cellSize / 2 + 1); }
+      }
+    }
+    // 충돌 칸 (입력 구간 기준)
+    if (preview.conflictTyped >= 0) {
+      const cx = sel.x + dx * preview.conflictTyped, cy = sel.y + dy * preview.conflictTyped;
+      const [sx, sy] = worldToScreen(cx, cy);
+      cellBox(sx, sy, 'rgba(220,80,80,.35)', '#c0392b', 2);
+    }
+  } else if (sel) {
+    const [sx, sy] = worldToScreen(sel.x, sel.y);
+    cellBox(sx, sy, 'rgba(80,140,220,.2)', '#3b6ea5', 2);
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const c of cells.values()) {
+    if (c.fresh && now - c.fresh < 2200) { draw(); return; }
+  }
+}, 120);
+
+// ---------- 팬 / 줌 ----------
+let dragging = false, moved = false, lastX = 0, lastY = 0;
+
+canvas.addEventListener('mousedown', e => {
+  dragging = true; moved = false;
+  lastX = e.clientX; lastY = e.clientY;
+  canvas.classList.add('dragging');
+});
+addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX, dy = e.clientY - lastY;
+  if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+  camX -= dx / cellSize; camY -= dy / cellSize;
+  lastX = e.clientX; lastY = e.clientY;
+  draw();
+});
+addEventListener('mouseup', e => {
+  canvas.classList.remove('dragging');
+  if (dragging && !moved && e.target === canvas) {
+    const [cx, cy] = screenToCell(e.clientX, e.clientY);
+    openPopup(cx, cy, e.clientX, e.clientY);
+  }
+  dragging = false;
+});
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [wx, wy] = [e.clientX / cellSize + camX, e.clientY / cellSize + camY];
+  cellSize = Math.min(90, Math.max(18, cellSize * (e.deltaY < 0 ? 1.1 : 0.9)));
+  camX = wx - e.clientX / cellSize;
+  camY = wy - e.clientY / cellSize;
+  draw();
+}, { passive: false });
+
+// ---------- 로컬 구조 검사 (즉시 미리보기용, 사전 검증은 서버 /preview) ----------
+function resolveLocal(typed, x, y, dir) {
+  const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
+
+  let prefix = '', sx = x, sy = y;
+  while (true) {
+    const ex = cells.get(K(sx - dx, sy - dy));
+    if (!ex) break;
+    prefix = ex.ch + prefix;
+    sx -= dx; sy -= dy;
+  }
+  let suffix = '', ei = typed.length, ex2;
+  while ((ex2 = cells.get(K(x + dx * ei, y + dy * ei)))) { suffix += ex2.ch; ei++; }
+
+  const tCells = [];
+  let overlap = 0, newCount = 0;
+  for (let i = 0; i < typed.length; i++) {
+    const ex = cells.get(K(x + dx * i, y + dy * i)) || null;
+    tCells.push(ex);
+    if (ex) overlap++; else newCount++;
+  }
+  if (typed.length && newCount === 0) return { err: '이미 모두 채워진 자리입니다.' };
+  if (cells.size > 0 && typed.length && overlap === 0 && !prefix && !suffix) {
+    return { err: '기존 단어와 최소 한 글자는 이어져야 합니다.' };
+  }
+
+  // 후보(긴 판독부터): 구조적으로 가능한 첫 후보를 미리보기로
+  const combos = [];
+  const push = (uP, uS) => { if (!combos.some(c => c.uP === uP && c.uS === uS)) combos.push({ uP, uS }); };
+  push(prefix.length > 0, suffix.length > 0);
+  push(prefix.length > 0, false);
+  push(false, suffix.length > 0);
+  push(false, false);
+  combos.sort((a, b) =>
+    ((b.uP ? prefix.length : 0) + (b.uS ? suffix.length : 0)) -
+    ((a.uP ? prefix.length : 0) + (a.uS ? suffix.length : 0)));
+
+  let firstConflict = null, dirErrMsg = null;
+  for (const { uP, uS } of combos) {
+    let gridTyped = '', conflictAt = -1;
+    for (let i = 0; i < typed.length; i++) {
+      const ex = tCells[i];
+      if (ex) {
+        const dueumOk = i === 0 && !uP && dueumVariants(ex.ch).includes(typed[i]);
+        if (ex.ch !== typed[i] && !dueumOk) { conflictAt = i; break; }
+        gridTyped += ex.ch;
+      } else gridTyped += typed[i];
+    }
+    if (conflictAt >= 0) { if (firstConflict === null) firstConflict = conflictAt; continue; }
+
+    const word = (uP ? prefix : '') + gridTyped + (uS ? suffix : '');
+    const startX = uP ? sx : x, startY = uP ? sy : y;
+    if (word.length > 15) continue;
+
+    let dirBad = false;
+    for (let i = 0; i < word.length; i++) {
+      const ex = cells.get(K(startX + dx * i, startY + dy * i));
+      if (ex && ex.dirs.includes(dir)) {
+        dirBad = true;
+        if (!dirErrMsg) {
+          const d1 = dir === 'h' ? '가로' : '세로', d2 = dir === 'h' ? '세로' : '가로';
+          dirErrMsg = `'${ex.ch}'는 이미 ${d1} 단어예요. ${d1}는 ${d2}에서만 이을 수 있어요.`;
+        }
+        break;
+      }
+    }
+    if (dirBad) continue;
+
+    if (word.length < 2) return { incomplete: true, word, startX, startY };
+    return { ok: true, word, startX, startY };
+  }
+
+  if (dirErrMsg) return { err: dirErrMsg };
+  if (firstConflict !== null) {
+    return {
+      err: `${firstConflict + 1}번째 칸의 기존 글자와 다릅니다.`,
+      conflictTyped: firstConflict,
+      word: prefix + typed + suffix, startX: sx, startY: sy,
+    };
+  }
+  return { err: '두 글자 이상 입력하세요.' };
+}
+
+// ---------- 입력 팝업 ----------
+const popup = document.getElementById('popup');
+const wordInput = document.getElementById('wordInput');
+const popupMsg = document.getElementById('popupMsg');
+const dirH = document.getElementById('dirH');
+const dirV = document.getElementById('dirV');
+const submitBtn = document.getElementById('submitBtn');
+
+function openPopup(cx, cy, px, py) {
+  const hOk = dirAvailable(cx, cy, 'h');
+  const vOk = dirAvailable(cx, cy, 'v');
+  if (!hOk && !vOk) {
+    showToast('이 칸은 가로·세로 모두 사용 중이에요.');
+    return;
+  }
+  dirH.disabled = !hOk;
+  dirV.disabled = !vOk;
+  let dir = sel?.dir || 'h';
+  if (dir === 'h' && !hOk) dir = 'v';
+  if (dir === 'v' && !vOk) dir = 'h';
+  sel = { x: cx, y: cy, dir };
+  preview = null;
+  wordInput.value = '';
+  setMsg('');
+  submitBtn.disabled = true;
+  updateDirBtns();
+  popup.style.display = 'block';
+  popup.style.left = Math.min(px + 10, innerWidth - 270) + 'px';
+  popup.style.top = Math.min(py + 10, innerHeight - 180) + 'px';
+  wordInput.focus();
+  draw();
+}
+function closePopup() {
+  sel = null; preview = null; placing = false;
+  popup.style.display = 'none';
+  draw();
+}
+function setMsg(text, ok) {
+  popupMsg.textContent = text;
+  popupMsg.classList.toggle('ok', !!ok);
+}
+function updateDirBtns() {
+  dirH.classList.toggle('sel', sel.dir === 'h');
+  dirV.classList.toggle('sel', sel.dir === 'v');
+}
+dirH.onclick = () => { sel.dir = 'h'; updateDirBtns(); checkPreview(); };
+dirV.onclick = () => { sel.dir = 'v'; updateDirBtns(); checkPreview(); };
+document.getElementById('cancelBtn').onclick = closePopup;
+
+wordInput.addEventListener('input', checkPreview);
+wordInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) submit();
+  if (e.key === 'Escape') closePopup();
+});
+
+// 서버 미리 검증 (디바운스)
+let previewTimer = null, previewSeq = 0;
+function checkPreview() {
+  if (!sel) return;
+  const typed = wordInput.value.trim();
+  clearTimeout(previewTimer);
+
+  if (!typed) {
+    preview = null;
+    setMsg('');
+    submitBtn.disabled = true;
+    draw();
+    return;
+  }
+  if (!/^[가-힣]+$/.test(typed)) {
+    preview = null;
+    setMsg('한글만 입력할 수 있어요.');
+    submitBtn.disabled = true;
+    draw();
+    return;
+  }
+
+  // 즉시: 로컬 구조 검사로 미리보기 표시
+  const r = resolveLocal(typed, sel.x, sel.y, sel.dir);
+  preview = r.word ? { startX: r.startX, startY: r.startY, word: r.word, conflictTyped: r.conflictTyped ?? -1 } : null;
+  draw();
+
+  if (r.err) { setMsg(r.err); submitBtn.disabled = true; return; }
+  if (r.incomplete) { setMsg('두 글자 이상이어야 해요.'); submitBtn.disabled = true; return; }
+
+  // 서버에서 사전 포함 최종 판독 확인
+  setMsg(`'${r.word}' 확인 중…`);
+  submitBtn.disabled = true;
+  const seq = ++previewSeq;
+  const q = `/api/preview?word=${encodeURIComponent(typed)}&x=${sel.x}&y=${sel.y}&dir=${sel.dir}`;
+  previewTimer = setTimeout(async () => {
+    try {
+      const j = await (await fetch(q)).json();
+      if (seq !== previewSeq || !sel) return;
+      if (j.ok) {
+        preview = { startX: j.startX, startY: j.startY, word: j.word, conflictTyped: -1 };
+        setMsg(j.canonical !== j.word
+          ? `✓ '${j.word}' — 두음법칙 인정! (${j.canonical})`
+          : `✓ '${j.word}' — 사전에 있어요!`, true);
+        submitBtn.disabled = false;
+      } else {
+        setMsg(j.err);
+        submitBtn.disabled = true;
+      }
+      draw();
+    } catch {}
+  }, 200);
+}
+
+// 엔터 한 번에 제출: 검증 대기 중이어도 즉시 서버로 보내고 서버가 최종 판정
+async function submit() {
+  if (!sel || placing) return;
+  const typed = wordInput.value.trim();
+  if (!typed || !/^[가-힣]+$/.test(typed)) return;
+  clearTimeout(previewTimer);
+  placing = true;
+  setMsg('놓는 중…');
+  try {
+    const r = await fetch('/api/place', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: typed, x: sel.x, y: sel.y, dir: sel.dir, client: clientId }),
+    });
+    const j = await r.json();
+    placing = false;
+    if (j.ok) {
+      applyCells(j.cells, true);
+      version = j.version;
+      wordCount = j.wordCount;
+      updateStats();
+      const note = j.canonical ? ` (두음법칙: ${j.canonical})` : '';
+      closePopup();
+      showToast(`'${j.word}' 완성!${note}`);
+      draw();
+    } else if (sel) {
+      setMsg(j.err);
+    }
+  } catch {
+    placing = false;
+    if (sel) setMsg('서버 연결에 실패했어요. 다시 시도해 주세요.');
+  }
+}
+submitBtn.onclick = submit;
+
+// ---------- 토스트 ----------
+const toast = document.getElementById('toast');
+let toastTimer;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.style.display = 'none', 2500);
+}
+
+// ---------- 서버 동기화 (폴링) ----------
+const statusEl = document.getElementById('status');
+const statsEl = document.getElementById('stats');
+let firstSync = true;
+
+function updateStats() {
+  statsEl.textContent = `단어 ${wordCount}개 · 접속 ${userCount}명`;
+}
+
+function setOnline(on) {
+  if (on) { statusEl.textContent = '● 실시간 연결됨'; statusEl.classList.add('on'); }
+  else { statusEl.textContent = '연결 끊김, 재시도 중…'; statusEl.classList.remove('on'); }
+}
+
+// 서버 셀 목록 반영. highlight=true면 새 셀에 하이라이트
+function applyCells(list, highlight) {
+  const now = Date.now();
+  for (const c of list) {
+    const k = K(c.x, c.y);
+    const prev = cells.get(k);
+    const isNew = c.isNew !== undefined ? c.isNew : !prev;
+    cells.set(k, { ch: c.ch, dirs: c.dirs, fresh: (highlight && isNew) ? now : (prev?.fresh || 0) });
+  }
+}
+
+async function poll() {
+  try {
+    const j = await (await fetch(`/api/state?since=${version}&client=${encodeURIComponent(clientId)}`)).json();
+    setOnline(true);
+    userCount = j.users;
+    wordCount = j.wordCount;
+    if (j.cells) {
+      // 전체 스냅샷: 새로 생긴 셀만 하이라이트 (첫 로드는 제외)
+      const known = new Set(cells.keys());
+      applyCells(j.cells, !firstSync);
+      // 서버에서 사라진 셀 제거 (일반적으로 없음)
+      const remote = new Set(j.cells.map(c => K(c.x, c.y)));
+      for (const k of known) if (!remote.has(k)) cells.delete(k);
+      draw();
+    }
+    version = j.version;
+    firstSync = false;
+    updateStats();
+  } catch {
+    setOnline(false);
+  }
+  setTimeout(poll, 2000);
+}
+
+poll();
+resize();
+</script>
+</body>
+</html>
