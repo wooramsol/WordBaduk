@@ -100,7 +100,7 @@
   <b>낱말바둑</b>
   <div>모두가 함께하는 오픈낱말바둑입니다.<br>
   낱말로 영역을 둘러싸면 칸을 차지합니다.<br>
-  칸을 클릭해서 타이핑하세요.<br>
+  낱말이 이어지게 칸을 클릭해서 타이핑해보세요.<br>
   <span style="color:#8a7a4f">방향키로 칸 이동, Tab으로 가로/세로 전환</span></div>
   <button id="resetBoardBtn" type="button">전체 낱말 초기화 (테스트용)</button>
   <div id="credit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
@@ -110,7 +110,7 @@
   <div id="userCountTag">접속자 1명</div>
 </div>
 <div id="leaderboard" class="hidden">
-  <b>땅따먹기 순위</b>
+  <b>점수표</b>
   <ol id="lbList"></ol>
 </div>
 
@@ -157,6 +157,8 @@ let camX = -6, camY = -5, cellSize = 48;
 let sel = null;                     // { x, y, dir }
 let preview = null;                 // { startX, startY, word, conflictTyped }
 let placing = false;
+let placedWordsIndex = new Map();   // canonical 단어 -> { x, y, dir, word } — 중복 단어 위치 하이라이트용
+let dupHighlight = null;            // 지금 입력이 중복 단어일 때, 이미 보드에 있는 그 단어들의 위치
 
 // ---------- 두음법칙 ----------
 const Y_VOWELS = new Set([2, 6, 7, 12, 17, 20]); // ㅑ ㅕ ㅖ ㅛ ㅠ ㅣ
@@ -267,7 +269,10 @@ function resolvePlace(typed, x, y, dir, getCell, boardEmpty, usedWords) {
   }
   const dupWords = [...new Set(fails.filter(f => f.kind === 'dup').map(f => f.word))];
   if (dupWords.length) {
-    return { err: dupWords.map(w => `'${w}'`).join(', ') + '(은)는 이미 보드에서 쓰인 단어예요. 한 단어는 한 번만 쓸 수 있어요.' };
+    return {
+      err: dupWords.map(w => `'${w}'`).join(', ') + '(은)는 이미 보드에서 쓰인 단어예요. 한 단어는 한 번만 쓸 수 있어요.',
+      dupWords, // 어디에 이미 쓰였는지 화면에 하이라이트하기 위해 canonical 단어 목록을 같이 넘김
+    };
   }
   const conf = fails.find(f => f.kind === 'conflict');
   if (conf) return { err: conf.msg, conflictTyped: conf.i, word: prefix + typed + suffix, startX: sx, startY: sy };
@@ -415,9 +420,11 @@ function draw() {
     const [sx, sy] = worldToScreen(x, y);
     const age = now - (c.fresh || 0);
     const flashing = age < 2000;
-    // 완성 직후 반짝임도 놓은 사람의 과일 색을 따라가게 해서, 하이라이트/포획/리더보드 색과
-    // 헷갈리지 않게 함(예전엔 항상 고정 노란색이라 색 구분 체계와 충돌했음)
-    const flashHue = c.by != null ? ownerHue(c.by) : 45;
+    // 완성 직후 반짝임도 놓은/차지한 사람의 과일 색을 따라가게 해서, 하이라이트/포획/리더보드 색과
+    // 헷갈리지 않게 함(예전엔 항상 고정 노란색이라 색 구분 체계와 충돌했음).
+    // 글자 칸은 by(마지막 배치자), 포획 칸은 owner(차지한 사람)에 기록되어 있음.
+    const flashOwner = c.by != null ? c.by : c.owner;
+    const flashHue = flashOwner != null ? ownerHue(flashOwner) : 45;
     const flashFill = `hsla(${flashHue}, 90%, 68%, ${Math.max(0.15, 0.9 - age / 2500)})`;
 
     if (c.captured) {
@@ -469,7 +476,7 @@ function draw() {
         cellBox(sx, sy, 'rgba(90,180,110,.18)', '#3e8e52', 2);
         // 기존 글자는 반투명 베일을 덮어 흐릿하게 — 지금 새로 입력 중인 글자(선명한 색)와
         // 한눈에 구분되도록 함
-        ctx.fillStyle = 'rgba(253, 250, 240, 0.55)';
+        ctx.fillStyle = 'rgba(253, 250, 240, 0.8)';
         roundRect(sx + 1.5, sy + 1.5, cellSize - 3, cellSize - 3, 5);
         ctx.fill();
       } else {
@@ -488,10 +495,24 @@ function draw() {
     cellBox(sx, sy, `hsla(${myHueVal}, 70%, 55%, .2)`, `hsl(${myHueVal}, 65%, 45%)`, 2);
   }
 
+  // 중복 단어 에러일 때, 이미 보드에 쓰인 그 단어의 실제 위치를 살짝 깜빡이는 주황 테두리로 표시
+  if (dupHighlight) {
+    const pulse = 0.35 + 0.25 * Math.sin(now / 220);
+    for (const loc of dupHighlight) {
+      const ldx = loc.dir === 'h' ? 1 : 0, ldy = loc.dir === 'v' ? 1 : 0;
+      for (let i = 0; i < loc.word.length; i++) {
+        const cx = loc.x + ldx * i, cy = loc.y + ldy * i;
+        const [sx, sy] = worldToScreen(cx, cy);
+        cellBox(sx, sy, `rgba(243, 156, 18, ${pulse})`, '#c9820a', 2.5);
+      }
+    }
+  }
+
   positionSelUI(); // 팬/줌 중에도 모드 배지가 선택 칸을 계속 따라다니게 (wordInput은 여기서 안 건드림)
 }
 
 setInterval(() => {
+  if (dupHighlight) { draw(); return; } // 중복 단어 위치를 계속 깜빡여서 보여줌
   const now = Date.now();
   for (const c of cells.values()) {
     if (c.fresh && now - c.fresh < 2200) { draw(); return; }
@@ -658,6 +679,8 @@ let submitEnabled = false; // 과거 submitBtn.disabled 역할 — Enter 제출 
 // 모드 배지는 팬/줌 중에도 선택 칸을 계속 따라다녀야 하므로 draw()에서 매번 호출됨 (안전 — 포커스 없음)
 function positionSelUI() {
   if (!sel) { modeBadge.classList.remove('show'); return; }
+  // 이미 차지된(포획된) 영역은 선택만 될 뿐 입력할 수 없으므로, 가로/세로 방향 배지는 띄우지 않음
+  if (cells.get(K(sel.x, sel.y))?.captured) { modeBadge.classList.remove('show'); return; }
   const [sx, sy] = worldToScreen(sel.x, sel.y);
   modeBadge.style.left = (sx + cellSize / 2) + 'px';
   modeBadge.style.top = sy + 'px';
@@ -691,7 +714,7 @@ function openPopup(cx, cy, px, py) {
   broadcastTyping();
 }
 function closePopup() {
-  sel = null; preview = null; placing = false;
+  sel = null; preview = null; placing = false; dupHighlight = null;
   modeBadge.classList.remove('show');
   broadcastTyping();
   draw();
@@ -772,6 +795,7 @@ function checkPreview() {
   if (!sel) return;
   const typed = wordInput.value.trim();
   const dx = sel.dir === 'h' ? 1 : 0, dy = sel.dir === 'v' ? 1 : 0;
+  dupHighlight = null; // 매번 새로 계산 — 중복 단어 상태일 때만 아래에서 다시 채움
 
   if (!typed) {
     preview = null;
@@ -817,6 +841,11 @@ function checkPreview() {
       : { startX: sel.x, startY: sel.y, word: typed, conflictTyped: -1, typedFrom: 0, typedLen: typed.length };
     setMsg(r.err);
     submitEnabled = false;
+    // 이미 쓰인 단어라면, 그 단어가 실제로 보드 어디에 있는지 찾아서 하이라이트 대상으로 등록
+    if (r.dupWords && r.dupWords.length) {
+      dupHighlight = r.dupWords.map(w => placedWordsIndex.get(w)).filter(Boolean);
+      if (!dupHighlight.length) dupHighlight = null;
+    }
   }
   ensureVisible();
 }
@@ -1040,6 +1069,11 @@ async function boot() {
     }
     const words = board.words ? (Array.isArray(board.words) ? board.words : Object.values(board.words)) : [];
     usedWords = new Set(words.map(w => w.canonical || w.word));
+    placedWordsIndex = new Map();
+    for (const w of words) {
+      const canon = w.canonical || w.word;
+      placedWordsIndex.set(canon, { x: w.x, y: w.y, dir: w.dir, word: w.word });
+    }
     const wasFirst = firstSync;
     firstSync = false;
     updateStats();
