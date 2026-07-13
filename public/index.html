@@ -415,7 +415,10 @@ function draw() {
     const [sx, sy] = worldToScreen(x, y);
     const age = now - (c.fresh || 0);
     const flashing = age < 2000;
-    const flashFill = `rgba(255, 224, 130, ${Math.max(0.15, 0.9 - age / 2500)})`;
+    // 완성 직후 반짝임도 놓은 사람의 과일 색을 따라가게 해서, 하이라이트/포획/리더보드 색과
+    // 헷갈리지 않게 함(예전엔 항상 고정 노란색이라 색 구분 체계와 충돌했음)
+    const flashHue = c.by != null ? ownerHue(c.by) : 45;
+    const flashFill = `hsla(${flashHue}, 90%, 68%, ${Math.max(0.15, 0.9 - age / 2500)})`;
 
     if (c.captured) {
       // 땅따먹기로 포획된 영역: 글자 없이 소유자 색으로만 표시
@@ -458,6 +461,11 @@ function draw() {
       const existing = cells.get(K(cx, cy));
       if (existing) {
         cellBox(sx, sy, 'rgba(90,180,110,.18)', '#3e8e52', 2);
+        // 기존 글자는 반투명 베일을 덮어 흐릿하게 — 지금 새로 입력 중인 글자(선명한 색)와
+        // 한눈에 구분되도록 함
+        ctx.fillStyle = 'rgba(253, 250, 240, 0.55)';
+        roundRect(sx + 1.5, sy + 1.5, cellSize - 3, cellSize - 3, 5);
+        ctx.fill();
       } else {
         cellBox(sx, sy, `hsla(${myHueVal}, 70%, 55%, .25)`, `hsl(${myHueVal}, 65%, 45%)`, 2);
         const ch = preview.word[i];
@@ -829,6 +837,7 @@ async function submit() {
         const k = K(cx, cy);
         const cell = board.cells[k] || { ch: r.word[i] };
         cell[dir] = true;
+        cell.by = clientId; // 완성 플래시 색을 놓은 사람 색으로 보여주기 위해 최근 배치자 기록
         board.cells[k] = cell;
         placedCoords.push([cx, cy]);
       }
@@ -1005,7 +1014,7 @@ async function boot() {
         cells.set(k, { ch: null, dirs: [], captured: true, owner: c.owner, fresh });
       } else {
         const dirs = [c.h && 'h', c.v && 'v'].filter(Boolean);
-        cells.set(k, { ch: c.ch, dirs, captured: false, fresh });
+        cells.set(k, { ch: c.ch, dirs, captured: false, fresh, by: c.by });
       }
     }
     const words = board.words ? (Array.isArray(board.words) ? board.words : Object.values(board.words)) : [];
