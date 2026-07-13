@@ -726,7 +726,7 @@ wordInput.addEventListener('input', () => {
   // 조합 도중에도 미리보기가 즉시 눈에 보이게 함.
   requestAnimationFrame(draw);
 });
-wordInput.addEventListener('compositionupdate', () => requestAnimationFrame(draw));
+wordInput.addEventListener('compositionupdate', () => { checkPreview(); requestAnimationFrame(draw); });
 wordInput.addEventListener('compositionend', () => { checkPreview(); requestAnimationFrame(draw); });
 wordInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { submit(); return; }
@@ -773,9 +773,20 @@ function checkPreview() {
     draw();
     return;
   }
-  if (!/^[가-힣]+$/.test(typed)) {
+  // 완성된 음절(가-힣)뿐 아니라 조합 중인 낱자음/모음(ㄱ-ㅎ, ㅏ-ㅣ)도 허용해서,
+  // 한 음절이 완성되기 전에도 입력하는 즉시 화면에 보이게 함(자모 단위 실시간 미리보기).
+  if (!/^[가-힣ㄱ-ㅎㅏ-ㅣ]+$/.test(typed)) {
     preview = null;
     setMsg('한글만 입력할 수 있어요.');
+    submitEnabled = false;
+    draw();
+    return;
+  }
+  // 아직 조합 중이라 완성된 음절이 아닌 자모가 하나라도 섞여 있으면, 사전/배치 검증 없이
+  // 타이핑한 자모 그대로를 그 자리에 바로 보여주기만 함(완성되면 아래 정식 검증으로 넘어감).
+  if (!/^[가-힣]+$/.test(typed)) {
+    preview = { startX: sel.x, startY: sel.y, word: typed, conflictTyped: -1 };
+    setMsg('');
     submitEnabled = false;
     draw();
     return;
