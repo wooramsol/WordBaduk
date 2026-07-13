@@ -576,9 +576,25 @@ document.getElementById('cancelBtn').onclick = closePopup;
 
 wordInput.addEventListener('input', checkPreview);
 wordInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) submit();
-  if (e.key === 'Escape') closePopup();
+  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { submit(); return; }
+  if (e.key === 'Escape') { closePopup(); return; }
+  if (e.isComposing || e.keyCode === 229) return; // 한글 조합 중엔 방향키를 가로채지 않음
+  if (e.key === 'ArrowUp') { e.preventDefault(); moveSel(0, -1); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); moveSel(0, 1); }
+  else if (e.key === 'ArrowLeft' && wordInput.selectionStart === 0 && wordInput.selectionEnd === 0) {
+    e.preventDefault(); moveSel(-1, 0);
+  } else if (e.key === 'ArrowRight' && wordInput.selectionStart === wordInput.value.length && wordInput.selectionEnd === wordInput.value.length) {
+    e.preventDefault(); moveSel(1, 0);
+  }
 });
+
+// 방향키로 선택 칸을 인접 칸으로 이동 (가능한 방향/문구는 openPopup과 동일 로직 재사용)
+function moveSel(dx, dy) {
+  if (!sel) return;
+  const nx = sel.x + dx, ny = sel.y + dy;
+  const [sx, sy] = worldToScreen(nx, ny);
+  openPopup(nx, ny, sx + cellSize / 2, sy + cellSize / 2);
+}
 
 const getLocalCell = (x, y) => cells.get(K(x, y)) || null;
 
