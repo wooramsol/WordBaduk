@@ -27,6 +27,9 @@
   #infoPanel b { color: #1a1a1a; font-size: 15px; }
   #infoPanel.hidden { display: none; }
   #stats { margin-top: 4px; color: #6b5e3f; }
+  #credit { margin-top: 8px; font-size: 12px; }
+  #credit a { color: #a08c5a; text-decoration: none; }
+  #credit a:hover { text-decoration: underline; }
   #status { position: fixed; top: 12px; right: 12px; z-index: 10; font-size: 12px;
     padding: 6px 10px; border-radius: 20px; background: #e5e0d3; color: #777; }
   #status.on { background: #dcefdb; color: #2c6e2f; }
@@ -92,6 +95,7 @@
   <div>모두가 함께 가꾸는 낱말넝쿨입니다.<br>
   칸을 클릭해서 낱말을 이어주세요.</div>
   <div id="stats">낱말수 0개, 접속자 1명</div>
+  <div id="credit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
 </div>
 <div id="status">연결 중…</div>
 
@@ -363,6 +367,76 @@ setInterval(() => {
   }
 }, 120);
 
+// ---------- 뷰 자동 맞춤 ----------
+// 현재 보이는(키보드·입력시트 제외) 영역 높이
+function visibleHeight() {
+  const vv = window.visualViewport;
+  let vh = vv ? vv.height : innerHeight;
+  if (innerWidth <= 640 && popup.style.display === 'block') vh -= 195; // 하단 시트
+  return Math.max(vh, 120);
+}
+
+// 보드 전체가 화면 가운데 적절한 크기로 오도록
+function fitBoard() {
+  const vw = innerWidth, vh = visibleHeight();
+  if (cells.size === 0) {
+    cellSize = Math.min(56, Math.max(34, Math.floor(vw / 9)));
+    camX = 0.5 - vw / (2 * cellSize);
+    camY = 0.5 - vh / (2 * cellSize);
+    draw();
+    return;
+  }
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const k of cells.keys()) {
+    const [x, y] = k.split(',').map(Number);
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  const pad = 1.5;
+  const bw = maxX - minX + 1 + pad * 2;
+  const bh = maxY - minY + 1 + pad * 2;
+  cellSize = Math.min(64, Math.max(18, Math.min(vw / bw, vh / bh)));
+  const cx = (minX + maxX + 1) / 2, cy = (minY + maxY + 1) / 2;
+  camX = cx - vw / (2 * cellSize);
+  camY = cy - vh / (2 * cellSize);
+  draw();
+}
+
+// 선택 칸/미리보기 구간이 가시 영역 밖이면 가운데로 이동
+function ensureVisible() {
+  if (!sel) return;
+  let minX = sel.x, maxX = sel.x, minY = sel.y, maxY = sel.y;
+  if (preview) {
+    const dx = sel.dir === 'h' ? 1 : 0, dy = sel.dir === 'v' ? 1 : 0;
+    minX = Math.min(minX, preview.startX);
+    minY = Math.min(minY, preview.startY);
+    maxX = Math.max(maxX, preview.startX + dx * (preview.word.length - 1));
+    maxY = Math.max(maxY, preview.startY + dy * (preview.word.length - 1));
+  }
+  const vw = innerWidth, vh = visibleHeight();
+
+  // 스팬이 화면보다 크면 축소
+  const spanW = (maxX - minX + 2) * cellSize;
+  const spanH = (maxY - minY + 2) * cellSize;
+  if (spanW > vw || spanH > vh) {
+    cellSize = Math.max(18, Math.min(vw / (maxX - minX + 2), vh / (maxY - minY + 2)));
+  }
+
+  // 전부 보이면 그대로, 벗어나면 스팬 중심을 가시 영역 중심으로
+  const [sx0, sy0] = worldToScreen(minX, minY);
+  const [sx1, sy1] = worldToScreen(maxX + 1, maxY + 1);
+  const m = 12;
+  if (sx0 >= m && sy0 >= m && sx1 <= vw - m && sy1 <= vh - m) { draw(); return; }
+  const cx = (minX + maxX + 1) / 2, cy = (minY + maxY + 1) / 2;
+  camX = cx - vw / (2 * cellSize);
+  camY = cy - vh / (2 * cellSize);
+  draw();
+}
+
+if (window.visualViewport) {
+  visualViewport.addEventListener('resize', () => { if (sel) ensureVisible(); });
+}
+
 // ---------- 팬 / 줌 ----------
 let dragging = false, moved = false, lastX = 0, lastY = 0;
 
@@ -481,7 +555,7 @@ function openPopup(cx, cy, px, py) {
     popup.style.top = Math.min(py + 10, innerHeight - 180) + 'px';
   }
   wordInput.focus();
-  draw();
+  ensureVisible();
 }
 function closePopup() {
   sel = null; preview = null; placing = false;
@@ -540,7 +614,7 @@ function checkPreview() {
     setMsg(r.err);
     submitBtn.disabled = true;
   }
-  draw();
+  ensureVisible();
 }
 
 // 배치: RTDB 트랜잭션 (DB의 최신 상태 기준으로 재검증 → 원자적 반영)
@@ -667,9 +741,11 @@ boardRef.on('value', snap => {
   }
   const words = board.words ? (Array.isArray(board.words) ? board.words : Object.values(board.words)) : [];
   wordCount = words.length;
+  const wasFirst = firstSync;
   firstSync = false;
   updateStats();
-  draw();
+  if (wasFirst) fitBoard(); // 첫 로드: 단어뭉치를 화면 가운데 적절한 크기로
+  else draw();
 });
 
 // ---------- 사전 로드 ----------
