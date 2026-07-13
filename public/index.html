@@ -341,13 +341,28 @@ function cellBox(sx, sy, fill, stroke, lw) {
   ctx.stroke();
 }
 
-// 유저 ID -> 고유 색상(hue) 해시 — 포획 영역/리더보드/하이라이트 색상 표시에 공통으로 사용
-function ownerHue(owner) {
+// 유저 ID -> 과일 이름 + 그 과일다운 고정 색상(hue) 매핑. 익명 ID 문자열 대신
+// 알아보기 쉬운 과일 이름으로 표시하고, 포획 영역/리더보드/실시간 하이라이트 색상도 여기서 통일.
+const FRUITS = [
+  { name: '사과', hue: 355 }, { name: '딸기', hue: 340 }, { name: '체리', hue: 350 },
+  { name: '석류', hue: 5 }, { name: '수박', hue: 150 }, { name: '자몽', hue: 15 },
+  { name: '복숭아', hue: 18 }, { name: '오렌지', hue: 28 }, { name: '망고', hue: 33 },
+  { name: '파인애플', hue: 45 }, { name: '레몬', hue: 55 }, { name: '바나나', hue: 48 },
+  { name: '라임', hue: 90 }, { name: '키위', hue: 85 }, { name: '멜론', hue: 95 },
+  { name: '청포도', hue: 100 }, { name: '블루베리', hue: 225 }, { name: '포도', hue: 275 },
+  { name: '자두', hue: 285 }, { name: '무화과', hue: 300 },
+];
+function hashStr(str) {
   let h = 0;
-  const s = owner || '';
+  const s = str || '';
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h % 360;
+  return h;
 }
+function fruitOf(owner) {
+  return FRUITS[hashStr(owner) % FRUITS.length];
+}
+function ownerHue(owner) { return fruitOf(owner).hue; }
+function ownerName(owner) { return fruitOf(owner).name; }
 // 내(현재 접속자) 색상 — clientId 확정 전(로딩 중)에는 기본 파랑 계열 사용
 function myHue() {
   return clientId ? ownerHue(clientId) : 210;
@@ -900,7 +915,7 @@ function updateLeaderboard() {
     dot.style.background = `hsl(${hue}, 55%, 55%)`;
     const name = document.createElement('span');
     name.className = 'name';
-    name.textContent = owner;
+    name.textContent = ownerName(owner) + (owner === clientId ? ' (나)' : '');
     if (owner === clientId) name.style.color = `hsl(${hue}, 60%, 40%)`;
     const cnt = document.createElement('span');
     cnt.className = 'cnt';
