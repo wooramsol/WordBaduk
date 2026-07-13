@@ -59,7 +59,7 @@
   #wordInput {
     position: fixed; z-index: 20; opacity: 1; border: none; padding: 0; margin: 0;
     font-size: 16px; color: transparent; background: transparent; caret-color: transparent;
-    pointer-events: none; min-width: 24px; min-height: 24px;
+    pointer-events: none; min-width: 24px; min-height: 24px; outline: none; box-shadow: none;
   }
   #modeBadge {
     position: fixed; z-index: 21; display: none;
@@ -752,7 +752,11 @@ function checkPreview() {
       : `✓ '${r.word}' — 사전에 있어요!`, true);
     submitEnabled = true;
   } else {
-    preview = r.word ? { startX: r.startX, startY: r.startY, word: r.word, conflictTyped: r.conflictTyped ?? -1 } : null;
+    // 사전에 아직 없거나(타이핑 중) 너무 짧아도, 입력 중인 글자 자체는 항상 화면에 보여준다.
+    // (완성된 사전 단어일 때만 미리보기를 그리면 타이핑 도중엔 아무것도 안 보여서 "입력이 안 된다"로 오인됨)
+    preview = r.word
+      ? { startX: r.startX, startY: r.startY, word: r.word, conflictTyped: r.conflictTyped ?? -1 }
+      : { startX: sel.x, startY: sel.y, word: typed, conflictTyped: -1 };
     setMsg(r.err);
     submitEnabled = false;
   }
