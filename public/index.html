@@ -116,7 +116,7 @@
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
-<input id="wordInput" autocomplete="off" spellcheck="false">
+<input id="wordInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="done" lang="ko">
 <div id="modeBadge"></div>
 
 <div id="toast"></div>
@@ -630,28 +630,33 @@ canvas.addEventListener('wheel', e => {
 let touch = null; // { mode, x, y, moved, t0, d, mx, my }
 const tDist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 
+// 모바일에서는 단순 탭(→ 칸 선택 → 키보드 띄우기)까지 preventDefault()로 막아버리면
+// 일부 브라우저(특히 iOS Safari)가 이 터치를 "진짜 사용자 제스처"로 덜 신뢰해서 키보드가
+// 안 뜨는 경우가 있음. 그래서 실제로 드래그/핀치가 시작된 뒤에만 preventDefault()를 걸고,
+// 제자리 탭은 브라우저의 자연스러운 탭 처리 흐름을 최대한 건드리지 않음.
 canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
   if (e.touches.length === 1) {
     const t = e.touches[0];
     touch = { mode: 'pan', x: t.clientX, y: t.clientY, sx: t.clientX, sy: t.clientY, moved: false, t0: Date.now() };
   } else if (e.touches.length === 2) {
+    e.preventDefault(); // 두 손가락은 핀치줌 의도가 확실하므로 바로 막음
     const [a, b] = e.touches;
     touch = { mode: 'pinch', d: tDist(a, b), mx: (a.clientX + b.clientX) / 2, my: (a.clientY + b.clientY) / 2 };
   }
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
   if (!touch) return;
   if (touch.mode === 'pan' && e.touches.length === 1) {
     const t = e.touches[0];
     const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
     if (Math.abs(t.clientX - touch.sx) + Math.abs(t.clientY - touch.sy) > 8) touch.moved = true;
+    if (touch.moved) e.preventDefault(); // 실제로 움직이기 시작한 뒤에만 스크롤 등 기본 동작을 막음
     camX -= dx / cellSize; camY -= dy / cellSize;
     touch.x = t.clientX; touch.y = t.clientY;
     draw();
   } else if (touch.mode === 'pinch' && e.touches.length === 2) {
+    e.preventDefault();
     const [a, b] = e.touches;
     const d = tDist(a, b);
     const mx = (a.clientX + b.clientX) / 2, my = (a.clientY + b.clientY) / 2;
@@ -665,10 +670,15 @@ canvas.addEventListener('touchmove', e => {
 }, { passive: false });
 
 canvas.addEventListener('touchend', e => {
-  e.preventDefault();
   if (touch && touch.mode === 'pan' && !touch.moved && Date.now() - touch.t0 < 600 && e.touches.length === 0) {
+    // 제자리 탭 확정 — 이제서야 preventDefault()로 브라우저의 뒤이은 합성 클릭/포커스 처리를
+    // 막고, 우리가 openPopup()에서 직접 포커스를 준다(그 시점까지는 진짜 사용자 탭 제스처로
+    // 유지되게 해서 iOS 등에서 키보드가 뜰 확률을 높임)
+    e.preventDefault();
     const [cx, cy] = screenToCell(touch.sx, touch.sy);
     openPopup(cx, cy, touch.sx, touch.sy);
+  } else if (touch && touch.moved) {
+    e.preventDefault();
   }
   touch = null;
 }, { passive: false });
