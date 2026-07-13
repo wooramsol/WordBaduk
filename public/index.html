@@ -554,7 +554,7 @@ function visibleHeight() {
 function usableHeight() {
   const vh = visibleHeight();
   if (!sel || innerWidth > 900) return vh;
-  return Math.max(150, vh * 0.6);
+  return Math.max(150, vh * 0.2);
 }
 
 // 보이는 영역의 "맨 위"가 캔버스 기준으로 어디인지. 일부 모바일 브라우저는 입력창 포커스 시
