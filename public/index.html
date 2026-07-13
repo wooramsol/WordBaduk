@@ -454,7 +454,7 @@ function draw() {
     cellBox(sx, sy, `hsla(${myHueVal}, 70%, 55%, .2)`, `hsl(${myHueVal}, 65%, 45%)`, 2);
   }
 
-  positionSelUI(); // 팬/줌 중에도 숨김 input과 모드 배지가 선택 칸을 계속 따라다니게
+  positionSelUI(); // 팬/줌 중에도 모드 배지가 선택 칸을 계속 따라다니게 (wordInput은 여기서 안 건드림)
 }
 
 setInterval(() => {
@@ -621,17 +621,24 @@ const wordInput = document.getElementById('wordInput');
 const modeBadge = document.getElementById('modeBadge');
 let submitEnabled = false; // 과거 submitBtn.disabled 역할 — Enter 제출 가능 여부
 
-// 선택된 칸 위치에 맞춰 숨김 input과 배지를 이동 (팬/줌 때마다 draw()에서도 호출됨)
+// 모드 배지는 팬/줌 중에도 선택 칸을 계속 따라다녀야 하므로 draw()에서 매번 호출됨 (안전 — 포커스 없음)
 function positionSelUI() {
   if (!sel) { modeBadge.classList.remove('show'); return; }
+  const [sx, sy] = worldToScreen(sel.x, sel.y);
+  modeBadge.style.left = (sx + cellSize / 2) + 'px';
+  modeBadge.style.top = sy + 'px';
+  modeBadge.classList.add('show');
+}
+
+// wordInput은 칸을 "새로 선택"할 때만 위치를 맞춘다. 타이핑 중(한글 조합 중) 위치/크기가
+// 바뀌면 조합이 중간에 끊기는 브라우저가 있어서, draw()가 자주 호출돼도 여긴 건드리지 않음.
+function positionWordInput() {
+  if (!sel) return;
   const [sx, sy] = worldToScreen(sel.x, sel.y);
   wordInput.style.left = sx + 'px';
   wordInput.style.top = sy + 'px';
   wordInput.style.width = cellSize + 'px';
   wordInput.style.height = cellSize + 'px';
-  modeBadge.style.left = (sx + cellSize / 2) + 'px';
-  modeBadge.style.top = sy + 'px';
-  modeBadge.classList.add('show');
 }
 
 function openPopup(cx, cy, px, py) {
@@ -643,6 +650,7 @@ function openPopup(cx, cy, px, py) {
   setMsg(capturedHere ? '포획된 영역이라 사용할 수 없어요. 화살표로 다른 칸으로 이동해 보세요.' : '');
   submitEnabled = false;
   updateModeBadge();
+  positionWordInput();
   positionSelUI();
   wordInput.focus();
   ensureVisible();
