@@ -57,15 +57,21 @@
     max-height: calc(100vh - 60px); overflow-y: auto;
   }
   #leaderboard.hidden { display: none; }
-  #leaderboard b { display: block; font-size: 13px; color: #1a1a1a; margin-bottom: 6px; }
   #leaderboard ol { list-style: none; counter-reset: lb; }
   #leaderboard li { counter-increment: lb; display: flex; align-items: center; gap: 6px;
     padding: 2px 0; }
   #leaderboard li::before { content: counter(lb) "등"; width: 26px; color: #9a927d; font-size: 11px; }
   #leaderboard .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-  #leaderboard .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #leaderboard .name { flex: 1; min-width: 0; overflow-wrap: break-word; }
   #leaderboard li.me .name { font-weight: 700; }
-  #leaderboard .cnt { color: #6b5e3f; font-variant-numeric: tabular-nums; }
+  #leaderboard .cnt { color: #6b5e3f; font-variant-numeric: tabular-nums;
+    font-size: 14px; font-weight: 800; margin-left: 2px; display: inline-block; }
+  #leaderboard .cnt.bump { animation: scoreBump .6s ease; }
+  @keyframes scoreBump {
+    0% { transform: scale(1); color: #6b5e3f; }
+    35% { transform: scale(1.4); color: #2c8f4a; }
+    100% { transform: scale(1); color: #6b5e3f; }
+  }
   /* 오른쪽 끝의 LIVE 태그 — 지금 실제로 접속 중인 플레이어만 불이 들어오고(초록),
      예전에 땅은 땄지만 지금은 접속 안 한 플레이어는 꺼진 채(회색)로 표시됨 */
   #leaderboard .live { flex: none; margin-left: 4px; font-size: 9px; font-weight: 700;
@@ -119,7 +125,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.0.9</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.0</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -133,7 +139,6 @@
   <div id="userCountTag">현재접속자 1명</div>
 </div>
 <div id="leaderboard" class="hidden">
-  <b>점수표</b>
   <ol id="lbList"></ol>
 </div>
 
@@ -1194,6 +1199,25 @@ function updateStats() {
 // ---------- 땅따먹기 리더보드 ----------
 const leaderboardEl = document.getElementById('leaderboard');
 const lbListEl = document.getElementById('lbList');
+let prevScores = new Map(); // owner -> 직전에 화면에 표시했던 점수(점수 오를 때 애니메이션용)
+// 점수가 이전 값에서 새 값으로 스르륵 올라가는 것처럼 보이게(카운트업) + 순간적으로
+// 커졌다 작아지는 강조 애니메이션(bump)을 같이 줌
+function animateScore(el, from, to) {
+  if (to <= from) { el.textContent = to + '점'; return; }
+  const duration = 600;
+  const start = performance.now();
+  el.classList.add('bump');
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3); // ease-out
+    const val = Math.round(from + (to - from) * eased);
+    el.textContent = val + '점';
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = to + '점';
+  }
+  requestAnimationFrame(step);
+}
+
 function updateLeaderboard() {
   const tally = new Map();
   for (const c of cells.values()) {
@@ -1229,7 +1253,12 @@ function updateLeaderboard() {
     if (owner === clientId) name.style.color = `hsl(${hue}, 60%, 40%)`;
     const cnt = document.createElement('span');
     cnt.className = 'cnt';
-    cnt.textContent = count + '점';
+    // 처음 보는 플레이어는 애니메이션 없이 바로 최종 점수로 표시, 이미 알고 있던
+    // 플레이어의 점수가 올랐으면 이전 값에서 새 값으로 카운트업 + 반짝임
+    const prev = prevScores.has(owner) ? prevScores.get(owner) : count;
+    cnt.textContent = prev + '점';
+    animateScore(cnt, prev, count);
+    prevScores.set(owner, count);
     const live = document.createElement('span');
     const isOnline = onlineIds.has(owner);
     live.className = 'live' + (isOnline ? ' on' : '');
