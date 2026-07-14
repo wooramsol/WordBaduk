@@ -18,6 +18,9 @@
     font-size: 15px; font-weight: 700; color: #1a1a1a; cursor: pointer;
     user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   }
+  /* 배포할 때마다 이 버전 번호를 올림(예: v1.0.0 -> v1.0.1) — 지금 보고 있는 화면이
+     최신 배포와 같은 버전인지 한눈에 확인할 수 있게 타이틀 옆에 작게 표시 */
+  #verTag { font-size: 10px; font-weight: 400; color: #a89a78; vertical-align: middle; }
   #infoPanel {
     position: fixed; top: 54px; left: 12px; z-index: 10;
     background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
@@ -110,12 +113,12 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑?</div>
+<div id="brand">낱말바둑? <span id="verTag">v1.0.0</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
-  <div>모두가 함께하는 오픈낱말바둑입니다.<br>
-  낱말로 영역을 둘러싸면 칸을 차지합니다.<br>
-  낱말이 이어지게 칸을 클릭해서 타이핑해보세요.<br>
+  <div>실시간으로 함께 두는 낱말바둑.<br>
+  낱말로 에워싼 영역은 내 땅이 됩니다.<br>
+  칸을 클릭해 낱말을 이어가 보세요.<br>
   <span style="color:#8a7a4f">방향키로 칸 이동, Tab으로 가로/세로 전환</span></div>
   <button id="resetBoardBtn" type="button">전체 낱말 초기화 (테스트용)</button>
   <div id="credit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
