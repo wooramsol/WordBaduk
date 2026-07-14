@@ -819,25 +819,38 @@ function positionWordInput() {
 // 그 글자를 못 읽는(=단어로 안 붙는) 버그가 있었음.
 function autoDetectDir(cx, cy) {
   const c = cells.get(K(cx, cy));
-  if (c && !c.captured && c.dirs && c.dirs.length === 1) return c.dirs[0];
 
-  // 포획된(차지된) 칸은 벽 취급 — 실제로 이어붙일 수 없으므로 "인접 칸이 있다"는
+  // 포획된(차지된) 칸은 벽 취급 — 실제로 이어붙일 수 없으므로 "이을 수 있는 글자"
   // 판단에서 제외해야 함(칸 기록은 있어도 그 방향으로는 못 쓰는 칸이니까)
   const usable = (x, y) => { const k = cells.get(K(x, y)); return !!k && !k.captured; };
-  const blocked = (x, y) => { const k = cells.get(K(x, y)); return !!k && k.captured; };
+  // 글자든 포획 칸이든 "뭔가 이미 차 있어서 그 자리엔 새로 못 넣음"
+  const occupied = (x, y) => !!cells.get(K(x, y));
+  // 양옆(또는 위아래) 중 최소 한쪽이 비어 있어야 그 방향으로 새 글자를 이어 놓을 자리가 있음
+  const hOpen = !occupied(cx - 1, cy) || !occupied(cx + 1, cy);
+  const vOpen = !occupied(cx, cy - 1) || !occupied(cx, cy + 1);
+
+  if (c && !c.captured && c.dirs && c.dirs.length === 1) {
+    const existing = c.dirs[0], other = existing === 'h' ? 'v' : 'h';
+    const existingOpen = existing === 'h' ? hOpen : vOpen;
+    const otherOpen = existing === 'h' ? vOpen : hOpen;
+    // 예: "카드라마왕"처럼 이미 완성된 가로 단어 한가운데 글자를 클릭하면, 양옆이 전부
+    // 다른 글자로 꽉 차 있어 가로로는 더 이상 아무것도 새로 넣을 자리가 없음. 이런 경우
+    // 원래 쓰이던 방향(가로) 그대로 두지 말고, 아직 비어 있어 실제로 쓸 수 있는 반대
+    // 방향(세로)으로 자동 전환함
+    if (!existingOpen && otherOpen) return other;
+    return existing;
+  }
 
   const hasH = usable(cx - 1, cy) || usable(cx + 1, cy);
   const hasV = usable(cx, cy - 1) || usable(cx, cy + 1);
   if (hasH && !hasV) return 'h';
   if (hasV && !hasH) return 'v';
 
-  // 인접한 기존 글자가 없는 완전히 새 자리라도, 한쪽 방향은 양옆이 포획된 칸으로 막혀
+  // 인접한 기존 글자가 없는 완전히 새 자리라도, 한쪽 방향은 양옆이 이미 차 있어(포획 등)
   // 2글자 이상의 단어를 놓을 자리 자체가 없을 수 있음 — 가로/세로 둘 중 하나만 실제로
   // 쓸 수 있는 상황이면, 처음부터 그 "쓸 수 있는" 방향으로 자동 선택함
-  const hBlocked = blocked(cx - 1, cy) && blocked(cx + 1, cy);
-  const vBlocked = blocked(cx, cy - 1) && blocked(cx, cy + 1);
-  if (hBlocked && !vBlocked) return 'v';
-  if (vBlocked && !hBlocked) return 'h';
+  if (!hOpen && vOpen) return 'v';
+  if (!vOpen && hOpen) return 'h';
 
   return sel?.dir || 'h'; // 둘 다 열려있거나 둘 다 막혀있으면 기존/기본 방향 유지
 }
