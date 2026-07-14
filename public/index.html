@@ -119,7 +119,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.0.3</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.0.4</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -1145,6 +1145,11 @@ brand.onclick = () => infoPanel.classList.toggle('hidden');
 const resetBoardBtn = document.getElementById('resetBoardBtn');
 resetBoardBtn.onclick = () => {
   if (!boardRef) { showToast('아직 연결 중이에요. 잠시 후 다시 시도해 주세요.'); return; }
+  // 아무나 누르면 실수로 전체 데이터가 날아갈 수 있어서, 간단한 비밀번호로 한 번 더 막음
+  // (보안 목적이 아니라 실수 방지용 — 소스에 그대로 노출되는 값이니 참고)
+  const pw = prompt('테스트용 초기화 비밀번호를 입력하세요.');
+  if (pw === null) return; // 취소
+  if (pw !== '1102') { showToast('비밀번호가 틀렸어요.'); return; }
   if (!confirm('정말 모든 낱말을 초기화할까요?\n테스트용 기능이며 지금 접속 중인 모든 사람에게 영향을 줍니다.')) return;
   boardRef.set({ cells: {}, words: [], version: 0 });
   closePopup();
