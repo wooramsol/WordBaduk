@@ -66,6 +66,11 @@
   #leaderboard .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #leaderboard li.me .name { font-weight: 700; }
   #leaderboard .cnt { color: #6b5e3f; font-variant-numeric: tabular-nums; }
+  /* 오른쪽 끝의 작은 점 — 지금 실제로 접속 중인 플레이어인지 표시(초록 = 접속 중,
+     빈 링 = 예전에 땅은 땄지만 지금은 접속 안 함) */
+  #leaderboard .live { width: 7px; height: 7px; border-radius: 50%; flex: none;
+    margin-left: 3px; background: transparent; border: 1.5px solid #d8d2c4; }
+  #leaderboard .live.on { background: #4caf6d; border-color: #4caf6d; }
 
   /* 칸에 직접 입력: 보이는 입력창/버튼 없음. wordInput은 IME(한글 조합) 지원을 위해
      실제로 존재하지만 화면엔 보이지 않고, 타이핑한 글자는 캔버스 칸에 바로 그려짐. */
@@ -113,7 +118,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.0.0</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.0.1</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -1162,10 +1167,12 @@ function updateLeaderboard() {
   for (const c of cells.values()) {
     if (c.captured && c.owner) tally.set(c.owner, (tally.get(c.owner) || 0) + 1);
   }
-  // 점수표에는 "지금 접속 중인" 플레이어를 전원 표시함(아직 땅을 못 딴 0점 플레이어도 포함).
-  // 과거에 땅을 땄지만 지금은 접속이 끊긴 플레이어는 목록에서 빠짐.
-  if (onlineIds.size === 0) { leaderboardEl.classList.add('hidden'); return; }
-  const ranked = [...onlineIds].map(id => [id, tally.get(id) || 0]).sort((a, b) => b[1] - a[1]);
+  if (tally.size === 0) { leaderboardEl.classList.add('hidden'); return; }
+  // 점수표는 말 그대로 "점수표"이므로 지금 접속 여부와 상관없이 땅을 딴 적 있는 플레이어를
+  // 전원(인원 제한 없이) 점수 순으로 보여줌. 대신 과일/색이 8종뿐이라 접속자가 많아지면
+  // 서로 다른 사람이 같은 과일로 겹쳐 보일 수 있는데, 그중 지금 실제로 접속 중인 사람은
+  // 오른쪽에 작은 점(초록 = 접속 중)으로 표시해서 최소한 "지금 활동 중인지"는 구분되게 함
+  const ranked = [...tally.entries()].sort((a, b) => b[1] - a[1]);
   lbListEl.textContent = '';
   // owner(clientId)는 유저가 localStorage를 조작하면 임의 문자열일 수 있으므로
   // innerHTML이 아닌 textContent/DOM API로만 채워 넣어 삽입 공격을 원천 차단
@@ -1183,7 +1190,11 @@ function updateLeaderboard() {
     const cnt = document.createElement('span');
     cnt.className = 'cnt';
     cnt.textContent = String(count);
-    li.append(dot, name, cnt);
+    const live = document.createElement('span');
+    const isOnline = onlineIds.has(owner);
+    live.className = 'live' + (isOnline ? ' on' : '');
+    live.title = isOnline ? '지금 접속 중' : '지금은 접속 안 함';
+    li.append(dot, name, cnt, live);
     lbListEl.appendChild(li);
   }
   leaderboardEl.classList.remove('hidden');
