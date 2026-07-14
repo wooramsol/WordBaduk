@@ -1033,6 +1033,8 @@ async function submit() {
         word: r.word,
         canonical: r.canonical !== r.word ? r.canonical : null,
         capturedCount: capturedCells.length,
+        startX: r.startX,
+        startY: r.startY,
       };
       return board;
     });
@@ -1042,10 +1044,14 @@ async function submit() {
       const note = placedInfo.canonical ? ` (두음법칙: ${placedInfo.canonical})` : '';
       const capNote = placedInfo.capturedCount > 0 ? ` — 영역 ${placedInfo.capturedCount}칸 포획!` : '';
       showToast(`'${placedInfo.word}' 완성!${note}${capNote}`);
-      // 선택 칸 유지: 같은 칸에서 이어 입력하거나 방향키로 다른 칸으로 이동 가능
+      // 완성되면 선택 칸을 방금 완성한 단어의 "마지막 글자" 칸으로 옮김 — 이어서 다음 글자를
+      // 바로 입력하기 좋은 위치(예: 단어 끝에 새 글자를 붙여 다른 단어를 잇는 흐름)이기 때문
       if (sel) {
-        const [sx, sy] = worldToScreen(x, y);
-        openPopup(x, y, sx + cellSize / 2, sy + cellSize / 2);
+        const dxp = dir === 'h' ? 1 : 0, dyp = dir === 'v' ? 1 : 0;
+        const lastX = placedInfo.startX + dxp * (placedInfo.word.length - 1);
+        const lastY = placedInfo.startY + dyp * (placedInfo.word.length - 1);
+        const [sx, sy] = worldToScreen(lastX, lastY);
+        openPopup(lastX, lastY, sx + cellSize / 2, sy + cellSize / 2);
       }
     } else if (sel) {
       const errMsg = lastErr || '다른 유저와 겹쳤어요. 다시 시도해 주세요.';
