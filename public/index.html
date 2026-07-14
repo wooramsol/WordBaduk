@@ -119,7 +119,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.0.7</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.0.8</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -1072,8 +1072,20 @@ async function submit() {
       const board = b || { cells: {}, words: [], version: 0 };
       board.cells = board.cells || {};
       board.words = board.words || [];
+      // 단어 배치(접두/접미 연결 포함)에서만 30x30 밖을 벽으로 취급 — "칸을 쓸 수 없다"는
+      // 뜻이지 "그 자체가 나를 둘러싼 벽"이라는 뜻이 아님
       const getCell = (cx, cy) => {
-        if (!inBounds(cx, cy)) return OUT_OF_BOUNDS_WALL; // 30x30 밖은 항상 벽 취급
+        if (!inBounds(cx, cy)) return OUT_OF_BOUNDS_WALL;
+        const c = board.cells[K(cx, cy)];
+        if (!c) return null;
+        if (c.captured) return { ch: null, dirs: [], captured: true, owner: c.owner };
+        return { ch: c.ch, dirs: [c.h && 'h', c.v && 'v'].filter(Boolean), captured: false };
+      };
+      // 포획(땅따먹기) 판정에서는 30x30 경계를 벽처럼 쓰면 안 됨 — 그러면 가운데에 글자
+      // 하나만 놓아도 "보드 경계 + 그 글자"로 둘러싸인 것처럼 오판해서 남은 빈 칸 전체가
+      // 포획돼버림(실제로 겪은 버그). 경계 밖은 여기서는 그냥 "빈 칸"처럼 취급해서, 진짜
+      // 글자로 완전히 둘러싸이지 않은 이상 경계를 만나면 계속 뚫려있는 것으로 보고 포획하지 않음
+      const getCellForCapture = (cx, cy) => {
         const c = board.cells[K(cx, cy)];
         if (!c) return null;
         if (c.captured) return { ch: null, dirs: [], captured: true, owner: c.owner };
@@ -1103,7 +1115,7 @@ async function submit() {
       });
 
       // 땅따먹기: 방금 놓은 글자로 완전히 둘러싸인 빈 칸이 생겼는지 검사해 포획 처리
-      const capturedCells = findCapturedRegions(getCell, K, placedCoords);
+      const capturedCells = findCapturedRegions(getCellForCapture, K, placedCoords);
       for (const [cx, cy] of capturedCells) {
         board.cells[K(cx, cy)] = { captured: true, owner: clientId, ts: Date.now() };
       }
