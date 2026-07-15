@@ -149,7 +149,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.37</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.38</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -236,16 +236,17 @@ let placedWordsIndex = new Map();   // canonical 단어 -> { x, y, dir, word } �
 let dupHighlight = null;            // 지금 입력이 중복 단어일 때, 이미 보드에 있는 그 단어들의 위치
 
 // ---------- 두음법칙 ----------
-const Y_VOWELS = new Set([2, 6, 7, 12, 17, 20]); // ㅑ ㅕ ㅖ ㅛ ㅠ ㅣ
 function dueumVariants(ch) {
   const code = ch.charCodeAt(0) - 0xac00;
   if (code < 0 || code > 11171) return [];
   const ini = Math.floor(code / 588);
   const rest = code % 588;
-  const vow = Math.floor(rest / 28);
   const make = i => String.fromCharCode(0xac00 + i * 588 + rest);
-  if (ini === 5) return [Y_VOWELS.has(vow) ? make(11) : make(2)]; // ㄹ → ㅇ/ㄴ
-  if (ini === 2 && Y_VOWELS.has(vow)) return [make(11)];          // ㄴ → ㅇ
+  // 모음에 따라 ㄴ/ㅇ 중 하나만 "맞는" 변형으로 고르지 않고, ㄹ로 시작하면 ㄴ/ㅇ 둘 다,
+  // ㄴ으로 시작하면 ㅇ을 항상 후보로 줌 — 실제로 사전에 있는 쪽만 매칭되니 후보를 넓게
+  // 줘도 안전하고, 모음별 세부 규칙을 안 따져도 돼서 더 단순함
+  if (ini === 5) return [make(2), make(11)]; // ㄹ → ㄴ, ㅇ 둘 다 시도
+  if (ini === 2) return [make(11)];          // ㄴ → ㅇ
   return [];
 }
 
