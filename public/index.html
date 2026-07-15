@@ -125,7 +125,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.2</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.3</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -321,7 +321,10 @@ function resolvePlace(typed, x, y, dir, getCell, boardEmpty, usedWords) {
   }
   const dictWords = [...new Set(fails.filter(f => f.kind === 'dict').map(f => f.word))];
   if (dictWords.length) {
-    return { err: dictWords.map(w => `'${w}'`).join(', ') + '(으)로 읽어도 사전에 없는 단어입니다.' };
+    // 접두/접미를 여러 길이로 시도하다 보니 실패한 후보 단어가 아주 많아질 수 있어서
+    // (예: "...지역삼뻭", "비자본주의...지역삼뻭" 등 10개 넘게) 전부 나열하면 메시지가
+    // 감당 안 되게 길어짐. 그래서 어떤 조합으로 읽었는지는 생략하고 통일된 문구만 보여줌
+    return { err: '사전에 없는 단어입니다.' };
   }
   const conf = fails.find(f => f.kind === 'conflict');
   if (conf) return { err: conf.msg, conflictTyped: conf.i, word: prefix + typed + suffix, startX: sx, startY: sy };
