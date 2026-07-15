@@ -32,8 +32,18 @@ Capacitor로 감싸서 iOS/Android 네이티브 앱으로 만든 프로젝트입
 ```bash
 cd mobile-app
 npm install
+npx cap sync ios
 npx cap open ios
 ```
+
+> `npx cap sync`는 `git clone` 직후 반드시 한 번 실행해야 합니다.
+> `ios/App/App/public`, `ios/App/App/capacitor.config.json`,
+> `android/app/src/main/assets/public` 는 Capacitor가 자동 생성한
+> `.gitignore`에 의해 git에 커밋되지 않으므로, 클론 직후에는 이
+> 파일들이 없어서 Xcode가 "couldn't be opened" 에러를 냅니다.
+> `cap sync`를 실행하면 `../public`(웹 소스)에서 다시 복사해서
+> 채워줍니다. (`config.xml`이 빨간색으로 남는 건 Capacitor
+> 기본 템플릿의 알려진 무해한 잔재이니 무시해도 됩니다.)
 
 Xcode가 열리면:
 1. 좌측 `App` 프로젝트 선택 → `Signing & Capabilities`에서
@@ -54,6 +64,7 @@ Mac이 아니어도 Android Studio(또는 CLI)만 있으면 됩니다.
 ```bash
 cd mobile-app
 npm install
+npx cap sync android
 npx cap open android
 ```
 
