@@ -101,7 +101,7 @@
     position: fixed; z-index: 21; display: none;
     padding: 8px 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
     background: #eee7d8; color: #6b5e3f; border: 1.5px solid #cfc7b5;
-    white-space: nowrap; transform: translate(-50%, -155%);
+    white-space: nowrap; transform: translate(-50%, 12%);
     box-shadow: 0 2px 8px rgba(0,0,0,.18);
     cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
     align-items: center; justify-content: center;
@@ -137,7 +137,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.8</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.9</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -612,17 +612,20 @@ function draw() {
     cellBox(sx, sy, `hsla(${myHueVal}, 70%, 55%, .2)`, `hsl(${myHueVal}, 65%, 45%)`, 2);
   }
 
-  // 웹(비터치)에서는 선택 칸 오른쪽 아래 구석에 지금 입력 방향(→ 가로 / ↓ 세로)을 작은
-  // 화살표로 보여줌 — 버튼 없이도 방향이 뭔지 바로 보이게. 입력이 시작되면(글자를 하나라도
-  // 치면) preview가 그 칸을 채우기 시작하므로 화살표는 사라짐(겹치지 않게 함께 숨김)
+  // 웹(비터치)에서는 선택 칸 기준 입력이 진행될 다음 칸(가로면 오른쪽 칸, 세로면 아래쪽 칸)
+  // 정중앙에 지금 입력 방향(→ 가로 / ↓ 세로)을 화살표로 보여줌 — 버튼 없이도 방향이 뭔지
+  // 바로 보이게. 입력이 시작되면(글자를 하나라도 치면) preview가 그 칸을 채우기 시작하므로
+  // 화살표는 사라짐(겹치지 않게 함께 숨김)
   if (sel && !HAS_TOUCH && !wordInput.value) {
-    const [sx, sy] = worldToScreen(sel.x, sel.y);
+    const nx = sel.x + (sel.dir === 'h' ? 1 : 0);
+    const ny = sel.y + (sel.dir === 'v' ? 1 : 0);
+    const [nsx, nsy] = worldToScreen(nx, ny);
     ctx.save();
-    ctx.font = Math.floor(cellSize * 0.4) + 'px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    ctx.font = Math.floor(cellSize * 0.5) + 'px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
     ctx.fillStyle = `hsl(${myHueVal}, 65%, 40%)`;
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(sel.dir === 'h' ? '→' : '↓', sx + cellSize - 3, sy + cellSize - 2);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(sel.dir === 'h' ? '→' : '↓', nsx + cellSize / 2, nsy + cellSize / 2 + 1);
     ctx.restore();
   }
 
@@ -887,7 +890,7 @@ function positionSelUI() {
   const [sx, sy] = worldToScreen(sel.x, sel.y);
   if (HAS_TOUCH) {
     modeBadge.style.left = (sx + cellSize / 2) + 'px';
-    modeBadge.style.top = sy + 'px';
+    modeBadge.style.top = (sy + cellSize) + 'px';
     modeBadge.classList.add('show');
     tabHint.classList.remove('show');
   } else {
