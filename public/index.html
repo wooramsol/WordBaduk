@@ -141,7 +141,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.21</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.22</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -1073,7 +1073,25 @@ function updateModeBadge() {
   modeBadge.textContent = sel.dir === 'h' ? '가로' : '세로';
 }
 
-wordInput.addEventListener('input', () => {
+// 한글(완성 음절 가-힣 + 조합 중인 자모 ㄱ-ㅎ/ㅏ-ㅣ)이 아닌 문자(영문, 숫자, 공백, 특수문자
+// 등)는 입력창에 아예 남지 않도록 즉시 걸러냄. 예전엔 이런 문자가 들어와도 그냥 checkPreview()
+// 에서 조용히 막히기만 하고 화면엔 아무 안내도 안 떠서(웹에선 안내가 뜨는 modeBadge 자체를 안
+// 씀) 사용자 입장에선 "입력이 아예 안 먹는" 것처럼 보였음 — 이제 즉시 지우고 토스트로 안내함.
+// e.isComposing이 true인 동안(한글 조합 중)은 절대 건드리지 않아야 조합이 안 끊어짐.
+let invalidCharNotified = false;
+wordInput.addEventListener('input', e => {
+  if (!e.isComposing) {
+    const cleaned = wordInput.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣ]/g, '');
+    if (cleaned !== wordInput.value) {
+      wordInput.value = cleaned;
+      if (!invalidCharNotified) {
+        showToast('한글만 입력할 수 있어요.');
+        invalidCharNotified = true;
+      }
+    } else {
+      invalidCharNotified = false;
+    }
+  }
   checkPreview();
   broadcastTyping();
   // 일부 브라우저는 한글 IME 조합 중엔 캔버스 리페인트를 미뤄뒀다가 조합이 끝나야 반영하는
