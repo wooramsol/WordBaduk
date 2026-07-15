@@ -233,7 +233,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.47</div>
+<div id="verTagBottom">v1.1.48</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
@@ -251,22 +251,23 @@
 const cells = new Map();            // "x,y" -> { ch, dirs:[], fresh }
 const K = (x, y) => x + ',' + y;
 
-// ---------- 보드 크기 제한(20x20, 무한 아님) ----------
+// ---------- 보드 크기 제한(15x15, 무한 아님) ----------
 // 원점(0,0)이 대략 화면 중앙에 오도록 살짝 좌상단으로 치우치게 잡음(30은 짝수라 정확히
 // 가운데인 칸은 없음). 이 범위 밖은 항상 "벽"(포획된 칸과 동일 취급)으로 처리해서 글자를
 // 놓을 수도, 그 너머로 단어를 이어붙일 수도 없게 막음
-const BOARD_MIN = -10, BOARD_MAX = 9; // 20칸: -10 ~ 9
+const BOARD_MIN = -7, BOARD_MAX = 7; // 15칸: -7 ~ 7
 const inBounds = (x, y) => x >= BOARD_MIN && x <= BOARD_MAX && y >= BOARD_MIN && y <= BOARD_MAX;
 const OUT_OF_BOUNDS_WALL = { ch: null, dirs: [], captured: true, owner: null };
-const PAN_MARGIN = 2; // 보드 경계 밖으로 카메라를 옮길 수 있는 여유 칸 수(끝없이 스크롤되는 것 방지, 가로/데스크톱 세로 기준)
+const PAN_MARGIN_X = 1; // 보드 경계 밖 좌우로 카메라를 옮길 수 있는 여유 칸 수
+const PAN_MARGIN_Y = 2; // 보드 경계 밖 위아래로 카메라를 옮길 수 있는 여유 칸 수(키보드와 거리 확보용)
 const MAX_ZOOM_OUT_MARGIN = 2; // 웹에서 휠로 최대 줌아웃했을 때 보드 바깥으로 보이는 여백(칸 수, 한쪽 기준)
 // 뷰포트 크기에 맞춰 "최대 줌아웃(=최소 cellSize)"을 계산 — 화면이 넓을수록 더 축소해야
 // 하지만, 그래도 보드 바깥 여백이 MAX_ZOOM_OUT_MARGIN칸을 넘지 않도록 cellSize 하한을 잡음
 function minCellSizeForZoomOut() {
-  const boardSpan = BOARD_MAX + 1 - BOARD_MIN; // 20
+  const boardSpan = BOARD_MAX + 1 - BOARD_MIN; // 15
   const maxViewSpan = boardSpan + MAX_ZOOM_OUT_MARGIN * 2;
   // 짧은 쪽 뷰포트 변을 기준으로 잡아야 함 — 긴 쪽(max) 기준으로 잡으면 반대로 짧은 쪽에서
-  // 보드 전체(20칸)보다 적은 칸수만 보이게 되어 보드 일부가 화면 밖으로 잘려버림.
+  // 보드 전체(15칸)보다 적은 칸수만 보이게 되어 보드 일부가 화면 밖으로 잘려버림.
   // 세로는 innerHeight가 아니라 visibleHeight()를 씀 — 모바일(폰)에서는 키보드가 항상
   // 열려있다고 가정한 값이라, 키보드가 실제로 뜬 뒤에도 "여백 MAX_ZOOM_OUT_MARGIN칸" 기준이
   // 그대로 유지되고 줌아웃 한계가 갑자기 달라지지 않음
@@ -442,16 +443,16 @@ function resolvePlace(typed, x, y, dir, getCell, boardEmpty, usedWords) {
 }
 
 // ---------- 땅따먹기: 완전히 둘러싸인 빈 칸 포획(flood-fill) ----------
-// getCell(x,y): 벽(글자, 이미 포획된 칸, 20x20 경계 밖)이면 truthy, 진짜 빈 칸이면 null
+// getCell(x,y): 벽(글자, 이미 포획된 칸, 15x15 경계 밖)이면 truthy, 진짜 빈 칸이면 null
 // newlyPlacedCoords: 이번에 새로 놓인 글자 칸 좌표들 — 이 칸들의 인접 빈 칸에서만 탐색 시작
 // 보드 경계도 벽으로 치기 때문에(가장자리에 붙어 나머지 삼면만 글자로 막아도 포획 인정),
 // "가운데에 글자 하나만 놓아도 남은 보드 전체가 포획되는" 것을 막을 안전장치가 필요함.
 // 영역의 가로/세로 "폭"(bounding box)이 MAX_SPAN을 넘으면 "포획 아님"으로 처리 — 30x30
 // 시절엔 25칸까지 허용했음(정상적으로 다 막힌 큰 영역도 너무 좁은 제한 때문에 막히는 걸
-// 피하려고). 20x20으로 줄이면서 그 비율(약 5/6)을 유지해 17칸으로 맞춤. 그래도 여전히
-// "보드 전체(20칸)"보다는 작게 제한돼서 거의 전체를 한 번에 쓸어가는 극단적인 경우는 계속 막힘
+// 피하려고). 15x15에 비례해 13칸으로 맞춤. 그래도 여전히
+// "보드 전체(15칸)"보다는 작게 제한돼서 거의 전체를 한 번에 쓸어가는 극단적인 경우는 계속 막힘
 function findCapturedRegions(getCell, K, newlyPlacedCoords) {
-  const MAX_SPAN = 17; // 영역의 가로 또는 세로 폭이 이 칸 수를 넘으면 "포획 아님"
+  const MAX_SPAN = 13; // 영역의 가로 또는 세로 폭이 이 칸 수를 넘으면 "포획 아님" (15칸 보드에 비례 축소)
   const globalVisited = new Set();
   const captured = [];
   const NEI = (cx, cy) => [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
@@ -581,16 +582,16 @@ function dirAvailable(x, y, dir) {
   return true;
 }
 
-// 카메라(camX/camY)가 20x20 보드 밖으로 끝없이 스크롤되지 않도록 여유(PAN_MARGIN)를 두고
+// 카메라(camX/camY)가 15x15 보드 밖으로 끝없이 스크롤되지 않도록 여유(PAN_MARGIN_X/Y)를 두고
 // 제한함 — 경계선이 잘 보일 정도의 여백은 남기되, 그 너머 빈 공간으로 무한히 나가지는 못하게.
-// 가로/세로 모두 동일하게 PAN_MARGIN칸. 세로(vh)는 innerHeight가 아니라 실제 값을 그대로
+// 가로는 PAN_MARGIN_X칸, 세로는 PAN_MARGIN_Y칸. 세로(vh)는 innerHeight가 아니라 실제 값을 그대로
 // 반영하는 visibleHeight()를 씀 — 키보드가 닫혀있으면 화면 전체 높이와 같아서 그냥 화면
 // 정중앙에 오고, 키보드가 열리면 그만큼 줄어든 실제 보이는 영역 안에서 다시 중앙정렬되며
-// 위아래로 PAN_MARGIN칸씩 여백이 남아 키보드와도 자연스럽게 거리가 생김
+// 위아래로 PAN_MARGIN_Y칸씩 여백이 남아 키보드와도 자연스럽게 거리가 생김
 function clampCamera() {
   const vw = innerWidth, vh = visibleHeight();
-  const minX = BOARD_MIN - PAN_MARGIN, maxWorldX = BOARD_MAX + 1 + PAN_MARGIN;
-  const minY = BOARD_MIN - PAN_MARGIN, maxWorldY = BOARD_MAX + 1 + PAN_MARGIN;
+  const minX = BOARD_MIN - PAN_MARGIN_X, maxWorldX = BOARD_MAX + 1 + PAN_MARGIN_X;
+  const minY = BOARD_MIN - PAN_MARGIN_Y, maxWorldY = BOARD_MAX + 1 + PAN_MARGIN_Y;
   const spanX = maxWorldX - minX, spanY = maxWorldY - minY;
   const viewSpanX = vw / cellSize, viewSpanY = vh / cellSize;
   // 최대로 줌아웃해서 화면이 (보드+여유)보다 넓어지면, 예전엔 그냥 왼쪽/위쪽 끝(minX/minY)에
@@ -612,7 +613,7 @@ function draw() {
   const x0 = Math.floor(camX), y0 = Math.floor(camY);
   const x1 = Math.ceil(camX + innerWidth / cellSize), y1 = Math.ceil(camY + innerHeight / cellSize);
 
-  // 보드 범위(20x20) 바깥은 살짝 어둡게 칠해서 여기까지가 한계라는 걸 시각적으로 보여줌
+  // 보드 범위(15x15) 바깥은 살짝 어둡게 칠해서 여기까지가 한계라는 걸 시각적으로 보여줌
   const [boardSx0, boardSy0] = worldToScreen(BOARD_MIN, BOARD_MIN);
   const [boardSx1, boardSy1] = worldToScreen(BOARD_MAX + 1, BOARD_MAX + 1);
   ctx.fillStyle = 'rgba(60,50,30,.055)';
@@ -621,7 +622,7 @@ function draw() {
   ctx.strokeStyle = '#c3b490'; ctx.lineWidth = 2;
   ctx.strokeRect(boardSx0, boardSy0, boardSx1 - boardSx0, boardSy1 - boardSy0);
 
-  // 격자선도 보드(20x20) 안쪽에서만 그림 — 예전엔 경계 밖 어두운 영역에도 격자선이
+  // 격자선도 보드(15x15) 안쪽에서만 그림 — 예전엔 경계 밖 어두운 영역에도 격자선이
   // 계속 이어져서 마치 그 바깥에도 칸이 있는 것처럼 보였음
   ctx.strokeStyle = '#e3ddd0'; ctx.lineWidth = 1;
   ctx.beginPath();
@@ -836,9 +837,9 @@ function visibleTop() {
   return Math.max(0, vv.offsetTop - rect.top);
 }
 
-// 보드 전체(20x20 고정 범위)가 화면에 딱 맞게 들어오도록. 예전엔 무한보드라 "지금까지
+// 보드 전체(15x15 고정 범위)가 화면에 딱 맞게 들어오도록. 예전엔 무한보드라 "지금까지
 // 놓인 글자들의 범위"에 맞춰 카메라를 잡았지만, 이제 보드 크기가 고정이라 항상 전체
-// 20x20을 한 화면에 보여주는 게 더 직관적임(빈 보드든 아니든 항상 같은 뷰로 시작)
+// 15x15를 한 화면에 보여주는 게 더 직관적임(빈 보드든 아니든 항상 같은 뷰로 시작)
 function fitBoard() {
   const vw = innerWidth, vh = visibleHeight();
   const pad = 1; // 경계선 주변 여백
@@ -1231,7 +1232,7 @@ modeBadge.addEventListener('click', () => {
 });
 
 const getLocalCell = (x, y) => {
-  if (!inBounds(x, y)) return OUT_OF_BOUNDS_WALL; // 20x20 밖은 항상 벽 취급
+  if (!inBounds(x, y)) return OUT_OF_BOUNDS_WALL; // 15x15 밖은 항상 벽 취급
   return cells.get(K(x, y)) || null;
 };
 
@@ -1293,7 +1294,7 @@ function checkPreview() {
     }
   }
   // 타이핑하면서 미리보기가 화면 밖으로 나가면 자동으로 카메라를 옮기는 것도 모바일 전용 —
-  // 웹에서는 20x20 보드가 항상 한 화면에 다 보이므로 이 자동 이동이 필요 없고, 그냥 다시 그림
+  // 웹에서는 15x15 보드가 항상 한 화면에 다 보이므로 이 자동 이동이 필요 없고, 그냥 다시 그림
   if (HAS_TOUCH) ensureVisible();
   else draw();
 }
@@ -1316,11 +1317,11 @@ async function submit() {
       const board = b || { cells: {}, words: [], version: 0 };
       board.cells = board.cells || {};
       board.words = board.words || [];
-      // 20x20 밖은 벽으로 취급 — 배치(접두/접미 연결)뿐 아니라 포획(땅따먹기) 판정에서도
+      // 15x15 밖은 벽으로 취급 — 배치(접두/접미 연결)뿐 아니라 포획(땅따먹기) 판정에서도
       // 마찬가지. 보드 가장자리에 딱 붙어서 나머지 삼면만 글자로 막아도 "완전히 둘러싸인
       // 것"으로 인정되어야 하기 때문(경기장 담벼락도 결국 한쪽 벽 역할을 하는 것과 같음).
       // 다만 이것만으로는 "가운데에 글자 하나만 놓아도 남은 보드 전체가 포획되는" 문제가
-      // 생기므로, findCapturedRegions의 MAX_SPAN(영역 폭 제한)을 20x20 보드에 맞게 충분히
+      // 생기므로, findCapturedRegions의 MAX_SPAN(영역 폭 제한)을 15x15 보드에 맞게 충분히
       // 작게 낮춰서 "진짜 작게 둘러싸인 영역"만 포획되고 "사실상 안 둘러싸인 넓은 영역"은
       // 계속 걸러지게 함
       const getCell = (cx, cy) => {
