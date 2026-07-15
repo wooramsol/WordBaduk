@@ -95,31 +95,30 @@
        문제 없음(이미 그 칸이 선택된 상태이므로). */
     min-width: 24px; min-height: 24px; outline: none; box-shadow: none;
   }
-  /* 방향 전환 배지 — 선택 칸 위에 띄움. 터치하기 편하도록 넉넉한 크기로 만들고,
-     그리드 칸과 안 겹치게 충분히 띄움. 제출은 키보드 Enter로만 함(별도 버튼 없음).
-     아래쪽에 살짝 진한 테두리(버튼의 "옆면"처럼)를 줘서 눌러볼 수 있는 버튼처럼 보이게 하고,
-     hover/active 시 눌리는 느낌을 줌(터치 기기에선 hover가 안 먹으니 자연히 무시됨). */
+  /* 방향 전환 배지 — 터치 기기(모바일)에서만 씀. 선택 칸 위에 띄우고, 터치하기 편하도록
+     넉넉한 크기로 만들고, 그리드 칸과 안 겹치게 충분히 띄움. 제출은 키보드 Enter로만 함. */
   #modeBadge {
     position: fixed; z-index: 21; display: none;
     padding: 8px 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
-    background: #f3ecdd; color: #6b5e3f; border: 1.5px solid #cfc7b5;
-    border-bottom: 3px solid #b8ac8f;
+    background: #eee7d8; color: #6b5e3f; border: 1.5px solid #cfc7b5;
     white-space: nowrap; transform: translate(-50%, -155%);
-    box-shadow: 0 2px 6px rgba(0,0,0,.16);
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
     cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
     align-items: center; justify-content: center;
-    transition: background .1s, transform .1s, box-shadow .1s;
   }
   #modeBadge.show { display: flex; }
-  #modeBadge:hover { background: #ece2cc; }
-  #modeBadge:active { transform: translate(-50%, -150%); border-bottom-width: 1.5px; box-shadow: 0 1px 3px rgba(0,0,0,.16); }
-  #modeBadge.ok { background: #dcefdb; color: #2c6e2f; border-color: #8fcf93; border-bottom-color: #6bb571; }
-  #modeBadge.err { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; border-bottom-color: #d97a7a; }
-  /* 웹(비터치 기기)에서만 "Tab으로도 전환 가능"을 직관적으로 보여주는 작은 힌트 */
-  #modeBadge .tabHint {
-    margin-left: 7px; padding: 1px 5px; border-radius: 5px; font-size: 10px; font-weight: 700;
-    background: rgba(0,0,0,.13); letter-spacing: .02em;
+  #modeBadge.ok { background: #dcefdb; color: #2c6e2f; border-color: #8fcf93; }
+  #modeBadge.err { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
+  /* 웹(비터치 기기)에서는 배지 대신 이 작은 힌트만 선택 칸 위에 띄움 — 방향은 칸 안의
+     화살표로 보여주고, 여긴 "Tab으로 전환 가능"만 알려줌 */
+  #tabHint {
+    position: fixed; z-index: 21; display: none;
+    padding: 3px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
+    background: #eee7d8; color: #8a7a5a; border: 1px solid #d8d0bd;
+    white-space: nowrap; transform: translate(-50%, -135%);
+    pointer-events: none; letter-spacing: .03em;
   }
+  #tabHint.show { display: block; }
 
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -138,7 +137,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.7</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.8</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -159,6 +158,7 @@
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
 <input id="wordInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" lang="ko">
 <div id="modeBadge"></div>
+<div id="tabHint">Tab</div>
 
 <div id="toast"></div>
 
@@ -612,6 +612,20 @@ function draw() {
     cellBox(sx, sy, `hsla(${myHueVal}, 70%, 55%, .2)`, `hsl(${myHueVal}, 65%, 45%)`, 2);
   }
 
+  // 웹(비터치)에서는 선택 칸 오른쪽 아래 구석에 지금 입력 방향(→ 가로 / ↓ 세로)을 작은
+  // 화살표로 보여줌 — 버튼 없이도 방향이 뭔지 바로 보이게. 입력이 시작되면(글자를 하나라도
+  // 치면) preview가 그 칸을 채우기 시작하므로 화살표는 사라짐(겹치지 않게 함께 숨김)
+  if (sel && !HAS_TOUCH && !wordInput.value) {
+    const [sx, sy] = worldToScreen(sel.x, sel.y);
+    ctx.save();
+    ctx.font = Math.floor(cellSize * 0.4) + 'px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    ctx.fillStyle = `hsl(${myHueVal}, 65%, 40%)`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(sel.dir === 'h' ? '→' : '↓', sx + cellSize - 3, sy + cellSize - 2);
+    ctx.restore();
+  }
+
   // 중복 단어 에러일 때, 이미 보드에 쓰인 그 단어의 실제 위치를 살짝 깜빡이는 주황 테두리로 표시
   if (dupHighlight) {
     const pulse = 0.35 + 0.25 * Math.sin(now / 220);
@@ -858,17 +872,30 @@ canvas.addEventListener('touchend', e => {
 // modeBadge: 가로/세로 모드만 표시. 제출은 버튼 없이 키보드 Enter로만 함.
 const wordInput = document.getElementById('wordInput');
 const modeBadge = document.getElementById('modeBadge');
+const tabHint = document.getElementById('tabHint'); // 웹(비터치)에서 modeBadge 대신 쓰는 작은 힌트
 let submitEnabled = false; // Enter로 제출 가능한 상태인지
 
 // 배지는 팬/줌 중에도 선택 칸을 계속 따라다녀야 하므로 draw()에서 매번 호출됨 (안전 — 포커스 없음)
+// 터치 기기(모바일)는 modeBadge(가로/세로 버튼)를, 웹은 tabHint(작은 "Tab" 힌트)만 띄움 —
+// 웹에서는 방향을 칸 안의 화살표(draw() 참고)로 보여주므로 별도 버튼이 필요 없음
 function positionSelUI() {
-  if (!sel) { modeBadge.classList.remove('show'); return; }
-  // 이미 차지된(포획된) 영역은 선택만 될 뿐 입력할 수 없으므로, 배지는 띄우지 않음
-  if (cells.get(K(sel.x, sel.y))?.captured) { modeBadge.classList.remove('show'); return; }
+  if (!sel || cells.get(K(sel.x, sel.y))?.captured) {
+    modeBadge.classList.remove('show');
+    tabHint.classList.remove('show');
+    return;
+  }
   const [sx, sy] = worldToScreen(sel.x, sel.y);
-  modeBadge.style.left = (sx + cellSize / 2) + 'px';
-  modeBadge.style.top = sy + 'px';
-  modeBadge.classList.add('show');
+  if (HAS_TOUCH) {
+    modeBadge.style.left = (sx + cellSize / 2) + 'px';
+    modeBadge.style.top = sy + 'px';
+    modeBadge.classList.add('show');
+    tabHint.classList.remove('show');
+  } else {
+    tabHint.style.left = (sx + cellSize / 2) + 'px';
+    tabHint.style.top = sy + 'px';
+    tabHint.classList.add('show');
+    modeBadge.classList.remove('show');
+  }
 }
 
 // wordInput은 칸을 "새로 선택"할 때만 위치를 맞춘다. 타이핑 중(한글 조합 중) 위치/크기가
@@ -985,18 +1012,8 @@ function setMsg(text, ok, neutral) {
 }
 function updateModeBadge() {
   if (!sel) return;
-  const arrow = sel.dir === 'h' ? '가로' : '세로';
-  modeBadge.textContent = '';
-  const label = document.createElement('span');
-  label.textContent = arrow;
-  modeBadge.appendChild(label);
-  // 터치 기기가 아니면(=웹) Tab 키로도 전환 가능하다는 걸 배지 안에 작게 보여줌
-  if (!HAS_TOUCH) {
-    const hint = document.createElement('span');
-    hint.className = 'tabHint';
-    hint.textContent = 'Tab';
-    modeBadge.appendChild(hint);
-  }
+  // 웹(비터치)에서는 modeBadge 자체를 안 쓰므로(#tabHint + 칸 안 화살표로 대체) 문구만 갱신
+  modeBadge.textContent = sel.dir === 'h' ? '가로' : '세로';
 }
 
 wordInput.addEventListener('input', () => {
