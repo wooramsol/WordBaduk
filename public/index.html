@@ -67,17 +67,22 @@
   /* 등수마다 li의 font-size 자체가 다르고(1등이 제일 큼), 그 안의 등수/점/이름/점수/LIVE는
      전부 em 단위라 폰트 크기에 비례해서 같이 커지고 작아짐 — 고정 px로 된 "공통 크기" 요소가
      하나도 없게 함. justify-content:center로 각 줄의 내용 전체를 가로 중앙에 정렬 */
-  #leaderboard li { counter-increment: lb; display: flex; align-items: center;
+  #leaderboard li { display: flex; align-items: center;
     justify-content: center; gap: 0.5em; padding: 0.15em 0; font-size: 12px; white-space: nowrap; }
-  #leaderboard li::before { content: counter(lb) "등"; color: #9a927d;
+  /* "..." 항목(.lbMore)은 순위가 아니므로 카운터 증가/등수 표시 대상에서 제외 */
+  #leaderboard li:not(.lbMore) { counter-increment: lb; }
+  #leaderboard li:not(.lbMore)::before { content: counter(lb) "등"; color: #9a927d;
     font-size: 0.85em; flex: none; }
   #leaderboard .dot { width: 0.6em; height: 0.6em; border-radius: 50%; flex: none; }
   /* 과일 이름은 항상 한 줄로 — 줄바꿈되면 다른 항목과 줄이 겹쳐 보여 지저분함 */
   #leaderboard .name { white-space: nowrap; }
   #leaderboard li.me .name { font-weight: 700; }
   #leaderboard .cnt { color: #6b5e3f; font-variant-numeric: tabular-nums;
-    font-size: 1.15em; font-weight: 800; display: inline-block; }
+    font-weight: 800; display: inline-block; } /* 이름과 폰트 크기를 맞추기 위해 별도 font-size 없음(li 기본값 상속) */
   #leaderboard .cnt.bump { animation: scoreBump .6s ease; }
+  /* 4등 이하가 더 있을 때 표시하는 "..." — 별도 등수/점 없이 중앙에 작게 */
+  #leaderboard .lbMore { justify-content: center; color: #a89a78; font-size: 11px;
+    letter-spacing: .1em; padding: 2px 0 0; }
   @keyframes scoreBump {
     0% { transform: scale(1); color: #6b5e3f; }
     35% { transform: scale(1.4); color: #2c8f4a; }
@@ -136,7 +141,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.16</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.17</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -1331,12 +1336,15 @@ function updateLeaderboard() {
   // 전원(인원 제한 없이) 점수 순으로 보여줌. 대신 과일/색이 8종뿐이라 접속자가 많아지면
   // 서로 다른 사람이 같은 과일로 겹쳐 보일 수 있는데, 그중 지금 실제로 접속 중인 사람은
   // 오른쪽에 작은 점(초록 = 접속 중)으로 표시해서 최소한 "지금 활동 중인지"는 구분되게 함
-  // 화면 중앙 위쪽 박스에는 자리가 한정적이므로 상위 5명까지만 표시함
-  const ranked = [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  // 화면 중앙 위쪽 박스에는 자리가 한정적이므로 상위 3명까지만 보여주고, 그 밑은 있어도
+  // "..."로만 표시함
+  const rankedAll = [...tally.entries()].sort((a, b) => b[1] - a[1]);
+  const ranked = rankedAll.slice(0, 3);
+  const hasMore = rankedAll.length > 3;
   lbListEl.textContent = '';
   // 1등부터 아래로 갈수록 글자 크기가 작아지게 — li의 font-size를 기준(em)으로 두면
   // 안의 이름/점수/등수 등이 전부 비례해서 같이 작아짐
-  const RANK_FONT_SIZES = [17, 15, 13.5, 12.5, 11.5];
+  const RANK_FONT_SIZES = [17, 15, 13.5];
   // 과일이 8종뿐이라 서로 다른 사람이 같은 과일로 겹칠 수 있음(8명을 넘어가면 반드시 생김).
   // 점수 순으로 훑으면서 같은 과일 이름이 이미 나온 적 있으면 "사과 2", "사과 3"처럼 번호를
   // 붙여서 최소한 화면상 이름은 겹치지 않게 함(색 자체는 여전히 같을 수 있음)
@@ -1375,6 +1383,12 @@ function updateLeaderboard() {
     li.append(dot, name, cnt, live);
     lbListEl.appendChild(li);
   });
+  if (hasMore) {
+    const moreLi = document.createElement('li');
+    moreLi.className = 'lbMore';
+    moreLi.textContent = '...';
+    lbListEl.appendChild(moreLi);
+  }
   leaderboardEl.classList.remove('hidden');
 }
 
