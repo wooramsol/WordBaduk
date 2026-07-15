@@ -64,26 +64,30 @@
   }
   #leaderboard.hidden { display: none; }
   #leaderboard ol { list-style: none; counter-reset: lb; }
-  #leaderboard li { counter-increment: lb; display: flex; align-items: center; gap: 0.5em;
-    padding: 2px 0; font-size: 12px; white-space: nowrap; }
-  #leaderboard li::before { content: counter(lb) "등"; width: 1.9em; color: #9a927d;
+  /* 등수마다 li의 font-size 자체가 다르고(1등이 제일 큼), 그 안의 등수/점/이름/점수/LIVE는
+     전부 em 단위라 폰트 크기에 비례해서 같이 커지고 작아짐 — 고정 px로 된 "공통 크기" 요소가
+     하나도 없게 함. justify-content:center로 각 줄의 내용 전체를 가로 중앙에 정렬 */
+  #leaderboard li { counter-increment: lb; display: flex; align-items: center;
+    justify-content: center; gap: 0.5em; padding: 0.15em 0; font-size: 12px; white-space: nowrap; }
+  #leaderboard li::before { content: counter(lb) "등"; color: #9a927d;
     font-size: 0.85em; flex: none; }
   #leaderboard .dot { width: 0.6em; height: 0.6em; border-radius: 50%; flex: none; }
   /* 과일 이름은 항상 한 줄로 — 줄바꿈되면 다른 항목과 줄이 겹쳐 보여 지저분함 */
   #leaderboard .name { white-space: nowrap; }
   #leaderboard li.me .name { font-weight: 700; }
   #leaderboard .cnt { color: #6b5e3f; font-variant-numeric: tabular-nums;
-    font-size: 1.15em; font-weight: 800; margin-left: 2px; display: inline-block; }
+    font-size: 1.15em; font-weight: 800; display: inline-block; }
   #leaderboard .cnt.bump { animation: scoreBump .6s ease; }
   @keyframes scoreBump {
     0% { transform: scale(1); color: #6b5e3f; }
     35% { transform: scale(1.4); color: #2c8f4a; }
     100% { transform: scale(1); color: #6b5e3f; }
   }
-  /* 오른쪽 끝의 LIVE 태그 — 지금 실제로 접속 중인 플레이어만 불이 들어오고(초록),
-     예전에 땅은 땄지만 지금은 접속 안 한 플레이어는 꺼진 채(회색)로 표시됨 */
-  #leaderboard .live { flex: none; margin-left: 4px; font-size: 9px; font-weight: 700;
-    letter-spacing: .02em; padding: 2px 5px; border-radius: 8px;
+  /* LIVE 태그 — 지금 실제로 접속 중인 플레이어만 불이 들어오고(초록), 예전에 땅은 땄지만
+     지금은 접속 안 한 플레이어는 꺼진 채(회색)로 표시됨. 전부 em 단위라 등수별 글자 크기에
+     비례해서 커지고 작아짐(고정 px 없음) */
+  #leaderboard .live { flex: none; font-size: 0.7em; font-weight: 700;
+    letter-spacing: .02em; padding: 0.2em 0.5em; border-radius: 0.7em;
     background: #eee9dd; color: #b8ae97; }
   #leaderboard .live.on { background: #dcefdb; color: #2c6e2f; }
 
@@ -132,7 +136,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.15</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.16</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
