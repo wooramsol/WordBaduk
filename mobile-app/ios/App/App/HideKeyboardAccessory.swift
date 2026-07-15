@@ -7,15 +7,30 @@ import WebKit
 // 메서드 스위즐링으로 nil 반환하도록 바꿔치기한다.
 extension WKWebView {
     static let hideAccessoryBarOnce: Void = {
-        guard let contentViewClass = NSClassFromString("WKContentView") else { return }
+        print("[accessoryFix] step0: swizzle attempt starting")
+
+        guard let contentViewClass = NSClassFromString("WKContentView") else {
+            print("[accessoryFix] step1 FAILED: WKContentView class not found")
+            return
+        }
+        print("[accessoryFix] step1 OK: found WKContentView class")
 
         let originalSelector = Selector(("inputAccessoryView"))
-        guard let originalMethod = class_getInstanceMethod(contentViewClass, originalSelector) else { return }
+        guard let originalMethod = class_getInstanceMethod(contentViewClass, originalSelector) else {
+            print("[accessoryFix] step2 FAILED: inputAccessoryView method not found on WKContentView")
+            return
+        }
+        print("[accessoryFix] step2 OK: found inputAccessoryView method")
 
         let newSelector = #selector(getter: WKWebView.wv_noInputAccessoryView)
-        guard let newMethod = class_getInstanceMethod(WKWebView.self, newSelector) else { return }
+        guard let newMethod = class_getInstanceMethod(WKWebView.self, newSelector) else {
+            print("[accessoryFix] step3 FAILED: wv_noInputAccessoryView method not found")
+            return
+        }
+        print("[accessoryFix] step3 OK: found replacement method")
 
         method_exchangeImplementations(originalMethod, newMethod)
+        print("[accessoryFix] step4 OK: swizzle applied successfully")
     }()
 
     @objc var wv_noInputAccessoryView: UIView? { return nil }
