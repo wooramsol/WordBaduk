@@ -51,6 +51,15 @@
   }
   #infoPanel b { color: #1a1a1a; font-size: 15px; }
   #infoPanel.hidden { display: none; }
+  /* 안내 문구 속 방향 아이콘 — 실제 게임에서 칸 위에 뜨는 화살표(→/↓)와 같은 모양을 작은
+     원형 배지로 축소해서 보여줌. 글로 "가로/세로 버튼"이라 설명하는 것보다 실제로 화면에
+     뜨는 아이콘 모양 그대로 보여주는 게 더 직관적이라는 피드백에 따라 추가 */
+  .dirIconBadge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #8a7a4f; color: #fff; font-size: 12px; font-weight: 700;
+    vertical-align: -4px; margin: 0 1px;
+  }
   /* 반복 테스트를 위한 임시 초기화 버튼 — 테스트 끝나면 이 스타일/버튼 통째로 지워도 됨 */
   #resetBoardBtn {
     display: block; margin: 10px 0 2px; padding: 5px 10px; font-size: 11px;
@@ -223,7 +232,7 @@
   <div>실시간으로 여러 명이 함께하는 낱말바둑이에요.<br>
   칸을 눌러 낱말을 만들어보세요. 어디에 이어붙여도 괜찮아요.<br>
   울타리를 치듯 한 구역을 둘러싸면, 안쪽 칸이 전부 내 땅이 돼요.<br>
-  <span style="color:#8a7a4f">방향 버튼(가로/세로)을 눌러 입력 방향을 바꿀 수 있어요.</span></div>
+  <span style="color:#8a7a4f"><span class="dirIconBadge">&rarr;</span><span class="dirIconBadge">&darr;</span> 아이콘을 눌러 입력 방향을 바꿀 수 있어요.</span></div>
   <button id="resetBoardBtn" type="button">전체 낱말 초기화 (테스트용)</button>
 </div>
 <div id="topRight">
@@ -233,7 +242,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.52</div>
+<div id="verTagBottom">v1.1.53</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
