@@ -44,7 +44,11 @@
     position: fixed; top: 54px; left: 12px; z-index: 40;
     background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
     border-radius: 12px; padding: 12px 15px; box-shadow: 0 2px 10px rgba(0,0,0,.1);
-    font-size: 13px; color: #444; line-height: 1.7; max-width: 280px;
+    font-size: 13px; color: #444; line-height: 1.7;
+    /* 고정폭(280px)이었을 때 문장 중간에서 브라우저가 임의로 자동 줄바꿈을 넣어서,
+       직접 <br>로 잡아둔 줄 배치가 화면 너비에 따라 흐트러지는 문제가 있었음 —
+       화면 폭 안에서 가능한 만큼만 max-width를 열어주고 텍스트 쪽은 nowrap으로 막음 */
+    max-width: calc(100vw - 24px);
     /* 창 높이를 줄였을 때 패널이 화면 아래로 잘려 나가지 않도록, 남는 높이만큼만
        차지하고 넘치는 내용은 패널 안에서 스크롤되게 함 */
     max-height: calc(100vh - 70px); overflow-y: auto;
@@ -239,7 +243,7 @@
 <div id="brand">낱말바둑<span id="brandHelpIcon">ⓘ</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
-  <div>실시간으로 여러 명이 함께하는 낱말바둑이에요.<br>
+  <div style="white-space: nowrap; overflow-x: auto;">실시간으로 여러 명이 함께하는 낱말바둑이에요.<br>
   칸을 눌러 낱말을 만들어보세요. 어디에 이어붙여도 괜찮아요.<br>
   울타리를 치듯 낱말들로 한 구역을 둘러싸면, 안쪽 칸이 전부 내 땅이됩니다.<br>
   <span id="dirHintTouch" style="color:#8a7a4f;display:none"><span class="dirIconBadge">가로</span><span class="dirIconBadge">세로</span> 배지를 눌러 입력 방향을 바꿀 수 있어요.</span>
@@ -253,7 +257,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.55</div>
+<div id="verTagBottom">v1.1.56</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
