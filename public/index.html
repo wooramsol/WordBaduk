@@ -141,7 +141,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.19</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.20</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -461,7 +461,25 @@ function hashStr(str) {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h;
 }
+// owner(clientId) -> 과일 인덱스(0~7). 처음 단어를 놓은 순서대로 8개 과일을 "돌려가며"
+// 배정함 — board.words 배열은 모든 클라이언트가 동일한 서버 데이터를 보므로, 이 순서는
+// 누가 계산하든 항상 똑같이 나옴(동기화 필요 없음). "블루베리 2, 3..."처럼 번호를 붙여
+// 구분하던 방식은 없앰 — 9번째 플레이어부터는 그냥 1번째와 같은 과일을 다시 씀(사용자 결정)
+let ownerFruitIndex = new Map();
+function rebuildOwnerFruitIndex(wordsList) {
+  ownerFruitIndex = new Map();
+  let next = 0;
+  for (const w of wordsList) {
+    if (w.by && !ownerFruitIndex.has(w.by)) {
+      ownerFruitIndex.set(w.by, next % FRUITS.length);
+      next++;
+    }
+  }
+}
 function fruitOf(owner) {
+  // 아직 단어를 하나도 놓지 않아 순서를 모르는 경우(예: 막 접속만 한 상태)는 해시 기반으로
+  // 임시 배정 — 실제로 단어를 놓는 순간 words 배열에 들어가면서 순서 기반 배정으로 바뀜
+  if (ownerFruitIndex.has(owner)) return FRUITS[ownerFruitIndex.get(owner)];
   return FRUITS[hashStr(owner) % FRUITS.length];
 }
 function ownerHue(owner) { return fruitOf(owner).hue; }
@@ -1348,10 +1366,9 @@ function updateLeaderboard() {
   // 1등부터 아래로 갈수록 글자 크기가 작아지게 — li의 font-size를 기준(em)으로 두면
   // 안의 이름/점수/등수 등이 전부 비례해서 같이 작아짐
   const RANK_FONT_SIZES = [17, 15, 13.5];
-  // 과일이 8종뿐이라 서로 다른 사람이 같은 과일로 겹칠 수 있음(8명을 넘어가면 반드시 생김).
-  // 점수 순으로 훑으면서 같은 과일 이름이 이미 나온 적 있으면 "사과 2", "사과 3"처럼 번호를
-  // 붙여서 최소한 화면상 이름은 겹치지 않게 함(색 자체는 여전히 같을 수 있음)
-  const nameSeen = new Map();
+  // 과일 이름은 이제 8개를 "처음 단어 놓은 순서대로" 돌려가며 배정함(rebuildOwnerFruitIndex)
+  // — "사과 2", "사과 3"처럼 번호를 붙여 구분하던 방식은 없앰. 9번째 플레이어부터는 앞사람과
+  // 같은 과일 이름이 다시 나올 수 있는데, 이건 사용자가 받아들이기로 한 트레이드오프임
   // owner(clientId)는 유저가 localStorage를 조작하면 임의 문자열일 수 있으므로
   // innerHTML이 아닌 textContent/DOM API로만 채워 넣어 삽입 공격을 원천 차단
   ranked.forEach(([owner, count], i) => {
@@ -1364,11 +1381,7 @@ function updateLeaderboard() {
     dot.style.background = `hsl(${hue}, 55%, 55%)`;
     const name = document.createElement('span');
     name.className = 'name';
-    const baseName = ownerName(owner);
-    const seenCount = (nameSeen.get(baseName) || 0) + 1;
-    nameSeen.set(baseName, seenCount);
-    const dedupedName = baseName + (seenCount > 1 ? ' ' + seenCount : '');
-    name.textContent = dedupedName + (owner === clientId ? ' (나)' : '');
+    name.textContent = ownerName(owner) + (owner === clientId ? ' (나)' : '');
     if (owner === clientId) name.style.color = `hsl(${hue}, 60%, 40%)`;
     const cnt = document.createElement('span');
     cnt.className = 'cnt';
@@ -1464,6 +1477,9 @@ async function boot() {
       }
     }
     const words = board.words ? (Array.isArray(board.words) ? board.words : Object.values(board.words)) : [];
+    // 단어를 처음 놓은 순서대로 8개 과일을 돌려가며 배정 — 모든 클라이언트가 같은 words
+    // 배열을 보므로 항상 동일한 결과가 나옴
+    rebuildOwnerFruitIndex(words);
     usedWords = new Set(words.map(w => w.canonical || w.word));
     placedWordsIndex = new Map();
     for (const w of words) {
