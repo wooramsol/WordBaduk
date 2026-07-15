@@ -61,6 +61,15 @@
     background: #eee7d8; color: #6b5e3f; border: 1.5px solid #cfc7b5;
     vertical-align: 1px; margin: 0 2px;
   }
+  /* 웹(비터치)용 방향 안내 — 실제로 칸 위에 뜨는 Tab 알약 배지 + 화살표(→/↓) 조합을
+     그대로 미니 버전으로 재현. 모바일용(.dirIconBadge, 가로/세로 배지)과는 다른 기기라
+     보게 되는 실제 UI가 다르므로 각 기기에 맞는 안내만 보여줌(HAS_TOUCH로 JS에서 토글) */
+  .dirTabBadge {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700;
+    background: #8a7a4f; color: #fff; vertical-align: 1px; margin: 0 2px;
+  }
+  .dirArrowIcon { font-size: 14px; font-weight: 700; color: #8a7a4f; margin: 0 1px; }
   /* 반복 테스트를 위한 임시 초기화 버튼 — 테스트 끝나면 이 스타일/버튼 통째로 지워도 됨 */
   #resetBoardBtn {
     display: block; margin: 10px 0 2px; padding: 5px 10px; font-size: 11px;
@@ -232,8 +241,9 @@
   <b>낱말바둑</b>
   <div>실시간으로 여러 명이 함께하는 낱말바둑이에요.<br>
   칸을 눌러 낱말을 만들어보세요. 어디에 이어붙여도 괜찮아요.<br>
-  울타리를 치듯 한 구역을 둘러싸면, 안쪽 칸이 전부 내 땅이 돼요.<br>
-  <span style="color:#8a7a4f"><span class="dirIconBadge">가로</span><span class="dirIconBadge">세로</span> 배지를 눌러 입력 방향을 바꿀 수 있어요.</span></div>
+  울타리를 치듯 낱말들로 한 구역을 둘러싸면, 안쪽 칸이 전부 내 땅이됩니다.<br>
+  <span id="dirHintTouch" style="color:#8a7a4f;display:none"><span class="dirIconBadge">가로</span><span class="dirIconBadge">세로</span> 배지를 눌러 입력 방향을 바꿀 수 있어요.</span>
+  <span id="dirHintWeb" style="color:#8a7a4f;display:none"><span class="dirTabBadge">Tab</span>과 화살표(<span class="dirArrowIcon">&rarr;</span>/<span class="dirArrowIcon">&darr;</span>)로 입력 방향을 바꿀 수 있어요.</span></div>
   <button id="resetBoardBtn" type="button">전체 낱말 초기화 (테스트용)</button>
 </div>
 <div id="topRight">
@@ -243,7 +253,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.54</div>
+<div id="verTagBottom">v1.1.55</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
@@ -839,6 +849,9 @@ setInterval(() => {
 // 카메라 재배치가 동시에 겹쳐서였음 — wordInput.focus({preventScroll:true})로 브라우저
 // 자동 스크롤은 이미 막아뒀으니, 카메라만 조용히 다시 계산되어 부드럽게 자리를 잡음
 const HAS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+// 안내창의 방향 힌트도 실제 화면에서 보게 될 UI에 맞춰 기기별로 다르게 보여줌 —
+// 모바일은 가로/세로 배지, 웹은 Tab 배지+화살표(실제 게임 내 표시와 동일한 모양)
+document.getElementById(HAS_TOUCH ? 'dirHintTouch' : 'dirHintWeb').style.display = '';
 function visibleHeight() {
   const vv = window.visualViewport;
   const vh = vv ? vv.height : innerHeight;
