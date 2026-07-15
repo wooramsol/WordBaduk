@@ -101,7 +101,7 @@
     position: fixed; z-index: 21; display: none;
     padding: 8px 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
     background: #eee7d8; color: #6b5e3f; border: 1.5px solid #cfc7b5;
-    white-space: nowrap; transform: translate(-50%, 12%);
+    white-space: nowrap; transform: translate(-50%, -155%);
     box-shadow: 0 2px 8px rgba(0,0,0,.18);
     cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
     align-items: center; justify-content: center;
@@ -126,7 +126,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.12</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.13</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -167,6 +167,14 @@ const BOARD_MIN = -15, BOARD_MAX = 14; // 30칸: -15 ~ 14
 const inBounds = (x, y) => x >= BOARD_MIN && x <= BOARD_MAX && y >= BOARD_MIN && y <= BOARD_MAX;
 const OUT_OF_BOUNDS_WALL = { ch: null, dirs: [], captured: true, owner: null };
 const PAN_MARGIN = 3; // 보드 경계 밖으로 카메라를 옮길 수 있는 여유 칸 수(끝없이 스크롤되는 것 방지)
+const MAX_ZOOM_OUT_MARGIN = 2; // 웹에서 휠로 최대 줌아웃했을 때 보드 바깥으로 보이는 여백(칸 수, 한쪽 기준)
+// 뷰포트 크기에 맞춰 "최대 줌아웃(=최소 cellSize)"을 계산 — 화면이 넓을수록 더 축소해야
+// 하지만, 그래도 보드 바깥 여백이 MAX_ZOOM_OUT_MARGIN칸을 넘지 않도록 cellSize 하한을 잡음
+function minCellSizeForZoomOut() {
+  const boardSpan = BOARD_MAX + 1 - BOARD_MIN; // 30
+  const maxViewSpan = boardSpan + MAX_ZOOM_OUT_MARGIN * 2;
+  return Math.max(innerWidth, innerHeight) / maxViewSpan;
+}
 let usedWords = new Set();          // 이미 보드에 쓰인 단어(canonical 기준) — 중복 사용 방지
 let userCount = 1;
 let onlineIds = new Set();          // 지금 접속 중인 플레이어 clientId 목록(나 포함) — 점수표 표시용
@@ -814,7 +822,7 @@ canvas.addEventListener('wheel', e => {
   e.preventDefault();
   const [ex, ey] = toCanvasXY(e.clientX, e.clientY);
   const [wx, wy] = [ex / cellSize + camX, ey / cellSize + camY];
-  cellSize = Math.min(90, Math.max(18, cellSize * (e.deltaY < 0 ? 1.1 : 0.9)));
+  cellSize = Math.min(90, Math.max(minCellSizeForZoomOut(), cellSize * (e.deltaY < 0 ? 1.1 : 0.9)));
   camX = wx - ex / cellSize;
   camY = wy - ey / cellSize;
   draw();
@@ -904,7 +912,7 @@ function positionSelUI() {
   }
   const [sx, sy] = worldToScreen(sel.x, sel.y);
   modeBadge.style.left = (sx + cellSize / 2) + 'px';
-  modeBadge.style.top = (sy + cellSize) + 'px';
+  modeBadge.style.top = sy + 'px';
   modeBadge.classList.add('show');
 }
 
