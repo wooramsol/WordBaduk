@@ -233,7 +233,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.50</div>
+<div id="verTagBottom">v1.1.51</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
@@ -540,9 +540,9 @@ function cellBox(sx, sy, fill, stroke, lw) {
 // 알아보기 쉬운 과일 이름으로 표시하고, 포획 영역/리더보드/실시간 하이라이트 색상도 여기서 통일.
 // 색상이 서로 비슷해 헷갈리는 과일은 빼고, 색상환에서 최대한 고르게 떨어진 것만 남김
 const FRUITS = [
-  { name: '사과', hue: 355 }, { name: '오렌지', hue: 28 }, { name: '바나나', hue: 55 },
-  { name: '키위', hue: 95 }, { name: '수박', hue: 160 }, { name: '블루베리', hue: 225 },
-  { name: '포도', hue: 275 }, { name: '자두', hue: 310 },
+  { name: '사과', hue: 355, emoji: '\u{1F34E}' }, { name: '오렌지', hue: 28, emoji: '\u{1F34A}' }, { name: '바나나', hue: 55, emoji: '\u{1F34C}' },
+  { name: '키위', hue: 95, emoji: '\u{1F95D}' }, { name: '수박', hue: 160, emoji: '\u{1F349}' }, { name: '블루베리', hue: 225, emoji: '\u{1FAD0}' },
+  { name: '포도', hue: 275, emoji: '\u{1F347}' }, { name: '자두', hue: 310, emoji: '\u{1F351}' },
 ];
 function hashStr(str) {
   let h = 0;
@@ -573,6 +573,7 @@ function fruitOf(owner) {
 }
 function ownerHue(owner) { return fruitOf(owner).hue; }
 function ownerName(owner) { return fruitOf(owner).name; }
+function ownerEmoji(owner) { return fruitOf(owner).emoji; }
 // 내(현재 접속자) 색상 — clientId 확정 전(로딩 중)에는 기본 파랑 계열 사용
 function myHue() {
   return clientId ? ownerHue(clientId) : 210;
@@ -671,10 +672,17 @@ function draw() {
     const flashFill = `hsla(${flashHue}, 90%, 68%, ${Math.max(0.15, 0.9 - age / 2500)})`;
 
     if (c.captured) {
-      // 땅따먹기로 포획된 영역: 글자 없이 소유자 색으로만 표시
+      // 땅따먹기로 포획된 영역: 소유자 색 배경 위에 소유자의 과일 아이콘을 그려서
+      // 누구 땅인지 색뿐 아니라 아이콘으로도 한눈에 구분되게 함
       const hue = ownerHue(c.owner);
       const fill = flashing ? flashFill : `hsla(${hue}, 55%, 55%, .32)`;
       cellBox(sx, sy, fill, `hsl(${hue}, 45%, 45%)`, 1.5);
+      const emoji = c.owner ? ownerEmoji(c.owner) : null;
+      if (emoji) {
+        ctx.globalAlpha = 0.85;
+        ctx.fillText(emoji, sx + cellSize / 2, sy + cellSize / 2 + 1);
+        ctx.globalAlpha = 1;
+      }
       continue;
     }
 
