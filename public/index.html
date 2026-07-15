@@ -149,7 +149,7 @@
 <body>
 <canvas id="board"></canvas>
 
-<div id="brand">낱말바둑? <span id="verTag">v1.1.30</span></div>
+<div id="brand">낱말바둑? <span id="verTag">v1.1.31</span></div>
 <div id="infoPanel" class="hidden">
   <b>낱말바둑</b>
   <div>실시간으로 함께 두는 낱말바둑.<br>
@@ -512,15 +512,14 @@ function dirAvailable(x, y, dir) {
 
 // 카메라(camX/camY)가 20x20 보드 밖으로 끝없이 스크롤되지 않도록 여유(PAN_MARGIN)를 두고
 // 제한함 — 경계선이 잘 보일 정도의 여백은 남기되, 그 너머 빈 공간으로 무한히 나가지는 못하게.
-// 가로/세로 모두 동일하게 2칸. 세로(vh)는 innerHeight가 아니라 visibleHeight()를 씀 —
-// 모바일에선 키보드가 항상 열려있다고 가정한(화면 위쪽 54%만) 값이라, 실제 화면 전체 높이
-// 기준으로 계산하면 "보드가 안전 영역보다 훨씬 작아 보여서" 자동 중앙정렬 쪽으로 계속
-// 스냅되며 아래로 드래그해도 도로 튕겨 돌아오는 문제가 있었음
+// 가로/세로 모두 동일하게 PAN_MARGIN칸. 세로(vh)는 innerHeight가 아니라 실제 값을 그대로
+// 반영하는 visibleHeight()를 씀 — 키보드가 닫혀있으면 화면 전체 높이와 같아서 그냥 화면
+// 정중앙에 오고, 키보드가 열리면 그만큼 줄어든 실제 보이는 영역 안에서 다시 중앙정렬되며
+// 위아래로 PAN_MARGIN칸씩 여백이 남아 키보드와도 자연스럽게 거리가 생김
 function clampCamera() {
   const vw = innerWidth, vh = visibleHeight();
-  const PAN_MARGIN_Y = IS_PHONE ? 4 : PAN_MARGIN; // 모바일 세로는 6칸에서 2칸 줄여 4칸(좌우는 2칸)
   const minX = BOARD_MIN - PAN_MARGIN, maxWorldX = BOARD_MAX + 1 + PAN_MARGIN;
-  const minY = BOARD_MIN - PAN_MARGIN_Y, maxWorldY = BOARD_MAX + 1 + PAN_MARGIN_Y;
+  const minY = BOARD_MIN - PAN_MARGIN, maxWorldY = BOARD_MAX + 1 + PAN_MARGIN;
   const spanX = maxWorldX - minX, spanY = maxWorldY - minY;
   const viewSpanX = vw / cellSize, viewSpanY = vh / cellSize;
   // 최대로 줌아웃해서 화면이 (보드+여유)보다 넓어지면, 예전엔 그냥 왼쪽/위쪽 끝(minX/minY)에
@@ -733,34 +732,25 @@ setInterval(() => {
 }, 120);
 
 // ---------- 뷰 자동 맞춤 ----------
-// 브라우저마다 visualViewport.height가 키보드를 제대로 반영하는 정도가 기기/버전마다 달라서
-// (전혀 안 줄어드는 경우도 있음), 키보드 높이를 실시간으로 "추정"하는 방식은 계속 어긋났고,
-// 키보드가 열리고 닫힐 때마다 줌 배율/화면 배치가 그때그때 달라져 보이는 문제도 있었음.
-// 그래서 아예 실시간 추정을 포기하고, 실제 가상키보드가 뜰 수 있는 터치 기기(휴대폰 크기
-// 화면)에서는 "키보드가 항상 열려있다"고 가정하고 고정 비율로만 계산함 — 키보드가 실제로
-// 열려있든 닫혀있든 줌/배치 기준이 항상 똑같아서 화면이 안 흔들림.
-// 화면 폭만으로는(창을 좁게 줄인 데스크톱 브라우저도 900 이하가 될 수 있음) 키보드가 뜨는
-// 기기인지 알 수 없으므로, 터치 지원 여부로 "가상 키보드가 뜰 수 있는 기기"인지 판단함.
-// 키보드가 없는 환경(데스크톱, 또는 터치가 없는 좁은 창)은 폭과 상관없이 그대로 화면 정중앙.
+// 키보드가 열려있는지 여부와 상관없이 원리는 딱 하나: "지금 실제로 보이는 영역
+// (visibleHeight)의 정중앙에 보드를 둔다." 키보드가 닫혀있으면 visibleHeight가 화면
+// 전체 높이와 같아서 자연스럽게 화면 정중앙에 오고, 키보드가 열리면 visibleHeight가
+// 키보드를 뺀 만큼 줄어들어서 자동으로 그 안에서 다시 중앙 정렬되며, PAN_MARGIN만큼의
+// 여백이 위/아래에 고르게 남아 키보드와도 거리가 생김. 기기/브라우저별로 다르게 "추정"할
+// 필요 없이 브라우저가 알려주는 실제 값(visualViewport.height)을 그대로 믿고 쓰면 됨.
 const HAS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-const IS_PHONE = HAS_TOUCH && innerWidth <= 900;
-// 키보드가 화면 아래쪽 대략 46%를 차지한다고 가정(흔한 모바일 키보드 높이 비율) — 즉 위쪽
-// 54%만 "항상 보이는 영역"으로 침. 현재 보이는(키보드·입력시트 제외) 영역 높이
 function visibleHeight() {
-  if (IS_PHONE) return Math.max(innerHeight * 0.54, 120);
   const vv = window.visualViewport;
-  // 폰이 아닌 환경(데스크톱/태블릿 등)은 실제 visualViewport.height를 그대로 씀
   const vh = vv ? vv.height : innerHeight;
   return Math.max(vh, 120);
 }
 function targetSelScreenY() {
-  return IS_PHONE ? innerHeight * 0.27 : visibleHeight() / 2;
+  return visibleHeight() / 2;
 }
 // 위 기준점을 중심으로 "안전하게 보인다고 가정하는 영역"의 아래쪽 경계 — 칸/미리보기가 이
-// 아래로 벗어나면 다시 정렬하거나 칸 크기를 줄이는 기준으로 씀. visibleHeight()와 같은
-// 54% 가정을 공유함(targetSelScreenY 27% * 2 = 54%)
+// 아래로 벗어나면 다시 정렬하거나 칸 크기를 줄이는 기준으로 씀
 function assumedVisibleBottom() {
-  return IS_PHONE ? targetSelScreenY() * 2 : visibleHeight();
+  return visibleHeight();
 }
 
 // 보이는 영역의 "맨 위"가 캔버스 기준으로 어디인지. 일부 모바일 브라우저는 입력창 포커스 시
