@@ -177,21 +177,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
-// 앱(iOS/Android) 안에서 실행 중일 때만 키보드 위 이전/다음/완료 툴바 숨김.
-// 일반 웹브라우저에서는 window.Capacitor가 없어서 그냥 아무 일도 안 함.
-// (별도 플러그인 js 파일 로드 없이, 네이티브에 이미 등록된 Keyboard 플러그인을
-//  Capacitor.registerPlugin으로 직접 프록시 생성해서 호출 — capacitorExports
-//  전역 의존성 문제를 피하기 위함)
-if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-  try {
-    const Keyboard = window.Capacitor.registerPlugin('Keyboard');
-    Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(e => console.error('[keyboard] setAccessoryBarVisible rejected', e));
-  } catch (e) {
-    console.error('[keyboard] accessory bar hide failed', e);
-  }
-}
-</script>
-<script>
 'use strict';
 // ---------- 상태 ----------
 const cells = new Map();            // "x,y" -> { ch, dirs:[], fresh }

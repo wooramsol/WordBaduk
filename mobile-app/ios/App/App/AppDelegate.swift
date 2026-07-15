@@ -8,13 +8,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
-        #if DEBUG
-        if #available(iOS 16.4, *) {
-            if let bridgeVC = window?.rootViewController as? CAPBridgeViewController {
+        if let bridgeVC = window?.rootViewController as? CAPBridgeViewController {
+            bridgeVC.webView?.hideKeyboardAccessoryBar()
+            #if DEBUG
+            if #available(iOS 16.4, *) {
                 bridgeVC.webView?.isInspectable = true
             }
+            #endif
         }
-        #endif
         return true
     }
 
