@@ -314,7 +314,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.75</div>
+<div id="verTagBottom">v1.1.76</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -678,25 +678,14 @@ function hashStr(str) {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h;
 }
-// owner(clientId) -> 과일 인덱스(0~7). 처음 단어를 놓은 순서대로 8개 과일을 "돌려가며"
-// 배정함 — board.words 배열은 모든 클라이언트가 동일한 서버 데이터를 보므로, 이 순서는
-// 누가 계산하든 항상 똑같이 나옴(동기화 필요 없음). "블루베리 2, 3..."처럼 번호를 붙여
-// 구분하던 방식은 없앰 — 9번째 플레이어부터는 그냥 1번째와 같은 과일을 다시 씀(사용자 결정)
-let ownerFruitIndex = new Map();
-function rebuildOwnerFruitIndex(wordsList) {
-  ownerFruitIndex = new Map();
-  let next = 0;
-  for (const w of wordsList) {
-    if (w.by && !ownerFruitIndex.has(w.by)) {
-      ownerFruitIndex.set(w.by, next % FRUITS.length);
-      next++;
-    }
-  }
-}
+// owner(clientId) -> 과일. 접속하자마자(심지어 낱말을 하나도 놓기 전부터) 바로 정해지고
+// 이후 낱말을 놓든 접속을 끊었다 다시 하든 절대 안 바뀌어야 하므로, 다른 플레이어의 접속
+// 순서나 낱말 순서와는 완전히 무관하게 clientId 자체의 해시값만으로 결정함. 예전에는
+// "처음 낱말을 놓은 순서대로" 8개를 돌려썼는데, 그러면 접속 직후(낱말 놓기 전)엔 해시 기반
+// 임시 과일이 보이다가 첫 낱말을 놓는 순간 "진짜" 과일로 바뀌어 보이는 문제가 있었음.
+// 트레이드오프: 다른 플레이어와 해시값이 겹치면 같은 과일이 나올 수 있음(플레이어 수가
+// 적어도 발생 가능) — 하지만 안정성(절대 안 바뀜)을 우선하기로 함
 function fruitOf(owner) {
-  // 아직 단어를 하나도 놓지 않아 순서를 모르는 경우(예: 막 접속만 한 상태)는 해시 기반으로
-  // 임시 배정 — 실제로 단어를 놓는 순간 words 배열에 들어가면서 순서 기반 배정으로 바뀜
-  if (ownerFruitIndex.has(owner)) return FRUITS[ownerFruitIndex.get(owner)];
   return FRUITS[hashStr(owner) % FRUITS.length];
 }
 function ownerHue(owner) { return fruitOf(owner).hue; }
@@ -1707,9 +1696,8 @@ function updateLeaderboard() {
   // 1등부터 아래로 갈수록 글자 크기가 작아지게 — li의 font-size를 기준(em)으로 두면
   // 안의 이름/점수/등수 등이 전부 비례해서 같이 작아짐
   const RANK_FONT_SIZES = [17, 15, 13.5];
-  // 과일 이름은 이제 8개를 "처음 단어 놓은 순서대로" 돌려가며 배정함(rebuildOwnerFruitIndex)
-  // — "사과 2", "사과 3"처럼 번호를 붙여 구분하던 방식은 없앰. 9번째 플레이어부터는 앞사람과
-  // 같은 과일 이름이 다시 나올 수 있는데, 이건 사용자가 받아들이기로 한 트레이드오프임
+  // 과일은 clientId 해시값으로 접속 즉시 고정 배정됨(fruitOf) — 다른 플레이어와 겹칠 수
+  // 있는데("사과 2"처럼 번호를 붙여 구분하지 않음), 대신 절대 안 바뀌는 걸 우선한 트레이드오프
   // owner(clientId)는 유저가 localStorage를 조작하면 임의 문자열일 수 있으므로
   // innerHTML이 아닌 textContent/DOM API로만 채워 넣어 삽입 공격을 원천 차단
   ranked.forEach(([owner, count], i) => {
@@ -1986,9 +1974,6 @@ async function boot() {
       }
     }
     const words = board.words ? (Array.isArray(board.words) ? board.words : Object.values(board.words)) : [];
-    // 단어를 처음 놓은 순서대로 8개 과일을 돌려가며 배정 — 모든 클라이언트가 같은 words
-    // 배열을 보므로 항상 동일한 결과가 나옴
-    rebuildOwnerFruitIndex(words);
     usedWords = new Set(words.map(w => w.canonical || w.word));
     placedWordsIndex = new Map();
     for (const w of words) {
