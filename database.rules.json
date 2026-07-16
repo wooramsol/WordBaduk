@@ -8,6 +8,14 @@
       ".read": true,
       ".write": true
     },
+    "playerFruit": {
+      ".read": true,
+      ".write": true
+    },
+    "fruitCounter": {
+      ".read": true,
+      ".write": true
+    },
     "$other": {
       ".read": false,
       ".write": false
