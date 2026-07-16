@@ -93,6 +93,29 @@
     cursor: pointer;
   }
   #resetBoardBtn:hover { background: #f6d6d6; }
+  /* 게임 종료(보드가 빈칸 없이 다 참) 축하 화면 — 컨페티 캔버스 + 중앙에 둥둥 뜨는 승리 텍스트 */
+  #gameOverOverlay {
+    position: fixed; inset: 0; z-index: 60;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(245,241,232,.35);
+    cursor: pointer;
+  }
+  #gameOverOverlay.hidden { display: none; }
+  #confettiCanvas { position: fixed; inset: 0; z-index: 59; pointer-events: none; }
+  #gameOverText {
+    position: relative; text-align: center;
+    font-size: clamp(28px, 8vw, 56px); font-weight: 800; color: #1a1a1a;
+    padding: 18px 28px; border-radius: 20px;
+    background: rgba(255,255,255,.9); border: 1px solid #d8d2c4;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+    animation: gameOverFloat 2.2s ease-in-out infinite alternate;
+    white-space: nowrap;
+  }
+  #gameOverHint { display: block; margin-top: 8px; font-size: 13px; font-weight: 400; color: #8a7a4f; }
+  @keyframes gameOverFloat {
+    from { transform: translateY(-14px); }
+    to   { transform: translateY(14px); }
+  }
   #topRight { position: fixed; top: 12px; right: 12px; z-index: 10; display: flex; gap: 6px; }
   #userCountTag { font-size: 12px; padding: 6px 10px; border-radius: 20px;
     background: #e5e0d3; color: #777; white-space: nowrap;
@@ -281,7 +304,12 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.71</div>
+<div id="verTagBottom">v1.1.72</div>
+
+<canvas id="confettiCanvas"></canvas>
+<div id="gameOverOverlay" class="hidden">
+  <div id="gameOverText">🎉 <span id="gameOverName"></span> 승리! 🎉<span id="gameOverHint">눌러서 닫기</span></div>
+</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
@@ -1599,11 +1627,6 @@ infoPanel.addEventListener('click', (e) => {
 const resetBoardBtn = document.getElementById('resetBoardBtn');
 resetBoardBtn.onclick = () => {
   if (!boardRef) { showToast('아직 연결 중이에요. 잠시 후 다시 시도해 주세요.'); return; }
-  // 아무나 누르면 실수로 전체 데이터가 날아갈 수 있어서, 간단한 비밀번호로 한 번 더 막음
-  // (보안 목적이 아니라 실수 방지용 — 소스에 그대로 노출되는 값이니 참고)
-  const pw = prompt('테스트용 초기화 비밀번호를 입력하세요.');
-  if (pw === null) return; // 취소
-  if (pw !== '1102') { showToast('비밀번호가 틀렸어요.'); return; }
   if (!confirm('정말 모든 낱말을 초기화할까요?\n테스트용 기능이며 지금 접속 중인 모든 사람에게 영향을 줍니다.')) return;
   boardRef.set({ cells: {}, words: [], version: 0 });
   prevScores.clear(); // 점수판 카운트업 애니메이션용으로 기억해둔 직전 점수도 같이 초기화
@@ -1715,6 +1738,113 @@ function updateLeaderboard() {
   leaderboardEl.classList.remove('hidden');
 }
 
+// ---------- 게임 종료 판정 + 승리 축하 연출 ----------
+// 보드(15x15, 총 225칸)에 빈칸이 하나도 없으면(전부 낱말이거나 이미 포획된 칸) 더 이상
+// 새로 포획할 영역이 생길 수 없으므로 게임 종료로 봄. 포획한 칸이 가장 많은 사람이 승자.
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const gameOverNameEl = document.getElementById('gameOverName');
+const confettiCanvas = document.getElementById('confettiCanvas');
+const confettiCtx = confettiCanvas.getContext('2d');
+let gameOverShown = false; // 지금 이 "꽉 찬" 상태를 이미 축하했는지 — 재초기화되면 다시 false로 풀림
+let confettiParticles = [];
+let confettiBurstTimer = null;
+let confettiRafId = null;
+const CONFETTI_COLORS = ['#e05a5a', '#f0a53c', '#f0d23c', '#5ab86e', '#4a90d9', '#8a6fd0', '#e05aa8'];
+
+function resizeConfettiCanvas() {
+  confettiCanvas.width = innerWidth * dpr;
+  confettiCanvas.height = innerHeight * dpr;
+  confettiCanvas.style.width = innerWidth + 'px';
+  confettiCanvas.style.height = innerHeight + 'px';
+}
+
+function spawnConfettiBurst() {
+  // 화면 상단 여러 지점에서 동시에 "빵!" 하고 터지는 느낌 — 매번 랜덤한 위치 3~4곳
+  const spots = 3 + Math.floor(Math.random() * 2);
+  for (let s = 0; s < spots; s++) {
+    const ox = Math.random() * innerWidth;
+    const oy = -20 - Math.random() * 40;
+    const n = 18 + Math.floor(Math.random() * 10);
+    for (let i = 0; i < n; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 5;
+      confettiParticles.push({
+        x: ox, y: oy,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed * 0.5 + 1,
+        size: 5 + Math.random() * 5,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        rot: Math.random() * Math.PI * 2,
+        vrot: (Math.random() - 0.5) * 0.3,
+        life: 0, maxLife: 90 + Math.random() * 40,
+      });
+    }
+  }
+}
+
+function stepConfetti() {
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  confettiCtx.save();
+  confettiCtx.scale(dpr, dpr);
+  confettiParticles = confettiParticles.filter(p => p.life < p.maxLife);
+  for (const p of confettiParticles) {
+    p.vy += 0.08; // 중력
+    p.x += p.vx; p.y += p.vy; p.rot += p.vrot; p.life++;
+    const fade = p.life > p.maxLife - 20 ? (p.maxLife - p.life) / 20 : 1;
+    confettiCtx.save();
+    confettiCtx.globalAlpha = Math.max(0, fade);
+    confettiCtx.translate(p.x, p.y);
+    confettiCtx.rotate(p.rot);
+    confettiCtx.fillStyle = p.color;
+    confettiCtx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.6);
+    confettiCtx.restore();
+  }
+  confettiCtx.restore();
+  confettiRafId = requestAnimationFrame(stepConfetti);
+}
+
+function showGameOver(winnerOwner) {
+  gameOverNameEl.textContent = ownerName(winnerOwner);
+  gameOverOverlay.classList.remove('hidden');
+  resizeConfettiCanvas();
+  confettiParticles = [];
+  spawnConfettiBurst();
+  if (!confettiBurstTimer) confettiBurstTimer = setInterval(spawnConfettiBurst, 700); // 빵빠레가 계속 터짐
+  if (!confettiRafId) confettiRafId = requestAnimationFrame(stepConfetti);
+}
+
+function hideGameOver() {
+  gameOverOverlay.classList.add('hidden');
+  if (confettiBurstTimer) { clearInterval(confettiBurstTimer); confettiBurstTimer = null; }
+  if (confettiRafId) { cancelAnimationFrame(confettiRafId); confettiRafId = null; }
+  confettiParticles = [];
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+}
+
+gameOverOverlay.addEventListener('click', hideGameOver);
+addEventListener('resize', () => { if (!gameOverOverlay.classList.contains('hidden')) resizeConfettiCanvas(); });
+
+function checkGameOver() {
+  let full = true;
+  for (let x = BOARD_MIN; x <= BOARD_MAX && full; x++) {
+    for (let y = BOARD_MIN; y <= BOARD_MAX; y++) {
+      if (!cells.has(K(x, y))) { full = false; break; }
+    }
+  }
+  if (!full) {
+    if (gameOverShown) { gameOverShown = false; hideGameOver(); } // 초기화 등으로 다시 빈칸이 생기면 리셋
+    return;
+  }
+  if (gameOverShown) return; // 이미 이번 판은 축하 연출을 보여줬음
+  const tally = new Map();
+  for (const c of cells.values()) {
+    if (c.captured && c.owner) tally.set(c.owner, (tally.get(c.owner) || 0) + 1);
+  }
+  if (tally.size === 0) return; // 포획한 사람이 아무도 없으면 축하할 승자가 없음
+  const [winnerOwner] = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+  gameOverShown = true;
+  showGameOver(winnerOwner);
+}
+
 // ---------- 사전 로드 (플레이어 ID 확정과 무관하게 바로 시작) ----------
 fetch('words.txt')
   .then(r => r.text())
@@ -1809,6 +1939,7 @@ async function boot() {
     firstSync = false;
     updateStats();
     updateLeaderboard();
+    checkGameOver();
     if (wasFirst) fitBoard(); // 첫 로드: 단어뭉치를 화면 가운데 적절한 크기로
     else draw();
   });
