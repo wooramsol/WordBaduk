@@ -98,12 +98,11 @@
     position: fixed; inset: 0; z-index: 60;
     display: flex; align-items: center; justify-content: center;
     background: rgba(245,241,232,.35);
-    cursor: pointer;
   }
   #gameOverOverlay.hidden { display: none; }
   #confettiCanvas { position: fixed; inset: 0; z-index: 59; pointer-events: none; }
   #gameOverText {
-    position: relative; text-align: center;
+    position: relative; text-align: center; cursor: pointer;
     font-size: clamp(28px, 8vw, 56px); font-weight: 800; color: #1a1a1a;
     padding: 18px 28px; border-radius: 20px;
     background: rgba(255,255,255,.9); border: 1px solid #d8d2c4;
@@ -314,7 +313,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.80</div>
+<div id="verTagBottom">v1.1.81</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1894,10 +1893,9 @@ function hideGameOver() {
 }
 
 gameOverOverlay.addEventListener('click', (e) => {
-  if (e.target.closest('#gameOverRestartBtn')) return; // 버튼 클릭은 아래 별도 핸들러가 처리
-  if (gameOverPhase === 'celebrate') showRestartPrompt();
-  // 재시작 버튼이 떠 있는 상태에서 배경을 누르는 건 아무 동작도 하지 않음 —
-  // 재시작 버튼을 직접 눌러야만 닫히고 초기화됨
+  // 재시작 버튼처럼, 승리 문구 팝업도 그 영역을 직접 눌러야만 반응하고 바깥(배경)을
+  // 눌러도 아무 동작이 없음 — 재시작 버튼 단계에서도 마찬가지로 버튼 자체 핸들러만 반응함
+  if (gameOverPhase === 'celebrate' && e.target.closest('#gameOverText')) showRestartPrompt();
 });
 
 gameOverRestartBtn.addEventListener('click', (e) => {
