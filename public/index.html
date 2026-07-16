@@ -228,6 +228,9 @@
     background: rgba(40,40,40,.92); color: #fff; padding: 9px 18px;
     border-radius: 20px; font-size: 13px; z-index: 30; display: none;
     max-width: 90vw; text-align: center;
+    /* 짧은 문구는 항상 한 줄로만 보이게 함. 아주 긴 메시지가 어쩌다 들어와도 두 줄로
+       꺾이지 않고, 대신 90vw를 넘는 부분만 "…"으로 잘림 */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
   @media (max-width: 640px) {
@@ -319,7 +322,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.1.96</div>
+<div id="verTagBottom">v1.1.97</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
