@@ -268,7 +268,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.63</div>
+<div id="verTagBottom">v1.1.64</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
@@ -485,6 +485,24 @@ function resolvePlace(typed, x, y, dir, getCell, boardEmpty, usedWords) {
   const long = fails.find(f => f.kind === 'long');
   if (long) return { err: long.msg };
   return { err: '두 글자 이상 입력하세요.', tooShort: true }; // 에러가 아니라 '아직 입력 중'일 뿐이므로 배지를 빨간색으로 만들지 않음
+}
+
+// ---------- 채팅 배치(영문/숫자/공백) ----------
+// 영문/숫자/공백이 하나라도 섞인 입력은 애초에 한글 사전 단어가 될 수 없으므로(DICT는
+// 한글만 포함) resolvePlace()의 사전/두음법칙/접두·접미 병합/중복단어 로직을 전부 건너뛰고,
+// 지금 선택한 칸부터 입력 방향으로 그대로 한 글자씩 놓기만 함. 유일한 제약은: 보드 범위 안,
+// 포획된 칸 아님, 이미 다른 글자가 있는 칸을 다른 글자로 덮어쓰지 않음(완전히 같은 글자로
+// "겹쳐 쓰는" 것만 허용) — 나머지(단어잇기 규칙, 사전, 중복 금지)는 전혀 적용되지 않음.
+// 그래도 놓인 글자는 다른 칸과 똑같이 "벽"으로 취급되어 땅따먹기(포획) 판정엔 정상적으로 참여함.
+function resolveChatPlace(typed, x, y, dir, getCell) {
+  if (typed.length > 15) return { err: '한 번에 15글자까지만 입력할 수 있어요.' };
+  const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
+  for (let i = 0; i < typed.length; i++) {
+    const ex = getCell(x + dx * i, y + dy * i);
+    if (ex && ex.captured) return { err: '포획된 영역이라 사용할 수 없습니다.' };
+    if (ex && ex.ch !== typed[i]) return { err: `${i + 1}번째 칸의 기존 글자와 다릅니다.` };
+  }
+  return { ok: true, word: typed, startX: x, startY: y };
 }
 
 // ---------- 땅따먹기: 완전히 둘러싸인 빈 칸 포획(flood-fill) ----------
@@ -1212,19 +1230,23 @@ function updateModeBadge() {
   modeBadge.textContent = sel.dir === 'h' ? '가로' : '세로';
 }
 
-// 한글(완성 음절 가-힣 + 조합 중인 자모 ㄱ-ㅎ/ㅏ-ㅣ)이 아닌 문자(영문, 숫자, 공백, 특수문자
-// 등)는 입력창에 아예 남지 않도록 즉시 걸러냄. 예전엔 이런 문자가 들어와도 그냥 checkPreview()
-// 에서 조용히 막히기만 하고 화면엔 아무 안내도 안 떠서(웹에선 안내가 뜨는 modeBadge 자체를 안
-// 씀) 사용자 입장에선 "입력이 아예 안 먹는" 것처럼 보였음 — 이제 즉시 지우고 토스트로 안내함.
+// 한글(완성 음절 가-힣 + 조합 중인 자모 ㄱ-ㅎ/ㅏ-ㅣ) 그리고 영문/숫자/공백은 입력을 허용하고,
+// 그 외(특수문자 등)만 입력창에 남지 않도록 즉시 걸러냄. 영문/숫자/공백은 사전 단어로는 쓸 수
+// 없지만(단어잇기·포획엔 관여 안 함) 사람들이 채팅처럼 자유롭게 쓰는 용도로 자주 써서 허용함
+// — 실제 배치 가능 여부는 checkPreview()/submit()에서 "채팅 모드"로 별도 판단함.
+// 예전엔 이런 문자가 들어와도 그냥 checkPreview()에서 조용히 막히기만 하고 화면엔 아무 안내도
+// 안 떠서(웹에선 안내가 뜨는 modeBadge 자체를 안 씀) 사용자 입장에선 "입력이 아예 안 먹는"
+// 것처럼 보였음 — 이제 즉시 지우고 토스트로 안내함.
 // e.isComposing이 true인 동안(한글 조합 중)은 절대 건드리지 않아야 조합이 안 끊어짐.
+const CHAT_CHARS_RE = /[A-Za-z0-9 ]/; // 채팅 취급 문자(영문/숫자/공백) — 하나라도 섞이면 사전 검증 없이 채팅으로 처리
 let invalidCharNotified = false;
 wordInput.addEventListener('input', e => {
   if (!e.isComposing) {
-    const cleaned = wordInput.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣ]/g, '');
+    const cleaned = wordInput.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9 ]/g, '');
     if (cleaned !== wordInput.value) {
       wordInput.value = cleaned;
       if (!invalidCharNotified) {
-        showToast('한글만 입력할 수 있어요.');
+        showToast('한글, 영문, 숫자, 띄어쓰기만 입력할 수 있어요.');
         invalidCharNotified = true;
       }
     } else {
@@ -1298,6 +1320,24 @@ function checkPreview() {
     draw();
     return;
   }
+  // 영문/숫자/공백이 하나라도 섞이면(한글과 섞여 있어도) 한글 사전 단어가 될 수 없으므로
+  // — 사전/두음법칙/단어잇기/중복금지를 전부 건너뛰는 "채팅 모드"로 처리. 사람들이 자유
+  // 텍스트를 칸에 적으며 채팅처럼 쓰는 걸 지원하되, 이렇게 놓인 글자는 다른 한글 단어와
+  // 이어붙는 데는 쓰이지 않음(사전 검증이 아예 없으므로).
+  if (CHAT_CHARS_RE.test(typed)) {
+    const rc = resolveChatPlace(typed, sel.x, sel.y, sel.dir, getLocalCell);
+    if (rc.ok) {
+      preview = { startX: rc.startX, startY: rc.startY, word: rc.word, conflictTyped: -1, typedFrom: 0, typedLen: typed.length, chat: true };
+      setMsg('채팅으로 입력돼요 (단어잇기엔 안 쓰여요)', true);
+      submitEnabled = true;
+    } else {
+      preview = { startX: sel.x, startY: sel.y, word: typed, conflictTyped: -1, typedFrom: 0, typedLen: typed.length, chat: true };
+      setMsg(rc.err);
+      submitEnabled = false;
+    }
+    if (HAS_TOUCH) ensureVisible(); else draw();
+    return;
+  }
   // 완성된 음절(가-힣)뿐 아니라 조합 중인 낱자음/모음(ㄱ-ㅎ, ㅏ-ㅣ)도 허용해서,
   // 한 음절이 완성되기 전에도 입력하는 즉시 화면에 보이게 함(자모 단위 실시간 미리보기).
   if (!/^[가-힣ㄱ-ㅎㅏ-ㅣ]+$/.test(typed)) {
@@ -1351,8 +1391,11 @@ function checkPreview() {
 async function submit() {
   if (!sel || placing) return;
   const typed = wordInput.value.trim();
-  if (!typed || !/^[가-힣]+$/.test(typed)) return;
-  if (!DICT) { setMsg('사전을 아직 불러오는 중이에요…'); showToast('사전을 아직 불러오는 중이에요…'); return; }
+  if (!typed) return;
+  const isChat = CHAT_CHARS_RE.test(typed);
+  if (!isChat && !/^[가-힣]+$/.test(typed)) return;
+  // 채팅 모드는 사전이 필요 없으므로 DICT 로딩 여부와 무관하게 진행
+  if (!isChat && !DICT) { setMsg('사전을 아직 불러오는 중이에요…'); showToast('사전을 아직 불러오는 중이에요…'); return; }
   if (!clientId || !boardRef) { setMsg('플레이어 확인 중이에요…'); showToast('플레이어 확인 중이에요… 잠시 후 다시 시도해 주세요.'); return; }
   placing = true;
   setMsg('놓는 중…');
@@ -1381,8 +1424,12 @@ async function submit() {
       };
       const empty = Object.keys(board.cells).length === 0;
       const wordsList = Array.isArray(board.words) ? board.words : Object.values(board.words);
+      // 채팅 텍스트는 영문/숫자/공백을 포함해 한글 사전 단어와 절대 같은 문자열이 될 수
+      // 없으므로, usedWordsTx에 채팅 기록이 섞여 있어도 사전 단어 중복판정과 충돌하지 않음
       const usedWordsTx = new Set(wordsList.map(w => w.canonical || w.word));
-      const r = resolvePlace(typed, x, y, dir, getCell, empty, usedWordsTx);
+      const r = isChat
+        ? resolveChatPlace(typed, x, y, dir, getCell)
+        : resolvePlace(typed, x, y, dir, getCell, empty, usedWordsTx);
       if (!r.ok) { lastErr = r.err; return; } // abort
 
       const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
@@ -1398,11 +1445,13 @@ async function submit() {
       }
       board.words.push({
         word: r.word,
-        canonical: r.canonical !== r.word ? r.canonical : null,
+        canonical: r.canonical && r.canonical !== r.word ? r.canonical : null,
         x: r.startX, y: r.startY, dir, by: clientId, ts: Date.now(),
+        chat: isChat || undefined, // 채팅 여부 기록(과일 배정 순서엔 영향 없음, 다른 로직도 안 씀)
       });
 
       // 땅따먹기: 방금 놓은 글자로 완전히 둘러싸인 빈 칸이 생겼는지 검사해 포획 처리
+      // (채팅으로 놓은 글자도 다른 글자와 동일하게 "벽"으로 취급되어 포획 판정에 참여함)
       const capturedCells = findCapturedRegions(getCell, K, placedCoords);
       for (const [cx, cy] of capturedCells) {
         board.cells[K(cx, cy)] = { captured: true, owner: clientId, ts: Date.now() };
@@ -1411,19 +1460,24 @@ async function submit() {
       board.version = (board.version || 0) + 1;
       placedInfo = {
         word: r.word,
-        canonical: r.canonical !== r.word ? r.canonical : null,
+        canonical: r.canonical && r.canonical !== r.word ? r.canonical : null,
         capturedCount: capturedCells.length,
         startX: r.startX,
         startY: r.startY,
+        chat: isChat,
       };
       return board;
     });
 
     placing = false;
     if (result.committed && placedInfo) {
-      const note = placedInfo.canonical ? ` (두음법칙: ${placedInfo.canonical})` : '';
       const capNote = placedInfo.capturedCount > 0 ? ` — 영역 ${placedInfo.capturedCount}칸 포획!` : '';
-      showToast(`'${placedInfo.word}' 완성!${note}${capNote}`);
+      if (placedInfo.chat) {
+        showToast(`'${placedInfo.word}' 입력했어요${capNote}`);
+      } else {
+        const note = placedInfo.canonical ? ` (두음법칙: ${placedInfo.canonical})` : '';
+        showToast(`'${placedInfo.word}' 완성!${note}${capNote}`);
+      }
       // 완성되면 선택 칸을 방금 완성한 단어의 "마지막 글자" 칸으로 옮김 — 이어서 다음 글자를
       // 바로 입력하기 좋은 위치(예: 단어 끝에 새 글자를 붙여 다른 단어를 잇는 흐름)이기 때문
       if (sel) {
