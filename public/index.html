@@ -270,7 +270,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.66</div>
+<div id="verTagBottom">v1.1.67</div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
      화면엔 안 보이고 선택된 칸 위치로 계속 따라다님. modeBadge는 가로/세로 모드 + 입력 상태만 표시 -->
@@ -1449,7 +1449,12 @@ async function submit() {
         word: r.word,
         canonical: r.canonical && r.canonical !== r.word ? r.canonical : null,
         x: r.startX, y: r.startY, dir, by: clientId, ts: Date.now(),
-        chat: isChat || undefined, // 채팅 여부 기록(과일 배정 순서엔 영향 없음, 다른 로직도 안 씀)
+        // 채팅 여부 기록(과일 배정 순서엔 영향 없음, 다른 로직도 안 씀). 반드시 boolean으로만
+        // 써야 함 — Firebase RTDB는 값이 undefined인 필드가 하나라도 있으면 트랜잭션 자체를
+        // 즉시 예외로 던짐(네트워크 문제가 아닌데도 "연결에 실패했어요"로 보였던 버그의 원인).
+        // isChat이 false일 때 `isChat || undefined`로 쓰면 정확히 이 undefined가 되어,
+        // 채팅이 아닌 일반 한글 단어를 놓을 때마다(포획 여부와 무관하게) 매번 실패했었음.
+        chat: !!isChat,
       });
 
       // 땅따먹기: 방금 놓은 글자로 완전히 둘러싸인 빈 칸이 생겼는지 검사해 포획 처리
