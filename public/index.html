@@ -314,7 +314,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a></div>
-<div id="verTagBottom">v1.1.77</div>
+<div id="verTagBottom">v1.1.78</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -801,7 +801,13 @@ function draw() {
     // 글자 칸은 by(마지막 배치자), 포획 칸은 owner(차지한 사람)에 기록되어 있음.
     const flashOwner = c.by != null ? c.by : c.owner;
     const flashHue = flashOwner != null ? ownerHue(flashOwner) : 45;
-    const flashFill = `hsla(${flashHue}, 90%, 68%, ${Math.max(0.15, 0.9 - age / 2500)})`;
+    // 완성 직후 한 번만 밝아졌다 흐려지는 대신, 짧게 몇 번 깜빡이도록(sin 진동) 만들고
+    // 그 진동 폭 자체가 시간이 지날수록 잦아들게 해서(envelope) 자연스럽게 끝남 —
+    // cells는 Firebase로 동기화되는 실제 보드 상태라 이 반짝임도 접속한 모두에게 똑같이 보임
+    const blinkPulse = 0.5 + 0.5 * Math.sin(age / 130);
+    const envelope = Math.max(0, 1 - age / 2000);
+    const flashAlpha = 0.2 + 0.7 * blinkPulse * envelope;
+    const flashFill = `hsla(${flashHue}, 90%, 68%, ${flashAlpha})`;
 
     if (c.captured) {
       // 땅따먹기로 포획된 영역: 소유자 색 배경 위에 소유자의 과일 아이콘을 그려서
