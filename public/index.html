@@ -302,6 +302,13 @@
   }
   #memberLogoutBtn.hidden { display: none; }
   #memberLogoutBtn:hover { background: #d8d2c0; }
+  /* 비회원으로 시작했을 때만 보이는 버튼 — 눌러서 다시 멤버/비회원 선택 화면으로 갈 수 있음 */
+  #guestSwitchBtn {
+    font-size: 12px; padding: 6px 10px; border-radius: 20px;
+    background: #e5e0d3; color: #6b5e3f; border: none; cursor: pointer;
+  }
+  #guestSwitchBtn.hidden { display: none; }
+  #guestSwitchBtn:hover { background: #d8d2c0; }
 
   @media (max-width: 640px) {
     /* 주소창/노치 등 모바일 상단 UI에 가려 잘리지 않도록 더 아래로, safe-area까지 고려 */
@@ -392,12 +399,13 @@
 <div id="topRight">
   <div id="userCountTag"><span id="userCountDot"></span><span id="userCountText">1명 접속 중</span></div>
   <button id="memberLogoutBtn" type="button" class="hidden">로그아웃</button>
+  <button id="guestSwitchBtn" type="button" class="hidden">멤버 로그인</button>
 </div>
 <div id="leaderboard" class="hidden">
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.0</div>
+<div id="verTagBottom">v1.9.1</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -2338,6 +2346,7 @@ const authChoiceViewEl = document.getElementById('authChoiceView');
 const authLoginViewEl = document.getElementById('authLoginView');
 const authSignupViewEl = document.getElementById('authSignupView');
 const memberLogoutBtn = document.getElementById('memberLogoutBtn');
+const guestSwitchBtn = document.getElementById('guestSwitchBtn');
 
 function authShowView(view) {
   authChoiceViewEl.classList.toggle('hidden', view !== 'choice');
@@ -2445,11 +2454,15 @@ async function resolveIdentity() {
 
   let guestChosen = false;
   try { guestChosen = localStorage.getItem('wb-guestChosen') === '1'; } catch {}
-  if (guestChosen) return await fetchClientId();
+  if (guestChosen) {
+    guestSwitchBtn.classList.remove('hidden');
+    return await fetchClientId();
+  }
 
   const result = await showAuthChoiceFlow();
   if (result.mode === 'guest') {
     try { localStorage.setItem('wb-guestChosen', '1'); } catch {}
+    guestSwitchBtn.classList.remove('hidden');
     return await fetchClientId();
   }
   isMemberMode = true;
@@ -2459,6 +2472,14 @@ async function resolveIdentity() {
 
 memberLogoutBtn.addEventListener('click', async () => {
   try { await firebase.auth().signOut(); } catch {}
+  location.reload();
+});
+
+// 비회원으로 시작한 사람이 다시 멤버/비회원 선택 화면을 보고 싶을 때 — "비회원으로
+// 시작했다"는 기억(localStorage)만 지우고 새로고침하면 resolveIdentity()가 다시
+// showAuthChoiceFlow()를 띄워줌
+guestSwitchBtn.addEventListener('click', () => {
+  try { localStorage.removeItem('wb-guestChosen'); } catch {}
   location.reload();
 });
 
