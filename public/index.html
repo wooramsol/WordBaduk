@@ -98,9 +98,9 @@
   .dirArrowIcon { font-size: 14px; font-weight: 700; color: #8a7a4f; margin: 0 1px; }
   /* 반복 테스트를 위한 임시 초기화 버튼 — 테스트 끝나면 이 스타일/버튼 통째로 지워도 됨 */
   #resetBoardBtn {
-    display: block; margin: 10px 0 2px; padding: 5px 10px; font-size: 11px;
+    padding: 5px 10px; font-size: 11px;
     border: 1px solid #e2a8a8; border-radius: 8px; background: #fbeaea; color: #b23c3c;
-    cursor: pointer;
+    cursor: pointer; flex: none;
   }
   #resetBoardBtn:hover { background: #f6d6d6; }
   /* 게임 종료(보드가 빈칸 없이 다 참) 축하 화면 — 컨페티 캔버스 + 중앙에 둥둥 뜨는 승리 텍스트 */
@@ -324,8 +324,10 @@
   표준국어대사전 기준 명사만 인정돼요.<br>
   <span id="dirHintTouch" style="color:#8a7a4f;display:none"><span class="dirIconBadge">가로</span><span class="dirIconBadge">세로</span> 배지를 눌러 입력 방향을 바꿀 수 있어요.</span>
   <span id="dirHintWeb" style="color:#8a7a4f;display:none"><span class="dirTabBadge">Tab</span>과 화살표(<span class="dirArrowIcon">&rarr;</span>/<span class="dirArrowIcon">&darr;</span>)로 입력 방향을 바꿀 수 있어요.</span></div>
-  <button id="resetBoardBtn" type="button">전체 낱말 초기화 (테스트용)</button>
-  <div style="font-size:11px;color:#a89a78;text-align:center;margin-top:8px;">눌러서 닫기</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+    <button id="resetBoardBtn" type="button">낱말 초기화 (테스트용)</button>
+    <div style="font-size:11px;color:#a89a78;">눌러서 닫기</div>
+  </div>
 </div>
 <div id="topRight">
   <div id="userCountTag"><span id="userCountDot"></span><span id="userCountText">1명 접속 중</span></div>
@@ -334,7 +336,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.2.0</div>
+<div id="verTagBottom">v1.2.1</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
