@@ -223,6 +223,14 @@
        "지금 선택된 칸" 위에만 걸쳐 있어서, 그 칸을 다시 탭했을 때 네이티브로 재포커스되는 것도
        문제 없음(이미 그 칸이 선택된 상태이므로). */
     min-width: 24px; min-height: 24px; outline: none; box-shadow: none;
+    /* wordInput이 선택 칸 크기만큼 화면 위에 실제로 얹혀 있다 보니, 그 위에서 드래그(보드
+       패닝 제스처)를 하면 브라우저가 "이 입력창 안의 글자를 드래그로 선택 중"이라고 오해해서
+       선택 핸들 + 붙여넣기/자동완성 말풍선이 뜨는 문제가 있었음. html/body의 user-select:none은
+       입력창 자신의 값 텍스트 선택까지는 못 막아서(브라우저가 폼 요소는 예외로 둠) 여기 직접
+       걸어줌 + touch-action:none으로 드래그 제스처 자체를 브라우저가 가로채지 않게 함
+       (아래 JS의 selectstart 차단과 함께 써야 완전히 막힘) */
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    touch-action: none;
   }
   /* 방향 전환 배지 — 터치 기기(모바일)에서만 씀. 선택 칸 위에 띄우고, 터치하기 편하도록
      넉넉한 크기로 만들고, 그리드 칸과 안 겹치게 충분히 띄움. 제출은 키보드 Enter로만 함. */
@@ -450,7 +458,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.9</div>
+<div id="verTagBottom">v1.9.10</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -517,7 +525,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.9'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.10'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1666,6 +1674,14 @@ wordInput.addEventListener('compositionupdate', () => { checkPreview(); requestA
 wordInput.addEventListener('compositionend', () => { checkPreview(); requestAnimationFrame(draw); });
 // 모바일 키보드가 닫히는 시점(포커스 아웃)에도 캔버스를 한 번 완전히 리셋해서 잔상 방지
 wordInput.addEventListener('blur', () => requestAnimationFrame(resize));
+// 보드를 드래그(패닝)하다가 그 드래그가 선택 칸 위(=wordInput이 얹혀있는 자리)를 지나가면
+// 브라우저가 "입력창 안의 텍스트를 드래그로 선택하는 중"이라고 오해해서 선택 핸들과
+// 붙여넣기/자동완성 말풍선이 뜨는 문제가 있었음 — CSS user-select:none만으론 폼 요소 자체의
+// 값 텍스트 선택까지는 못 막아서, 선택이 "시작되려는" 순간 자체를 막아버림. 이렇게 해도
+// 탭해서 커서를 두거나 타이핑/IME 조합하는 데는 전혀 영향 없음(선택 범위가 아니라 커서
+// 위치만 옮기는 동작은 selectstart가 아니라서).
+wordInput.addEventListener('selectstart', e => e.preventDefault());
+wordInput.addEventListener('contextmenu', e => e.preventDefault());
 wordInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { submit(); return; }
   if (e.key === 'Escape') { closePopup(); return; }
