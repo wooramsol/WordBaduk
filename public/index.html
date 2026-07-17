@@ -349,7 +349,7 @@
   <ol id="lbList"></ol>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.6.1</div>
+<div id="verTagBottom">v1.6.2</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -488,7 +488,11 @@ function resolvePlace(typed, x, y, dir, getCell, boardEmpty, usedWords) {
   const tCells = [];
   let overlap = 0, newCount = 0;
   for (let i = 0; i < typed.length; i++) {
-    const ex = getCell(x + dx * i, y + dy * i);
+    const cx = x + dx * i, cy = y + dy * i;
+    // 보드 밖으로 나가는 칸은 getCell()이 "포획된 칸과 똑같은 모양"(captured:true)의 벽
+    // 객체를 돌려주므로, 아래 captured 검사보다 먼저 따로 구분해서 정확한 이유를 알려줌
+    if (!inBounds(cx, cy)) return { err: '보드 범위를 벗어났어요.' };
+    const ex = getCell(cx, cy);
     tCells.push(ex);
     if (ex) overlap++; else newCount++;
   }
@@ -585,7 +589,11 @@ function resolveChatPlace(typed, x, y, dir, getCell) {
   if (typed.length > 15) return { err: '한 번에 15글자까지만 입력할 수 있어요.' };
   const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
   for (let i = 0; i < typed.length; i++) {
-    const ex = getCell(x + dx * i, y + dy * i);
+    const cx = x + dx * i, cy = y + dy * i;
+    // 보드 밖으로 나가는 칸은 getCell()이 "포획된 칸과 똑같은 모양"(captured:true)의 벽
+    // 객체를 돌려주므로, 아래 captured 검사보다 먼저 따로 구분해서 정확한 이유를 알려줌
+    if (!inBounds(cx, cy)) return { err: '보드 범위를 벗어났어요.' };
+    const ex = getCell(cx, cy);
     if (ex && ex.captured) return { err: '포획된 영역이라 사용할 수 없습니다.' };
     if (ex && ex.ch !== typed[i]) return { err: `${i + 1}번째 칸의 기존 글자와 다릅니다.` };
   }
