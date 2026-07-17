@@ -101,7 +101,7 @@ function extractOrigin(item) {
 
 async function probe() {
   console.log('테스트 조회 중… (검색어: 카메라)');
-  const json = await callApi({ q: '카메라', num: '3' });
+  const json = await callApi({ q: '카메라', num: '10' });
   console.log('\n=== 원본 응답(JSON) ===');
   console.log(JSON.stringify(json, null, 2));
 
@@ -180,4 +180,4 @@ async function run() {
   const mode = process.argv[2];
   if (mode === 'run') await run();
   else await probe(); // 인자 없이 실행하면 안전하게 probe만
-})().catch(e => { console.error('오류:', e); process.exit(1); });
+})().catch(e => { console.error('오류:', e.message); process.exit(1); });
