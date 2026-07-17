@@ -4,3 +4,4 @@ data.json
 .DS_Store
 public/firebase-config.js
 functions/.env
+scripts/probe-output.json

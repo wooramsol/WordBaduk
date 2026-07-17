@@ -102,20 +102,18 @@ function extractOrigin(item) {
 async function probe() {
   console.log('테스트 조회 중… (검색어: 카메라)');
   const json = await callApi({ q: '카메라', num: '10' });
-  console.log('\n=== 원본 응답(JSON) ===');
-  console.log(JSON.stringify(json, null, 2));
 
   const items = extractItems(json);
-  console.log(`\n=== 파싱 결과(item ${items.length}건) ===`);
-  for (const it of items) {
-    console.log({
-      word: extractWord(it),
-      pos: extractPos(it),
-      origin: extractOrigin(it),
-    });
-  }
-  console.log('\n위 "원본 응답"과 "파싱 결과"를 그대로 복사해서 Claude에게 보여주세요.');
-  console.log('word/pos/origin이 실제 값과 안 맞으면 스크립트의 extractWord/extractPos/extractOrigin을 고친 뒤 다시 probe 해봐야 해요.');
+  const parsed = items.map(it => ({ word: extractWord(it), pos: extractPos(it), origin: extractOrigin(it) }));
+
+  // 터미널 복사/붙여넣기는 길면 잘리기 쉬우니, 원본 JSON을 파일로 저장해둠 — 이 저장소
+  // 폴더는 Claude 작업 환경에도 마운트돼 있어서, 그냥 실행만 해주면 Claude가 파일을 직접 읽어볼 수 있음.
+  const outPath = path.join(__dirname, 'probe-output.json');
+  fs.writeFileSync(outPath, JSON.stringify({ raw: json, parsed }, null, 2));
+  console.log(`\n원본 응답 + 파싱 결과를 ${outPath} 에 저장했어요.`);
+  console.log('따로 복사할 필요 없이, "다 됐어" 정도로만 알려주시면 Claude가 이 파일을 직접 읽어서 확인할게요.');
+  console.log('\n(참고용 요약)');
+  for (const p of parsed) console.log(p);
 }
 
 async function run() {
