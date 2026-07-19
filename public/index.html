@@ -196,7 +196,7 @@
        틈에 배치. 배경/테두리/그림자 박스를 아예 없애고 글자만 떠 보이게 함 — 대신 보드
        색이 다양해도(하얀 바탕이든 포획 영역 색이든) 글자가 묻히지 않도록 옅은 흰색
        text-shadow로 은은한 윤곽을 줌(배경 박스 없이도 어디서나 읽히게) */
-    position: fixed; top: 34px; left: 50%; transform: translateX(-50%); z-index: 10;
+    position: fixed; top: 46px; left: 50%; transform: translateX(-50%); z-index: 10;
     padding: 4px 10px;
     font-size: 12px; color: #444;
     text-shadow: 0 0 4px #fff, 0 0 4px #fff, 0 1px 2px rgba(255,255,255,.9);
@@ -204,7 +204,7 @@
        리더보드엔 클릭할 만한 요소(버튼 등)가 없으므로 안전하게 전부 통과시켜도 됨 */
     pointer-events: none;
     max-width: min(40vw, 320px);
-    max-height: calc(100vh - 46px); overflow-y: auto; overflow-x: hidden;
+    max-height: calc(100vh - 58px); overflow-y: auto; overflow-x: hidden;
   }
   #leaderboard.hidden { display: none; }
   #leaderboard ol { list-style: none; counter-reset: lb; }
@@ -564,7 +564,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.18</div>
+<div id="verTagBottom">v1.9.19</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -638,7 +638,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.18'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.19'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -689,6 +689,10 @@ function minCellSizeForZoomOut() {
 let usedWords = new Set();          // 이미 보드에 쓰인 단어(canonical 기준) — 중복 사용 방지
 let userCount = 1;
 let onlineIds = new Set();          // 지금 접속 중인 플레이어 clientId 목록(나 포함) — 점수표 표시용
+// 지금 보드에 떠 있는 판이 "시작될 때 혼자였는지" — board.soloRound를 그대로 반영(boot()의
+// boardRef.on('value')에서 갱신). checkMultiStartTrigger()가 이 값과 실시간 인원수(userCount)를
+// 같이 보고 "혼자 하던 판에 사람이 들어왔는지" 판단함
+let currentRoundIsSolo = false;
 let DICT = null;                    // 사전 (Hosting에서 로드)
 let clientId = null;                // /api/identify(IP 기반 익명 ID) 로 비동기 확정됨 — boot() 참고
 let boardRef = null;                // Firebase 준비되면 boot()에서 할당
@@ -2252,7 +2256,11 @@ function buildSeedBoard() {
     cells[K(cx, cy)] = { ch: word[i], [dir]: true, by: null };
   }
   const words = [{ word, canonical: null, x: startX, y: startY, dir, by: null, ts: Date.now(), chat: false }];
-  return { cells, words, version: 0 };
+  // soloRound: 이 판이 "시작되는 순간" 접속 인원이 1명이었는지 기록 — 이후 누군가 들어와서
+  // 2명 이상이 됐을 때 자동시작 확인 팝업(checkMultiStartTrigger)을 띄울지 판단하는 기준이 됨.
+  // 처음부터 2명 이상으로 시작한 판(soloRound:false)에 중간에 3, 4번째가 들어오는 건 그냥
+  // 바로 참여시키면 되고(요구사항 3), 팝업은 "혼자 하던 판에 사람이 옴"일 때만 필요함
+  return { cells, words, version: 0, soloRound: userCount <= 1 };
 }
 
 // 반복 테스트를 위한 임시 초기화 버튼 — 보드 전체를 비움(단어/포획 영역 모두). 테스트 끝나면
@@ -2576,6 +2584,7 @@ function showRestartPrompt() {
 function hideGameOver() {
   gameOverOverlay.classList.add('hidden');
   stopConfetti();
+  inMultiStartPrompt = false;
 }
 
 // 재시작 버튼 클릭과 Enter 키 둘 다 이 함수 하나로 처리(요구사항: "클릭하거나 엔터누르면")
@@ -2585,6 +2594,38 @@ function triggerRestart() {
   prevScores.clear();
   hideGameOver();
   playGameStart();
+}
+
+// ---------- 게임 자동시작 라운드: 혼자 하던 판에 2명 이상이 되면 시작 확인 팝업 ----------
+// 게임 종료 후의 재시작 프롬프트(showRestartPrompt)와 UI를 그대로 재사용하되, "게임이
+// 끝나서"가 아니라 "혼자 하던 판에 사람이 들어와서" 뜨는 경우를 구분하기 위한 플래그.
+// 이게 true인 동안엔 submit()이 이미 gameOverOverlay 표시 여부로 배치를 막아주므로,
+// 두 사람이 "시작"을 누르기 전까지는 자동으로 서로 같이 플레이가 막힘.
+let inMultiStartPrompt = false;
+
+function showMultiplayerStartPrompt() {
+  inMultiStartPrompt = true;
+  gameOverPhase = 'restart';
+  stopConfetti();
+  gameOverTextEl.classList.add('hidden');
+  gameOverOverlay.classList.remove('hidden');
+  gameOverRestartWrap.classList.remove('hidden');
+  updateRestartPromptText();
+}
+
+// 매번 presence/board가 갱신될 때마다 불러서, "솔로로 시작된 판인데 지금 인원이 2명
+// 이상"이면 팝업을 띄우고, 그 조건이 풀리면(다시 혼자가 됐거나 등) 자동으로 닫음 —
+// 단, 진짜 게임 종료 축하/재시작 화면(showGameOver/showRestartPrompt 경로)은 절대
+// 건드리지 않음(inMultiStartPrompt로 명확히 구분됨)
+function checkMultiStartTrigger() {
+  const conditionMet = currentRoundIsSolo && userCount >= 2;
+  if (inMultiStartPrompt) {
+    if (!conditionMet) hideGameOver();
+    return;
+  }
+  if (conditionMet && gameOverOverlay.classList.contains('hidden')) {
+    showMultiplayerStartPrompt();
+  }
 }
 
 gameOverOverlay.addEventListener('click', (e) => {
@@ -2968,6 +3009,7 @@ async function boot() {
     onlineIds = newIds;
     updateStats();
     updateLeaderboard();
+    checkMultiStartTrigger(); // 혼자 하던 판에 방금 2명 이상이 됐으면 시작 확인 팝업을 띄움
     updateRestartPromptText(); // 재시작 안내가 떠 있는 동안 인원수가 바뀌면 문구도 실시간 갱신
     // 다른 유저들의 실시간 선택 칸/입력 상황 갱신 (누구나 중간에 참여해도 바로 보이게)
     livePeers.clear();
@@ -2985,6 +3027,11 @@ async function boot() {
   let prevWordCount = 0, prevCapturedCount = 0; // 단어 완성/영역 포획 효과음의 이전 스냅샷 기준값
   boardRef.on('value', snap => {
     const board = snap.val() || { cells: {}, words: [] };
+    // soloRound가 없는 예전 형식 보드(이 기능 배포 전에 이미 떠 있던 판)는 false로 취급 —
+    // 배포 순간 갑자기 팝업이 뜨는 대신, 다음 판부터 자연스럽게 정확한 값이 붙게 함
+    currentRoundIsSolo = !!board.soloRound;
+    checkMultiStartTrigger();
+    updateRestartPromptText();
     const bc = board.cells || {};
     const now = Date.now();
     const remote = new Set(Object.keys(bc));
