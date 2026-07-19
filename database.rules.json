@@ -24,6 +24,13 @@
       ".read": true,
       ".write": false
     },
+    "memberTotalScore": {
+      ".read": true,
+      ".write": true,
+      "$uid": {
+        ".validate": "newData.isNumber() && newData.val() >= 0"
+      }
+    },
     "members": {
       ".read": false,
       ".write": false

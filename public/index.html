@@ -139,15 +139,28 @@
   #gameOverEmoji.hidden, #gameOverName.hidden, #gameOverSuffix.hidden,
   #gameOverDrawMsg.hidden, #gameOverDrawSub.hidden { display: none; }
   #gameOverText.hidden { display: none; }
-  /* 승리 화면을 닫으면(눌러서 닫기) 나오는 재시작 버튼 — 비밀번호 없이 누구나 누를 수 있음 */
+  /* 승리 화면을 닫으면(눌러서 닫기) 나오는 재시작 영역 — 비밀번호 없이 누구나 누를 수 있음.
+     혼자일 땐 예전처럼 버튼 하나만(#gameOverRestartInfo는 계속 hidden), 2명 이상 접속 중일
+     땐 그 위에 "게임을 시작하시겠습니까? 현재 인원 N명"을 같이 보여줌(showRestartPrompt/
+     updateRestartPromptText 참고) — 버튼 폰트가 커서 문장을 통째로 버튼 안에 넣으면
+     안 예쁘므로 안내문과 버튼을 분리함 */
+  #gameOverRestartWrap {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    animation: gameOverFloat 2.2s ease-in-out infinite alternate;
+  }
+  #gameOverRestartWrap.hidden { display: none; }
+  #gameOverRestartInfo {
+    font-size: 14px; font-weight: 700; color: #6b5e3f; text-align: center;
+    background: rgba(255,255,255,.9); border: 1px solid #d8d2c4; border-radius: 12px;
+    padding: 6px 14px; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  }
+  #gameOverRestartInfo.hidden { display: none; }
   #gameOverRestartBtn {
-    position: relative; font-size: clamp(18px, 5vw, 26px); font-weight: 800;
+    font-size: clamp(18px, 5vw, 26px); font-weight: 800;
     padding: 16px 32px; border-radius: 18px; cursor: pointer; pointer-events: auto;
     background: rgba(255,255,255,.9); color: #1a1a1a; border: 1px solid #d8d2c4;
     box-shadow: 0 8px 28px rgba(0,0,0,.18);
-    animation: gameOverFloat 2.2s ease-in-out infinite alternate;
   }
-  #gameOverRestartBtn.hidden { display: none; }
   #gameOverRestartBtn:hover { background: rgba(245,241,232,1); }
   @keyframes gameOverFloat {
     from { transform: translateY(-14px); }
@@ -168,12 +181,22 @@
 
   /* 화면 중앙 위쪽에 반투명(opacity) 박스로 표시 — 1~5등만, 순위가 높을수록 글자를
      크게 해서 한눈에 순위 차이가 보이게 함 */
+  /* 명예의전당 버튼 — 리더보드 바로 위, 같은 가운데 줄에 고정. 리더보드와 달리 실제
+     클릭해야 하는 버튼이라 배경/테두리를 그대로 두고 pointer-events도 켜둠(부모가 아니라
+     이 요소 자체가 fixed라 상관없음) */
+  #hallOfFameBtn {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 11;
+    padding: 3px 12px; border-radius: 12px; border: 1px solid #d8d2c4;
+    background: rgba(255,255,255,.85); color: #7a6c45; font-size: 11px; font-weight: 700;
+    cursor: pointer; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  #hallOfFameBtn:hover { background: rgba(255,255,255,1); }
   #leaderboard {
-    /* 브랜드 로고(좌상단)/접속자 태그(우상단)와 같은 top:12px 줄의 가운데 틈에 배치.
-       배경/테두리/그림자 박스를 아예 없애고 글자만 떠 보이게 함 — 대신 보드 색이 다양해도
-       (하얀 바탕이든 포획 영역 색이든) 글자가 묻히지 않도록 옅은 흰색 text-shadow로
-       은은한 윤곽을 줌(배경 박스 없이도 어디서나 읽히게) */
-    position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10;
+    /* 명예의전당 버튼 바로 아래, 브랜드 로고(좌상단)/접속자 태그(우상단)와 같은 가운데
+       틈에 배치. 배경/테두리/그림자 박스를 아예 없애고 글자만 떠 보이게 함 — 대신 보드
+       색이 다양해도(하얀 바탕이든 포획 영역 색이든) 글자가 묻히지 않도록 옅은 흰색
+       text-shadow로 은은한 윤곽을 줌(배경 박스 없이도 어디서나 읽히게) */
+    position: fixed; top: 34px; left: 50%; transform: translateX(-50%); z-index: 10;
     padding: 4px 10px;
     font-size: 12px; color: #444;
     text-shadow: 0 0 4px #fff, 0 0 4px #fff, 0 1px 2px rgba(255,255,255,.9);
@@ -181,7 +204,7 @@
        리더보드엔 클릭할 만한 요소(버튼 등)가 없으므로 안전하게 전부 통과시켜도 됨 */
     pointer-events: none;
     max-width: min(40vw, 320px);
-    max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden;
+    max-height: calc(100vh - 46px); overflow-y: auto; overflow-x: hidden;
   }
   #leaderboard.hidden { display: none; }
   #leaderboard ol { list-style: none; counter-reset: lb; }
@@ -319,6 +342,52 @@
   }
   #guestSwitchBtn.hidden { display: none; }
   #guestSwitchBtn:hover { background: #d8d2c0; }
+
+  /* 명예의전당 — authOverlay/authCard와 같은 가운데 모달 패턴 재사용. 배경(#hofBackdrop)을
+     눌러도 닫히게 해서 authOverlay처럼 익숙한 팝업 동작을 유지함 */
+  #hofBackdrop {
+    position: fixed; inset: 0; z-index: 67;
+    background: rgba(40,36,26,.45);
+  }
+  #hofBackdrop.hidden { display: none; }
+  #hofOverlay {
+    position: fixed; inset: 0; z-index: 68;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; pointer-events: none;
+  }
+  #hofOverlay.hidden { display: none; }
+  #hofCard {
+    pointer-events: auto;
+    background: #fff; border-radius: 18px; padding: 22px 20px;
+    width: 100%; max-width: 340px; box-shadow: 0 8px 28px rgba(0,0,0,.2);
+    max-height: calc(100vh - 32px); overflow-y: auto;
+  }
+  #hofTitle { font-size: 18px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; text-align: center; }
+  #hofSub { font-size: 12px; color: #888; margin-bottom: 14px; text-align: center; }
+  #hofList { list-style: none; }
+  #hofList li {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 4px; border-bottom: 1px solid #f0ece0; font-size: 14px;
+  }
+  #hofList li:last-child { border-bottom: none; }
+  .hofRank { width: 1.8em; flex: none; text-align: center; font-weight: 800; color: #9a927d; font-size: 0.85em; }
+  .hofEmoji { flex: none; font-size: 1.1em; }
+  .hofName { flex: 1; font-weight: 700; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hofScore { flex: none; font-weight: 800; color: #6b5e3f; font-variant-numeric: tabular-nums; }
+  #hofList li.me { background: #f9f5ea; border-radius: 8px; }
+  #hofList li.me .hofName { color: #6b5e3f; }
+  /* 1~3위는 살짝 강조 — 순위 글자색만 다르게 줘서 굳이 이미지 없이도 눈에 띄게 함 */
+  #hofList li[data-rank="1"] .hofRank { color: #c9971f; }
+  #hofList li[data-rank="2"] .hofRank { color: #9a9a9a; }
+  #hofList li[data-rank="3"] .hofRank { color: #b57a4a; }
+  #hofEmpty { text-align: center; font-size: 13px; color: #999; padding: 20px 0; }
+  #hofEmpty.hidden { display: none; }
+  #hofCloseBtn {
+    display: block; width: 100%; padding: 11px; margin-top: 16px;
+    border-radius: 12px; border: 1px solid #d8d2c4; background: #f5f1e8;
+    color: #444; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  #hofCloseBtn:hover { filter: brightness(0.97); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   /* 접속 확인/사전·보드 첫 동기화를 기다리는 동안 화면 전체를 덮는 로딩 스피너 —
@@ -477,16 +546,33 @@
   <button id="memberLogoutBtn" type="button" class="hidden">로그아웃</button>
   <button id="guestSwitchBtn" type="button" class="hidden">로그인</button>
 </div>
+<button id="hallOfFameBtn" type="button">🏆 명예의전당</button>
 <div id="leaderboard" class="hidden">
   <ol id="lbList"></ol>
 </div>
+
+<!-- 명예의전당: 회원(비회원 제외)의 역대 누적 포획 점수 1~20위. memberTotalScore는
+     보드가 초기화/재시작돼도 절대 리셋되지 않는 별도 RTDB 경로(submit() 참고) -->
+<div id="hofBackdrop" class="hidden"></div>
+<div id="hofOverlay" class="hidden">
+  <div id="hofCard">
+    <div id="hofTitle">🏆 명예의전당</div>
+    <div id="hofSub">회원 누적 포획 점수 순위 (비회원 제외)</div>
+    <ol id="hofList"></ol>
+    <div id="hofEmpty" class="hidden">아직 기록이 없어요.</div>
+    <button id="hofCloseBtn" type="button">닫기</button>
+  </div>
+</div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.17</div>
+<div id="verTagBottom">v1.9.18</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
   <div id="gameOverText"><span id="gameOverEmoji"></span><span id="gameOverName"></span><span id="gameOverSuffix"> 승리!🎉</span><span id="gameOverDrawMsg" class="hidden">무승부!🤝</span><span id="gameOverDrawSub" class="hidden">아무도 땅을 차지하지 못했어요</span><span id="gameOverHint">눌러서 닫기</span></div>
-  <button id="gameOverRestartBtn" type="button" class="hidden">게임 재시작</button>
+  <div id="gameOverRestartWrap" class="hidden">
+    <div id="gameOverRestartInfo" class="hidden"></div>
+    <button id="gameOverRestartBtn" type="button">게임 재시작</button>
+  </div>
 </div>
 
 <!-- 칸에 직접 입력: 보이는 입력창 없음. wordInput은 한글 IME 조합을 위해 필요하지만
@@ -552,7 +638,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.17'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.18'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1945,6 +2031,15 @@ async function submit() {
 
     placing = false;
     if (result.committed && placedInfo) {
+      // 명예의전당용 누적 점수 — 보드 자체(board.cells의 captured 칸)는 판이 끝나고
+      // 재시작될 때마다 통째로 비워지므로, 회원이 포획한 칸 수는 별도 경로에 영구히
+      // 더해둠(비회원은 여기 안 씀 — 그래서 명예의전당엔 회원만 나옴). 실패해도 게임
+      // 진행엔 영향 없는 부가 기록이라 await 없이 fire-and-forget으로 둠
+      if (isMemberMode && placedInfo.capturedCount > 0) {
+        firebase.database().ref('memberTotalScore/' + clientId)
+          .transaction(cur => (cur || 0) + placedInfo.capturedCount)
+          .catch(() => {});
+      }
       const capNote = placedInfo.capturedCount > 0 ? ` — 영역 ${placedInfo.capturedCount}칸 포획!` : '';
       if (placedInfo.chat) {
         showToast(`'${placedInfo.word}' 입력했어요${capNote}`);
@@ -2276,6 +2371,68 @@ function updateLeaderboard() {
   leaderboardEl.classList.remove('hidden');
 }
 
+// ---------- 명예의전당 (회원 누적 점수, 비회원 제외) ----------
+// memberTotalScore/{uid} — 보드가 재시작/초기화돼도 절대 리셋되지 않는 누적치. 회원이
+// 영역을 포획할 때마다 submit()에서 그 칸 수만큼 더해짐(비회원은 애초에 이 경로에
+// 아무것도 안 씀 — 그래서 자연히 명예의전당에서 제외됨). 닉네임/아이콘은 이미 실시간
+// 구독 중인 ownerMemberProfile(memberProfiles 전체)에서 그대로 가져다 씀
+const hallOfFameBtn = document.getElementById('hallOfFameBtn');
+const hofBackdrop = document.getElementById('hofBackdrop');
+const hofOverlay = document.getElementById('hofOverlay');
+const hofListEl = document.getElementById('hofList');
+const hofEmptyEl = document.getElementById('hofEmpty');
+const hofCloseBtn = document.getElementById('hofCloseBtn');
+const HOF_EMPTY_DEFAULT_MSG = hofEmptyEl.textContent;
+
+function closeHallOfFame() {
+  hofOverlay.classList.add('hidden');
+  hofBackdrop.classList.add('hidden');
+}
+hofCloseBtn.addEventListener('click', closeHallOfFame);
+hofBackdrop.addEventListener('click', closeHallOfFame);
+
+hallOfFameBtn.addEventListener('click', async () => {
+  hofListEl.textContent = '';
+  hofEmptyEl.textContent = HOF_EMPTY_DEFAULT_MSG;
+  hofEmptyEl.classList.add('hidden');
+  hofOverlay.classList.remove('hidden');
+  hofBackdrop.classList.remove('hidden');
+  try {
+    const snap = await firebase.database().ref('memberTotalScore').once('value');
+    const scores = snap.val() || {};
+    const ranked = Object.entries(scores)
+      .map(([uid, score]) => ({ uid, score: Number(score) || 0 }))
+      .filter(e => e.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+    if (ranked.length === 0) { hofEmptyEl.classList.remove('hidden'); return; }
+    ranked.forEach((entry, i) => {
+      const profile = ownerMemberProfile.get(entry.uid);
+      const icon = ICONS[profile ? profile.iconIdx : 0] || ICONS[0];
+      const li = document.createElement('li');
+      li.dataset.rank = String(i + 1);
+      if (entry.uid === clientId) li.className = 'me';
+      const rank = document.createElement('span');
+      rank.className = 'hofRank';
+      rank.textContent = (i + 1) + '위';
+      const emoji = document.createElement('span');
+      emoji.className = 'hofEmoji';
+      emoji.textContent = icon.emoji;
+      const nameEl = document.createElement('span');
+      nameEl.className = 'hofName';
+      nameEl.textContent = (profile ? profile.nickname : '(알 수 없음)') + (entry.uid === clientId ? ' (나)' : '');
+      const scoreEl = document.createElement('span');
+      scoreEl.className = 'hofScore';
+      scoreEl.textContent = entry.score + '점';
+      li.append(rank, emoji, nameEl, scoreEl);
+      hofListEl.appendChild(li);
+    });
+  } catch (e) {
+    hofEmptyEl.textContent = '불러오는 중 오류가 발생했어요.';
+    hofEmptyEl.classList.remove('hidden');
+  }
+});
+
 // ---------- 게임 종료 판정 + 승리 축하 연출 ----------
 // 보드(13x13, 총 169칸)에 빈칸이 하나도 없으면(전부 낱말이거나 이미 포획된 칸) 더 이상
 // 새로 포획할 영역이 생길 수 없으므로 게임 종료로 봄. 포획한 칸이 가장 많은 사람이 승자.
@@ -2288,6 +2445,8 @@ const gameOverEmojiEl = document.getElementById('gameOverEmoji');
 const gameOverSuffixEl = document.getElementById('gameOverSuffix');
 const gameOverDrawMsgEl = document.getElementById('gameOverDrawMsg');
 const gameOverDrawSubEl = document.getElementById('gameOverDrawSub');
+const gameOverRestartWrap = document.getElementById('gameOverRestartWrap');
+const gameOverRestartInfoEl = document.getElementById('gameOverRestartInfo');
 const gameOverRestartBtn = document.getElementById('gameOverRestartBtn');
 const confettiCanvas = document.getElementById('confettiCanvas');
 const confettiCtx = confettiCanvas.getContext('2d');
@@ -2359,7 +2518,7 @@ function stopConfetti() {
 function showGameOver(winnerOwner) {
   gameOverPhase = 'celebrate';
   gameOverTextEl.classList.remove('hidden');
-  gameOverRestartBtn.classList.add('hidden');
+  gameOverRestartWrap.classList.add('hidden');
   if (winnerOwner) {
     gameOverEmojiEl.textContent = ownerEmoji(winnerOwner);
     gameOverEmojiEl.classList.remove('hidden');
@@ -2389,18 +2548,43 @@ function showGameOver(winnerOwner) {
   playGameOverFanfare();
 }
 
-// 축하 화면을 눌러서 닫으면 완전히 사라지는 대신, 가운데에 재시작 버튼을 띄움 —
-// 비밀번호 없이 접속 중인 누구나 눌러서 바로 다음 판을 시작할 수 있음
+// 축하 화면을 눌러서 닫으면 완전히 사라지는 대신, 가운데에 재시작 영역을 띄움 —
+// 비밀번호 없이 접속 중인 누구나 눌러서(또는 Enter로) 바로 다음 판을 시작할 수 있음.
+// 혼자 접속 중이면 예전처럼 "게임 재시작" 버튼 하나만(1번 요구사항: 그대로 유지),
+// 2명 이상이면 "게임을 시작하시겠습니까? 현재 인원 N명"을 같이 보여줘서, 아무나 한
+// 명이 시작을 눌러야 다음 판이 열리는 자동시작 라운드 흐름으로 바뀜.
+function updateRestartPromptText() {
+  if (gameOverPhase !== 'restart' || gameOverOverlay.classList.contains('hidden')) return;
+  if (userCount >= 2) {
+    gameOverRestartInfoEl.textContent = `게임을 시작하시겠습니까? 현재 인원 ${userCount}명`;
+    gameOverRestartInfoEl.classList.remove('hidden');
+    gameOverRestartBtn.textContent = '게임 시작';
+  } else {
+    gameOverRestartInfoEl.classList.add('hidden');
+    gameOverRestartBtn.textContent = '게임 재시작';
+  }
+}
+
 function showRestartPrompt() {
   gameOverPhase = 'restart';
   stopConfetti();
   gameOverTextEl.classList.add('hidden');
-  gameOverRestartBtn.classList.remove('hidden');
+  gameOverRestartWrap.classList.remove('hidden');
+  updateRestartPromptText();
 }
 
 function hideGameOver() {
   gameOverOverlay.classList.add('hidden');
   stopConfetti();
+}
+
+// 재시작 버튼 클릭과 Enter 키 둘 다 이 함수 하나로 처리(요구사항: "클릭하거나 엔터누르면")
+function triggerRestart() {
+  if (!boardRef) { showToast('아직 연결 중이에요. 잠시 후 다시 시도해 주세요.'); return; }
+  boardRef.set(buildSeedBoard());
+  prevScores.clear();
+  hideGameOver();
+  playGameStart();
 }
 
 gameOverOverlay.addEventListener('click', (e) => {
@@ -2411,11 +2595,16 @@ gameOverOverlay.addEventListener('click', (e) => {
 
 gameOverRestartBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (!boardRef) { showToast('아직 연결 중이에요. 잠시 후 다시 시도해 주세요.'); return; }
-  boardRef.set(buildSeedBoard());
-  prevScores.clear();
-  hideGameOver();
-  playGameStart();
+  triggerRestart();
+});
+
+// 재시작 안내가 떠 있는 동안 Enter로도 시작할 수 있게 함 — wordInput에 포커스가 있든
+// 없든(게임 종료 후엔 포커스가 애매해지기 쉬움) 항상 동작하도록 window 레벨에서 잡음
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && gameOverPhase === 'restart' && !gameOverOverlay.classList.contains('hidden')) {
+    e.preventDefault();
+    triggerRestart();
+  }
 });
 
 addEventListener('resize', () => { if (!gameOverOverlay.classList.contains('hidden')) resizeConfettiCanvas(); });
@@ -2779,6 +2968,7 @@ async function boot() {
     onlineIds = newIds;
     updateStats();
     updateLeaderboard();
+    updateRestartPromptText(); // 재시작 안내가 떠 있는 동안 인원수가 바뀌면 문구도 실시간 갱신
     // 다른 유저들의 실시간 선택 칸/입력 상황 갱신 (누구나 중간에 참여해도 바로 보이게)
     livePeers.clear();
     const now = Date.now();
