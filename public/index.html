@@ -183,7 +183,7 @@
 
   /* 화면 중앙 위쪽에 반투명(opacity) 박스로 표시 — 1~5등만, 순위가 높을수록 글자를
      크게 해서 한눈에 순위 차이가 보이게 함 */
-  /* 명예의전당 버튼 — 접속자 수(#userCountTag) 바로 왼쪽에, 같은 상단 줄(#topRight)에
+  /* 랭킹 버튼 — 접속자 수(#userCountTag) 바로 왼쪽에, 같은 상단 줄(#topRight)에
      나란히 붙임. 알약 높이를 #userCountTag와 똑같이 맞춤(font-size/padding 동일) */
   #hallOfFameBtn {
     font-size: 12px; padding: 6px 10px; border-radius: 20px;
@@ -328,8 +328,8 @@
     font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
   .authIconBtn.sel { border-color: #8a7a4f; background: #eee7d8; }
-  /* 로그인/로그아웃 버튼 — 이제 상단 바가 아니라 명예의전당 팝업(#hofCard) 안에 있음.
-     팝업 안의 다른 버튼(#hofCloseBtn)과 같은 폭 100% 스타일로 통일 */
+  /* 로그인/로그아웃 버튼 — 이제 상단 바가 아니라 랭킹 팝업(#hofCard) 안에 있음.
+     팝업 안 버튼과 같은 폭 100% 스타일로 통일 */
   #hofAccountSection { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0ece0; }
   #hofMemberPrompt { font-size: 12px; color: #999; text-align: center; margin-bottom: 8px; }
   #hofMemberPrompt.hidden { display: none; }
@@ -341,7 +341,7 @@
   #memberLogoutBtn.hidden, #guestSwitchBtn.hidden { display: none; }
   #memberLogoutBtn:hover, #guestSwitchBtn:hover { filter: brightness(0.97); }
 
-  /* 명예의전당 — authOverlay/authCard와 같은 가운데 모달 패턴 재사용. 배경(#hofBackdrop)을
+  /* 랭킹 — authOverlay/authCard와 같은 가운데 모달 패턴 재사용. 배경(#hofBackdrop)을
      눌러도 닫히게 해서 authOverlay처럼 익숙한 팝업 동작을 유지함 */
   #hofBackdrop {
     position: fixed; inset: 0; z-index: 67;
@@ -380,12 +380,15 @@
   #hofList li[data-rank="3"] .hofRank { color: #b57a4a; }
   #hofEmpty { text-align: center; font-size: 13px; color: #999; padding: 20px 0; }
   #hofEmpty.hidden { display: none; }
-  #hofCloseBtn {
-    display: block; width: 100%; padding: 11px; margin-top: 16px;
-    border-radius: 12px; border: 1px solid #d8d2c4; background: #f5f1e8;
-    color: #444; font-size: 14px; font-weight: 700; cursor: pointer;
+  /* 닫기 버튼 대신 하단에 작은 툴팁 형태 힌트만 둠 — 카드 바깥(#hofBackdrop) 클릭으로도
+     닫히니 이 텍스트 자체도 눌러서 닫을 수 있게 함 */
+  #hofCloseHint {
+    display: block; width: fit-content; margin: 16px auto 0;
+    padding: 5px 12px; border-radius: 20px; background: #f0ece0;
+    color: #999; font-size: 11px; font-weight: 600; text-align: center;
+    cursor: pointer;
   }
-  #hofCloseBtn:hover { filter: brightness(0.97); }
+  #hofCloseHint:hover { background: #e6e0cf; color: #888; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   /* 접속 확인/사전·보드 첫 동기화를 기다리는 동안 화면 전체를 덮는 로딩 스피너 —
@@ -540,21 +543,21 @@
   </div>
 </div>
 <div id="topRight">
-  <button id="hallOfFameBtn" type="button">🏆 명예의전당</button>
+  <button id="hallOfFameBtn" type="button">🏆 랭킹</button>
   <div id="userCountTag"><span id="userCountDot"></span><span id="userCountText">1명</span></div>
 </div>
 <div id="leaderboard" class="hidden">
   <ol id="lbList"></ol>
 </div>
 
-<!-- 명예의전당: 회원(비회원 제외)의 역대 누적 포획 점수 1~20위. memberTotalScore는
+<!-- 랭킹(구 명예의전당): 회원(비회원 제외)의 역대 누적 포획 점수 1~20위. memberTotalScore는
      보드가 초기화/재시작돼도 절대 리셋되지 않는 별도 RTDB 경로(submit() 참고).
      로그인/로그아웃도 여기 안으로 옮겨서, 상단 바에는 접속자 수만 남게 함 -->
 <div id="hofBackdrop" class="hidden"></div>
 <div id="hofOverlay" class="hidden">
   <div id="hofCard">
-    <div id="hofTitle">🏆 명예의전당</div>
-    <div id="hofSub">회원 누적 포획 점수 순위 (비회원 제외)</div>
+    <div id="hofTitle">🏆 랭킹</div>
+    <div id="hofSub">멤버 누적 점수 순위 (비회원 제외)</div>
     <ol id="hofList"></ol>
     <div id="hofEmpty" class="hidden">아직 기록이 없어요.</div>
     <div id="hofAccountSection">
@@ -562,11 +565,11 @@
       <button id="guestSwitchBtn" type="button" class="hidden">로그인</button>
       <button id="memberLogoutBtn" type="button" class="hidden">로그아웃</button>
     </div>
-    <button id="hofCloseBtn" type="button">닫기</button>
+    <div id="hofCloseHint">눌러서 닫기</div>
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.22</div>
+<div id="verTagBottom">v1.9.23</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -640,7 +643,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.22'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.23'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2037,9 +2040,9 @@ async function submit() {
 
     placing = false;
     if (result.committed && placedInfo) {
-      // 명예의전당용 누적 점수 — 보드 자체(board.cells의 captured 칸)는 판이 끝나고
+      // 랭킹용 누적 점수 — 보드 자체(board.cells의 captured 칸)는 판이 끝나고
       // 재시작될 때마다 통째로 비워지므로, 회원이 포획한 칸 수는 별도 경로에 영구히
-      // 더해둠(비회원은 여기 안 씀 — 그래서 명예의전당엔 회원만 나옴). 실패해도 게임
+      // 더해둠(비회원은 여기 안 씀 — 그래서 랭킹엔 회원만 나옴). 실패해도 게임
       // 진행엔 영향 없는 부가 기록이라 await 없이 fire-and-forget으로 둠
       if (isMemberMode && placedInfo.capturedCount > 0) {
         firebase.database().ref('memberTotalScore/' + clientId)
@@ -2381,10 +2384,10 @@ function updateLeaderboard() {
   leaderboardEl.classList.remove('hidden');
 }
 
-// ---------- 명예의전당 (회원 누적 점수, 비회원 제외) ----------
+// ---------- 랭킹 (구 명예의전당, 회원 누적 점수, 비회원 제외) ----------
 // memberTotalScore/{uid} — 보드가 재시작/초기화돼도 절대 리셋되지 않는 누적치. 회원이
 // 영역을 포획할 때마다 submit()에서 그 칸 수만큼 더해짐(비회원은 애초에 이 경로에
-// 아무것도 안 씀 — 그래서 자연히 명예의전당에서 제외됨). 닉네임/아이콘은 이미 실시간
+// 아무것도 안 씀 — 그래서 자연히 랭킹에서 제외됨). 닉네임/아이콘은 이미 실시간
 // 구독 중인 ownerMemberProfile(memberProfiles 전체)에서 그대로 가져다 씀
 const hallOfFameBtn = document.getElementById('hallOfFameBtn');
 const hofBackdrop = document.getElementById('hofBackdrop');
@@ -2392,14 +2395,14 @@ const hofOverlay = document.getElementById('hofOverlay');
 const hofListEl = document.getElementById('hofList');
 const hofEmptyEl = document.getElementById('hofEmpty');
 const hofMemberPromptEl = document.getElementById('hofMemberPrompt');
-const hofCloseBtn = document.getElementById('hofCloseBtn');
+const hofCloseHint = document.getElementById('hofCloseHint');
 const HOF_EMPTY_DEFAULT_MSG = hofEmptyEl.textContent;
 
 function closeHallOfFame() {
   hofOverlay.classList.add('hidden');
   hofBackdrop.classList.add('hidden');
 }
-hofCloseBtn.addEventListener('click', closeHallOfFame);
+hofCloseHint.addEventListener('click', closeHallOfFame);
 hofBackdrop.addEventListener('click', closeHallOfFame);
 
 hallOfFameBtn.addEventListener('click', async () => {
