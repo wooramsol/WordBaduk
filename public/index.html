@@ -564,7 +564,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.19</div>
+<div id="verTagBottom">v1.9.20</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -638,7 +638,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.19'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.20'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3027,9 +3027,12 @@ async function boot() {
   let prevWordCount = 0, prevCapturedCount = 0; // 단어 완성/영역 포획 효과음의 이전 스냅샷 기준값
   boardRef.on('value', snap => {
     const board = snap.val() || { cells: {}, words: [] };
-    // soloRound가 없는 예전 형식 보드(이 기능 배포 전에 이미 떠 있던 판)는 false로 취급 —
-    // 배포 순간 갑자기 팝업이 뜨는 대신, 다음 판부터 자연스럽게 정확한 값이 붙게 함
-    currentRoundIsSolo = !!board.soloRound;
+    // soloRound가 아예 없는 예전 형식 보드(이 기능 배포 전부터 떠 있던 판)는 "혼자 시작된
+    // 판"으로 간주함(true) — false로 취급했더니, 배포 직전부터 계속 혼자 하고 있던(=지금
+    // 딱 이 기능이 필요한) 판에서 정작 팝업이 안 뜨는 문제가 있었음. 반대로 이미 여럿이
+    // 하던 예전 판에 새 사람이 들어와 팝업이 한 번 잘못 뜨는 부작용은, 다음 재시작부터
+    // soloRound가 정확히 기록되면서 저절로 사라짐 — 덜 위험한 쪽으로 기본값을 바꿈
+    currentRoundIsSolo = board.soloRound !== false;
     checkMultiStartTrigger();
     updateRestartPromptText();
     const bc = board.cells || {};
