@@ -380,15 +380,13 @@
   #hofList li[data-rank="3"] .hofRank { color: #b57a4a; }
   #hofEmpty { text-align: center; font-size: 13px; color: #999; padding: 20px 0; }
   #hofEmpty.hidden { display: none; }
-  /* 닫기 버튼 대신 하단에 작은 툴팁 형태 힌트만 둠 — 카드 바깥(#hofBackdrop) 클릭으로도
-     닫히니 이 텍스트 자체도 눌러서 닫을 수 있게 함 */
+  /* 닫기 버튼 대신 하단에 작은 글자 힌트만 둠 — infoPanel의 "눌러서 닫기"와 동일한
+     스타일(배경/테두리 없는 순수 텍스트). 카드 바깥(#hofBackdrop) 클릭으로도 닫히니
+     이 텍스트 자체도 눌러서 닫을 수 있게 함 */
   #hofCloseHint {
-    display: block; width: fit-content; margin: 16px auto 0;
-    padding: 5px 12px; border-radius: 20px; background: #f0ece0;
-    color: #999; font-size: 11px; font-weight: 600; text-align: center;
-    cursor: pointer;
+    text-align: center; margin-top: 16px;
+    font-size: 11px; color: #a89a78; cursor: pointer;
   }
-  #hofCloseHint:hover { background: #e6e0cf; color: #888; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   /* 접속 확인/사전·보드 첫 동기화를 기다리는 동안 화면 전체를 덮는 로딩 스피너 —
@@ -569,7 +567,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.23</div>
+<div id="verTagBottom">v1.9.24</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -643,7 +641,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.23'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.24'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
