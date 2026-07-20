@@ -736,7 +736,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.57</div>
+<div id="verTagBottom">v1.9.58</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -813,7 +813,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.57'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.58'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -887,10 +887,26 @@ function togglePlayerBlock(id) {
   saveBlockedIds();
 }
 
-// 지금 보드에 떠 있는 판이 "시작될 때 혼자였는지" — board.soloRound를 그대로 반영(boot()의
-// boardRef.on('value')에서 갱신). checkMultiStartTrigger()가 이 값과 실시간 인원수(userCount)를
-// 같이 보고 "혼자 하던 판에 사람이 들어왔는지" 판단함
+// 지금 보드에 떠 있는 판이 "시작될 때 혼자였는지" — checkMultiStartTrigger()가 이 값과
+// 실시간 인원수(userCount)를 같이 보고 "혼자 하던 판에 사람이 들어왔는지" 판단함.
+// 예전엔 buildSeedBoard() 시점의 board.soloRound 필드(userCount를 딱 한 번만 읽은 스냅샷)를
+// 그대로 믿었는데, Firebase presence는 onDisconnect 정리가 즉시 일어나지 않아서(끊긴 지 얼마
+// 안 된 유령 접속이 잠깐 남아있음) 딱 그 순간 userCount가 실제보다 높게 잡히면 soloRound가
+// 처음부터 false로 잘못 기록되고, 그러면 진짜 2번째 사람이 들어와도 팝업이 영영 안 뜸(실제
+// 신고된 버그). 그래서 한 번의 스냅샷 대신, "아직 아무도 글자를 안 놓은(board.version===0)"
+// 동안 실시간으로 계속 관찰하다가 그 사이 한 번이라도 userCount<=1이었으면 "혼자 시작된
+// 판"으로 기록함 — 유령 접속은 보통 몇 초 안에 정리되므로 그 창 안에서 자연히 걸러짐
 let currentRoundIsSolo = false;
+let everSoloThisRound = false;   // 이번 "아직 아무도 안 놓은" 판 동안 한 번이라도 혼자였는지
+let lastSeedRoundTs = null;      // 새 판으로 바뀌었는지 판별용(버전0일 때의 첫 단어 ts)
+let lastBoardVersionForSolo = null; // presence 갱신 시점에도 "지금 판이 버전0인지" 알기 위해 기억
+let firstBoardSyncForSolo = true;   // 페이지 로드 후 받는 첫 board 스냅샷인지(이미 진행 중이던
+                                     // 판을 처음 볼 때의 기본값 판단용 — 예전 soloRound 필드를 참고)
+// 지금까지 관찰한 것으로 봐서 "혼자 시작된 판"이 맞는지 갱신 — board 스냅샷과 presence 갱신
+// 양쪽에서 다 호출됨(둘 중 뭐가 먼저 오든 놓치지 않게)
+function noteSoloIfFresh() {
+  if (lastBoardVersionForSolo === 0 && userCount <= 1) everSoloThisRound = true;
+}
 let DICT = null;                    // 사전 (Hosting에서 로드)
 let clientId = null;                // /api/identify(IP 기반 익명 ID) 로 비동기 확정됨 — boot() 참고
 let boardRef = null;                // Firebase 준비되면 boot()에서 할당
@@ -2214,14 +2230,10 @@ async function submit() {
 
       const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
       const placedCoords = [];
-      const stolenOwners = new Set(); // 이번에 덮어쓴 상대 소유 captured 칸들의 이전 주인 목록
       for (let i = 0; i < r.word.length; i++) {
         const cx = r.startX + dx * i, cy = r.startY + dy * i;
         const k = K(cx, cy);
         const existing = board.cells[k];
-        if (existing && existing.captured && existing.owner && existing.owner !== clientId) {
-          stolenOwners.add(existing.owner);
-        }
         // 포획된 칸 위에 새로 글자를 쓰면(=상대 땅을 뺏으면) 예전 captured/owner 기록을
         // 그대로 재사용하지 않고 완전히 새 글자 칸으로 새로 만듦 — 재사용하면 captured:true가
         // 안 지워져서 글자가 있는데도 여전히 "포획된 칸"으로 남는 상태가 됨(렌더링/판정 둘 다 깨짐)
@@ -2243,23 +2255,13 @@ async function submit() {
         chat: !!isChat,
       });
 
-      // 땅따먹기: 방금 놓은 글자로 완전히 둘러싸인 칸이 생겼는지 검사해 포획 처리
+      // 땅따먹기: 방금 놓은 글자로 완전히 둘러싸인 "빈" 칸이 생겼는지 검사해 포획 처리
       // (채팅으로 놓은 글자도 다른 글자와 동일하게 "벽"으로 취급되어 포획 판정에 참여함).
-      // 이번에 뺏은 칸이 있다면(stolenOwners), 그 이전 주인의 "나머지" 포획 칸들은 이번
-      // 판정에서만 특별히 빈 칸처럼(뚫린 칸으로) 취급함 — 그래야 그 칸들이 이번 배치로
-      // 실제로 다시 완전히 둘러싸였을 때만(자세한 조건은 findCapturedRegions 주석 참고)
-      // 정말로 나에게 넘어오고, 그냥 옆에 붙어있기만 해서는 넘어오지 않음
-      const getCellForCapture = stolenOwners.size === 0 ? getCell : (cx, cy) => {
-        if (!inBounds(cx, cy)) return OUT_OF_BOUNDS_WALL;
-        const c = board.cells[K(cx, cy)];
-        if (!c) return null;
-        if (c.captured) {
-          if (stolenOwners.has(c.owner)) return null; // 뺏긴 주인의 나머지 땅은 이번엔 "뚫린 칸"
-          return { ch: null, dirs: [], captured: true, owner: c.owner };
-        }
-        return { ch: c.ch, dirs: [c.h && 'h', c.v && 'v'].filter(Boolean), captured: false };
-      };
-      const capturedCells = findCapturedRegions(getCellForCapture, K, placedCoords);
+      // getCell은 포획된 칸을(누구 소유든) 항상 벽으로 취급하므로, 이미 포획된 칸을 덮어써서
+      // 그 칸 하나가 글자로 바뀌는 것과는 완전히 별개로, "진짜 빈 칸"이 이번 배치로 새로
+      // 둘러싸였을 때만 포획됨 — 이미 포획돼 있던 나머지 칸들은 그 주인이 누구든 계속 벽
+      // 취급이라 절대 이번 판정에 다시 끌려들어오지 않음(단순히 옆에 붙어있다고 넘어가지 않음)
+      const capturedCells = findCapturedRegions(getCell, K, placedCoords);
       for (const [cx, cy] of capturedCells) {
         board.cells[K(cx, cy)] = { captured: true, owner: clientId, ts: Date.now() };
       }
@@ -3523,6 +3525,8 @@ async function boot() {
     onlineIds = newIds;
     updateStats();
     updateLeaderboard();
+    noteSoloIfFresh(); // presence만 먼저 갱신될 수도 있으므로 여기서도 "혼자였는지" 관찰
+    currentRoundIsSolo = everSoloThisRound;
     checkMultiStartTrigger(); // 혼자 하던 판에 방금 2명 이상이 됐으면 시작 확인 팝업을 띄움
     updateRestartPromptText(); // 재시작 안내가 떠 있는 동안 인원수가 바뀌면 문구도 실시간 갱신
     // 다른 유저들의 실시간 선택 칸/입력 상황 갱신 (누구나 중간에 참여해도 바로 보이게)
@@ -3541,12 +3545,22 @@ async function boot() {
   let prevWordCount = 0, prevCapturedCount = 0; // 단어 완성/영역 포획 효과음의 이전 스냅샷 기준값
   boardRef.on('value', snap => {
     const board = snap.val() || { cells: {}, words: [] };
-    // soloRound가 아예 없는 예전 형식 보드(이 기능 배포 전부터 떠 있던 판)는 "혼자 시작된
-    // 판"으로 간주함(true) — false로 취급했더니, 배포 직전부터 계속 혼자 하고 있던(=지금
-    // 딱 이 기능이 필요한) 판에서 정작 팝업이 안 뜨는 문제가 있었음. 반대로 이미 여럿이
-    // 하던 예전 판에 새 사람이 들어와 팝업이 한 번 잘못 뜨는 부작용은, 다음 재시작부터
-    // soloRound가 정확히 기록되면서 저절로 사라짐 — 덜 위험한 쪽으로 기본값을 바꿈
-    currentRoundIsSolo = board.soloRound !== false;
+    lastBoardVersionForSolo = board.version || 0;
+    if (lastBoardVersionForSolo === 0) {
+      // 아직 아무도 글자를 안 놓은(=방금 새로 시작된) 판 — 새 판인지(첫 단어 ts가 바뀌었는지)
+      // 확인해서 새 판이면 "혼자였는지" 관찰을 처음부터 다시 시작하고, 지금 이 순간도 관찰함
+      const wl = Array.isArray(board.words) ? board.words : Object.values(board.words || {});
+      const seedTs = wl.length ? wl[0].ts : null;
+      if (seedTs !== lastSeedRoundTs) { lastSeedRoundTs = seedTs; everSoloThisRound = false; }
+      noteSoloIfFresh();
+    } else if (firstBoardSyncForSolo) {
+      // 페이지를 열자마자 받은 첫 스냅샷인데 이미 누군가 글자를 놓은(버전>0) 판이면, 이 판이
+      // 혼자 시작됐는지는 지금 알 방법이 없음 — 예전 soloRound 필드가 남아있으면 그걸 참고하고
+      // (필드가 아예 없는 아주 오래된 판이면 "혼자였을 수도 있다"로 안전하게 간주해 true)
+      everSoloThisRound = board.soloRound !== false;
+    }
+    firstBoardSyncForSolo = false;
+    currentRoundIsSolo = everSoloThisRound;
     checkMultiStartTrigger();
     updateRestartPromptText();
     const bc = board.cells || {};
