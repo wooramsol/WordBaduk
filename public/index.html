@@ -184,12 +184,13 @@
     display: inline-flex; align-items: center; gap: 5px;
     box-shadow: 0 2px 8px rgba(0,0,0,.08); }
   #userCountTag:not(.on) { opacity: .65; }
-  /* 실시간(라이브) 화면처럼 보이도록, 접속 중일 때만 점이 계속 깜빡임 */
+  /* 실시간(라이브) 화면처럼 보이도록, 접속 중일 때만 점이 계속 깜빡임 — 점 색도 초록이
+     아니라 알약 글자색(#7a6c45)을 그대로 써서 크림톤 테마에서 튀지 않게 함 */
   #userCountDot { width: 7px; height: 7px; border-radius: 50%; background: #9a927d; flex: none; }
-  #userCountTag.on #userCountDot { background: #2c8f4a; animation: liveBlink 1.8s ease-in-out infinite; }
+  #userCountTag.on #userCountDot { background: #7a6c45; animation: liveBlink 1.8s ease-in-out infinite; }
   @keyframes liveBlink {
-    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(44,143,74,.5); }
-    50% { opacity: .35; box-shadow: 0 0 0 3px rgba(44,143,74,0); }
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(122,108,69,.5); }
+    50% { opacity: .35; box-shadow: 0 0 0 3px rgba(122,108,69,0); }
   }
 
   /* 화면 중앙 위쪽에 반투명(opacity) 박스로 표시 — 1~5등만, 순위가 높을수록 글자를
@@ -689,7 +690,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.45</div>
+<div id="verTagBottom">v1.9.46</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -766,7 +767,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.45'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.46'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
