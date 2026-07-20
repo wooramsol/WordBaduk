@@ -333,8 +333,8 @@
     transform: translateY(-0.09em);
   }
 
-  /* 최초 접속 시 "멤버 로그인 / 비회원 로그인"을 고르는 화면 + 로그인/회원가입 폼.
-     게임 보드 위를 완전히 덮고(gameOverOverlay와 달리 클릭을 막음) 선택을 마쳐야 사라짐. */
+  /* 최초 접속 시 바로 뜨는 로그인/회원가입 폼(비회원 없음, 멤버만 플레이 가능).
+     게임 보드 위를 완전히 덮고(gameOverOverlay와 달리 클릭을 막음) 로그인을 마쳐야 사라짐. */
   #authOverlay {
     position: fixed; inset: 0; z-index: 70;
     display: flex; align-items: center; justify-content: center;
@@ -355,7 +355,7 @@
   }
   .authBtn:hover { filter: brightness(0.97); }
   .authBtnPrimary { background: #8a7a4f; color: #fff; border-color: #8a7a4f; }
-  #authLoginView.hidden, #authSignupView.hidden, #authChoiceView.hidden { display: none; }
+  #authLoginView.hidden, #authSignupView.hidden { display: none; }
   #authLoginView input, #authSignupView input {
     display: block; width: 100%; padding: 11px 12px; margin-top: 10px;
     border-radius: 10px; border: 1px solid #d8d2c4; font-size: 14px; outline: none;
@@ -380,15 +380,13 @@
   /* 로그인/로그아웃 버튼 — 이제 상단 바가 아니라 랭킹 팝업(#hofCard) 안에 있음.
      팝업 안 버튼과 같은 폭 100% 스타일로 통일 */
   #hofAccountSection { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0ece0; }
-  #hofMemberPrompt { font-size: 12px; color: #999; text-align: center; margin-bottom: 8px; }
-  #hofMemberPrompt.hidden { display: none; }
-  #memberLogoutBtn, #guestSwitchBtn {
+  #memberLogoutBtn {
     display: block; width: 100%; padding: 11px; margin-top: 0;
     border-radius: 12px; border: 1px solid #d8d2c4; background: #f5f1e8;
     color: #444; font-size: 14px; font-weight: 700; cursor: pointer;
   }
-  #memberLogoutBtn.hidden, #guestSwitchBtn.hidden { display: none; }
-  #memberLogoutBtn:hover, #guestSwitchBtn:hover { filter: brightness(0.97); }
+  #memberLogoutBtn.hidden { display: none; }
+  #memberLogoutBtn:hover { filter: brightness(0.97); }
   /* 회원 탈퇴 — 로그아웃보다 눈에 덜 띄는 작은 텍스트 링크로 둬서 실수로 누르는 걸 방지.
      누르면 비밀번호 재확인 폼이 펼쳐짐(memberDeleteForm) */
   #memberDeleteLink {
@@ -527,7 +525,7 @@
 
   @keyframes spin { to { transform: rotate(360deg); } }
   /* 접속 확인/사전·보드 첫 동기화를 기다리는 동안 화면 전체를 덮는 로딩 스피너 —
-     멤버/비회원 선택 화면이 뜨는 순간(showAuthChoiceFlow) 또는 보드 첫 데이터가
+     로그인 화면이 뜨는 순간(showAuthChoiceFlow) 또는 보드 첫 데이터가
      도착하는 순간(boot()의 wasFirst) 중 먼저 오는 쪽에서 사라짐 */
   #pageLoadingOverlay {
     position: fixed; inset: 0; z-index: 65;
@@ -651,7 +649,7 @@
 <canvas id="board"></canvas>
 
 <!-- 접속 확인 + 보드 첫 데이터 동기화를 기다리는 동안 보여주는 로딩 스피너.
-     멤버/비회원 선택 화면이 뜨거나 보드 데이터가 도착하면 사라짐(resolveIdentity/boot 참고) -->
+     로그인 화면이 뜨거나 보드 데이터가 도착하면 사라짐(resolveIdentity/boot 참고) -->
 <div id="pageLoadingOverlay">
   <div id="pageLoadingInner">
     <div class="pageSpinner"></div>
@@ -670,12 +668,12 @@
   1. 음절을 이어 낱말을 만들어보세요. 어디에 이어붙여도 괜찮아요.<br>
   2. 낱말들로 울타리를 치면, 안쪽 칸이 전부 내 땅이 돼요.<br>
   3. 울타리를 마지막에 완성한 사람이 점수를 획득해요.<br>
-  4. 이미 포획된 칸도 다시 포획할 수 있어요.<br>
+  4. 남이 차지한 땅도 다시 뺏을 수 있어요.<br>
   5. 한 줄짜리 울타리는 인정되지 않아요.<br>
   6. 표준국어대사전 기준 명사만 인정돼요.<br>
   <span id="dirHintTouch" style="display:none">7. <span class="dirIconBadge">가로</span><span class="dirIconBadge">세로</span> 배지를 눌러 입력 방향을 바꿀 수 있어요.</span>
   <span id="dirHintWeb" style="display:none">7. <span class="dirTabBadge">Tab</span>과 화살표(<span class="dirArrowIcon">&rarr;</span>/<span class="dirArrowIcon">&darr;</span>)로 입력 방향을 바꿀 수 있어요.</span><br>
-  8. 포획된 칸이 가장 많은 플레이어가 승리해요.<br>
+  8. 차지한 칸이 가장 많은 플레이어가 승리해요.<br>
   9. 버그 발견 시 @wooramsol 로 알려주세요!</div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
     <button id="resetBoardBtn" type="button">낱말 초기화 (테스트용)</button>
@@ -700,12 +698,10 @@
 <div id="hofOverlay" class="hidden">
   <div id="hofCard">
     <div id="hofTitle">🏆 랭킹</div>
-    <div id="hofSub">멤버 누적 점수 순위 (비회원 제외)</div>
+    <div id="hofSub">누적 점수 순위</div>
     <ol id="hofList"></ol>
     <div id="hofEmpty" class="hidden">아직 기록이 없어요.</div>
     <div id="hofAccountSection">
-      <div id="hofMemberPrompt" class="hidden">멤버되고 점수기록되기</div>
-      <button id="guestSwitchBtn" type="button" class="hidden">로그인</button>
       <button id="memberLogoutBtn" type="button" class="hidden">로그아웃</button>
       <!-- 앱 안에서 계정 삭제를 시작할 수 있어야 함(Apple 5.1.1(v) 대응). 로그아웃과
            헷갈리지 않도록 눈에 덜 띄는 링크로 두고, 누르면 비밀번호 재확인 폼이 펼쳐짐 -->
@@ -736,7 +732,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.65</div>
+<div id="verTagBottom">v1.9.66</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -757,24 +753,18 @@
      전용 카드 — 여러 명이 한꺼번에 들어와도 겹치지 않게 하나씩 순서대로 보여줌(showJoinAnnounce) -->
 <div id="joinAnnounce"><span id="joinAnnounceIcon"></span><span id="joinAnnounceText"></span></div>
 
-<!-- 최초 접속 시 멤버 로그인/비회원 로그인을 고르는 화면. 멤버 로그인은 로그인/회원가입
-     폼으로 이어짐. 비회원을 고르면 기존과 동일하게(IP 기반 익명 ID + 과일) 바로 시작함. -->
+<!-- 최초 접속 시 바로 멤버 로그인 화면부터 띄움(비회원 개념 비활성화 — 멤버만 플레이 가능).
+     로그인 폼에서 회원가입 폼으로 넘어갈 수 있음. -->
 <div id="authOverlay" class="hidden">
   <div id="authCard">
-    <div id="authChoiceView">
+    <form id="authLoginView">
       <div class="authTitle">낱말바둑</div>
-      <div class="authSub">멤버로 로그인하거나<br>비회원으로 바로 시작할 수 있어요.</div>
-      <button type="button" class="authBtn authBtnPrimary" id="authChooseMemberBtn">멤버 로그인 (5초컷 가입)</button>
-      <button type="button" class="authBtn" id="authChooseGuestBtn">비회원으로 시작</button>
-    </div>
-    <form id="authLoginView" class="hidden">
-      <div class="authTitle">멤버 로그인</div>
+      <div class="authSub">로그인하고 바로 시작해요.</div>
       <input type="text" id="authLoginNickname" placeholder="닉네임" autocomplete="username" maxlength="10">
       <input type="password" id="authLoginPassword" placeholder="비밀번호" autocomplete="current-password" maxlength="30">
       <div class="authErr" id="authLoginErr"></div>
       <button type="submit" class="authBtn authBtnPrimary">로그인</button>
       <div class="authSwitchLine">계정이 없으신가요? <a href="#" id="authGoSignupLink">5초컷 회원가입</a></div>
-      <div class="authSwitchLine"><a href="#" id="authLoginBackLink">뒤로</a></div>
     </form>
     <form id="authSignupView" class="hidden">
       <div class="authTitle">회원가입</div>
@@ -786,7 +776,6 @@
       <div class="authErr" id="authSignupErr"></div>
       <button type="submit" class="authBtn authBtnPrimary">가입하기</button>
       <div class="authSwitchLine">이미 계정이 있으신가요? <a href="#" id="authGoLoginLink">로그인</a></div>
-      <div class="authSwitchLine"><a href="#" id="authSignupBackLink">뒤로</a></div>
     </form>
   </div>
 </div>
@@ -813,7 +802,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.65'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.66'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1377,7 +1366,7 @@ async function claimFruitIndex(id) {
 // hue는 임의로 고르게 나눈 값이 아니라 그 이모지가 실제로 떠올리게 하는 색(주색)에
 // 최대한 맞춤 — 예를 들어 사과/딸기류는 빨강, 레몬/해바라기는 노랑, 개구리/선인장은
 // 초록 계열. 그래서 아이콘 자체의 인상과 게임 안에서 그 사람 색이 자연스럽게 어울림.
-// functions/index.js의 ICON_COUNT(42)와 반드시 개수가 같아야 함 — 서버가 iconIdx
+// functions/index.js의 ICON_COUNT(100)와 반드시 개수가 같아야 함 — 서버가 iconIdx
 // 범위를 검증할 때 쓰는 값이라, 여기서 아이콘을 추가/삭제하면 그쪽도 같이 고쳐야 함.
 const ICONS = [
   // 빨강
@@ -1404,6 +1393,36 @@ const ICONS = [
   // 분홍
   { emoji: '\u{1F338}', hue: 330 }, { emoji: '\u{1F9A9}', hue: 335 }, { emoji: '\u{1F437}', hue: 340 },
   { emoji: '\u{1F380}', hue: 330 },
+  // ---- 여기부터 100개로 확장하며 추가(과일 비중 확대) — 기존 0~41번은 이미 고른
+  // 사람들의 iconIdx가 바뀌지 않도록 순서를 절대 건드리지 않고 뒤에만 이어붙임 ----
+  // 과일
+  { emoji: '\u{1F34E}', hue: 355 }, { emoji: '\u{1F353}', hue: 350 }, { emoji: '\u{1F345}', hue: 5 },
+  { emoji: '\u{1F34A}', hue: 30 },  { emoji: '\u{1F96D}', hue: 35 },  { emoji: '\u{1F34D}', hue: 45 },
+  { emoji: '\u{1F34C}', hue: 50 },  { emoji: '\u{1F33D}', hue: 48 },  { emoji: '\u{1F350}', hue: 90 },
+  { emoji: '\u{1F951}', hue: 100 }, { emoji: '\u{1F95D}', hue: 95 },  { emoji: '\u{1F34F}', hue: 105 },
+  { emoji: '\u{1F348}', hue: 115 }, { emoji: '\u{1FAD2}', hue: 90 },  { emoji: '\u{1F349}', hue: 150 },
+  { emoji: '\u{1FAD0}', hue: 225 }, { emoji: '\u{1F347}', hue: 275 }, { emoji: '\u{1F351}', hue: 15 },
+  // 빨강/주황 (추가)
+  { emoji: '\u{1F336}', hue: 5 },   { emoji: '\u{1F982}', hue: 0 },   { emoji: '\u{1F525}', hue: 10 },
+  { emoji: '\u{1F383}', hue: 30 },  { emoji: '\u{1F3C0}', hue: 25 },  { emoji: '\u{1F439}', hue: 30 },
+  // 노랑 (추가)
+  { emoji: '\u{1F31F}', hue: 50 },  { emoji: '\u{1F423}', hue: 50 },  { emoji: '\u{1F33C}', hue: 50 },
+  { emoji: '\u{1F36F}', hue: 45 },
+  // 초록 (추가)
+  { emoji: '\u{1F33F}', hue: 120 }, { emoji: '\u{1F997}', hue: 110 }, { emoji: '\u{1F41B}', hue: 110 },
+  { emoji: '\u{1F966}', hue: 120 }, { emoji: '\u{1F332}', hue: 130 }, { emoji: '\u{1F343}', hue: 120 },
+  // 청록/파랑 (추가)
+  { emoji: '\u{1F420}', hue: 175 }, { emoji: '\u{1F421}', hue: 170 }, { emoji: '\u{1F991}', hue: 280 },
+  { emoji: '\u{1F40B}', hue: 205 }, { emoji: '\u{1F98B}', hue: 220 }, { emoji: '\u{1F300}', hue: 210 },
+  { emoji: '❄️', hue: 200 }, { emoji: '\u{1F428}', hue: 210 }, { emoji: '\u{1F99A}', hue: 200 },
+  // 보라/분홍 (추가)
+  { emoji: '\u{1F7E3}', hue: 270 }, { emoji: '\u{1F377}', hue: 280 }, { emoji: '\u{1F47E}', hue: 270 },
+  { emoji: '\u{1F337}', hue: 335 }, { emoji: '\u{1F388}', hue: 330 }, { emoji: '\u{1F36D}', hue: 330 },
+  { emoji: '\u{1F33A}', hue: 340 },
+  // 기타
+  { emoji: '⚽', hue: 0 },      { emoji: '\u{1F3B2}', hue: 0 },   { emoji: '\u{1F43C}', hue: 0 },
+  { emoji: '\u{1F9A5}', hue: 30 },  { emoji: '\u{1F9A6}', hue: 25 },  { emoji: '\u{1F43F}️', hue: 20 },
+  { emoji: '\u{1F40C}', hue: 20 },  { emoji: '\u{1F989}', hue: 30 },
 ];
 // owner(clientId=uid) -> 회원 프로필({nickname, iconIdx}). memberProfiles 전체를 실시간
 // 구독해서 채워짐(boot() 참고). 이 맵에 있으면 회원, 없으면(기존처럼) 과일 배정 대상.
@@ -2734,7 +2753,7 @@ resetBoardBtn.onclick = () => {
 // 닫힌다"는 걸 몰라도 바깥을 눌러 자연스럽게 닫을 수 있게 함
 let isReturningUser = false;
 try {
-  isReturningUser = !!localStorage.getItem('wb-memberUid') || localStorage.getItem('wb-guestChosen') === '1';
+  isReturningUser = !!localStorage.getItem('wb-memberUid');
 } catch {}
 if (!window.__wvExitScreen && !isReturningUser) {
   infoPanel.classList.remove('hidden');
@@ -2839,7 +2858,6 @@ const hofBackdrop = document.getElementById('hofBackdrop');
 const hofOverlay = document.getElementById('hofOverlay');
 const hofListEl = document.getElementById('hofList');
 const hofEmptyEl = document.getElementById('hofEmpty');
-const hofMemberPromptEl = document.getElementById('hofMemberPrompt');
 const hofCloseHint = document.getElementById('hofCloseHint');
 const HOF_EMPTY_DEFAULT_MSG = hofEmptyEl.textContent;
 
@@ -3270,16 +3288,14 @@ const pageLoadingRetryEl = document.getElementById('pageLoadingRetry');
 function hidePageLoadingOverlay() { pageLoadingOverlayEl.classList.add('hidden'); }
 document.getElementById('pageLoadingRetryBtn').addEventListener('click', () => location.reload());
 document.getElementById('pageLoadingDebugBtn').addEventListener('click', () => {
-  let memberUid = null, guestChosen = null;
+  let memberUid = null;
   try { memberUid = localStorage.getItem('wb-memberUid'); } catch {}
-  try { guestChosen = localStorage.getItem('wb-guestChosen'); } catch {}
   const lines = [
     '버전: ' + APP_VERSION,
     '단계: ' + bootStage,
     '실시간연결(connected): ' + connected,
     '네트워크(navigator.onLine): ' + navigator.onLine,
     'wb-memberUid: ' + (memberUid || '없음'),
-    'wb-guestChosen: ' + (guestChosen || '없음'),
     '에러: ' + (bootFatalError || '없음'),
     'UA: ' + navigator.userAgent,
     '시각: ' + new Date().toISOString(),
@@ -3309,11 +3325,9 @@ setTimeout(() => {
 }, 8000);
 
 const authOverlayEl = document.getElementById('authOverlay');
-const authChoiceViewEl = document.getElementById('authChoiceView');
 const authLoginViewEl = document.getElementById('authLoginView');
 const authSignupViewEl = document.getElementById('authSignupView');
 const memberLogoutBtn = document.getElementById('memberLogoutBtn');
-const guestSwitchBtn = document.getElementById('guestSwitchBtn');
 const memberDeleteLink = document.getElementById('memberDeleteLink');
 const memberDeleteForm = document.getElementById('memberDeleteForm');
 const memberDeletePasswordInput = document.getElementById('memberDeletePassword');
@@ -3321,7 +3335,6 @@ const memberDeleteErrEl = document.getElementById('memberDeleteErr');
 const memberDeleteCancelBtn = document.getElementById('memberDeleteCancelBtn');
 
 function authShowView(view) {
-  authChoiceViewEl.classList.toggle('hidden', view !== 'choice');
   authLoginViewEl.classList.toggle('hidden', view !== 'login');
   authSignupViewEl.classList.toggle('hidden', view !== 'signup');
 }
@@ -3343,22 +3356,15 @@ function buildAuthIconGrid() {
   });
 }
 
-// 최초 접속 시 "멤버 로그인 / 비회원 로그인" 선택 + 로그인/회원가입 폼을 보여주고,
-// 선택이 끝나면 { mode: 'guest' } 또는 { mode: 'member', uid } 로 resolve됨.
+// 최초 접속 시 바로 로그인 폼을 보여주고(비회원 없음, 멤버만 플레이 가능), 로그인 또는
+// 회원가입이 끝나면 { mode: 'member', uid } 로 resolve됨.
 function showAuthChoiceFlow() {
   return new Promise(resolve => {
-    hidePageLoadingOverlay(); // 선택 화면이 뜨는 순간부터는 로딩 스피너가 아니라 이 화면이 곧 "로딩 중" 표시
+    hidePageLoadingOverlay(); // 로그인 화면이 뜨는 순간부터는 로딩 스피너가 아니라 이 화면이 곧 "로딩 중" 표시
     authOverlayEl.classList.remove('hidden');
-    authShowView('choice');
+    authShowView('login');
     buildAuthIconGrid();
 
-    document.getElementById('authChooseGuestBtn').onclick = () => {
-      authOverlayEl.classList.add('hidden');
-      resolve({ mode: 'guest' });
-    };
-    document.getElementById('authChooseMemberBtn').onclick = () => authShowView('login');
-    document.getElementById('authLoginBackLink').onclick = e => { e.preventDefault(); authShowView('choice'); };
-    document.getElementById('authSignupBackLink').onclick = e => { e.preventDefault(); authShowView('choice'); };
     document.getElementById('authGoSignupLink').onclick = e => { e.preventDefault(); authShowView('signup'); };
     document.getElementById('authGoLoginLink').onclick = e => { e.preventDefault(); authShowView('login'); };
 
@@ -3429,10 +3435,9 @@ function showAuthChoiceFlow() {
   });
 }
 
-// 접속할 때마다 이 순서로 신원을 확정함:
-// 1) 예전에 로그인/가입에 성공해서 uid가 localStorage에 남아있으면(멤버) 조용히 그 uid로
-// 2) 아니고 예전에 "비회원으로 시작"을 고른 적 있으면(localStorage) 조용히 기존 방식으로
-// 3) 둘 다 아니면(최초 접속) 선택 화면을 띄워서 물어봄
+// 접속할 때마다 이 순서로 신원을 확정함(비회원 개념 비활성화 — 멤버만 플레이 가능):
+// 1) 예전에 로그인/가입에 성공해서 uid가 localStorage에 남아있으면 조용히 그 uid로
+// 2) 아니면(최초 접속이거나 로그아웃 상태) 바로 로그인 화면을 띄워서 물어봄
 async function resolveIdentity() {
   bootStage = 'resolveIdentity:start';
   let memberUid = null;
@@ -3445,28 +3450,8 @@ async function resolveIdentity() {
     return memberUid;
   }
 
-  let guestChosen = false;
-  try { guestChosen = localStorage.getItem('wb-guestChosen') === '1'; } catch {}
-  if (guestChosen) {
-    bootStage = 'resolveIdentity:guest-chosen-fetching-id';
-    guestSwitchBtn.classList.remove('hidden');
-    hofMemberPromptEl.classList.remove('hidden'); // 비회원에게만 "멤버되고 점수기록되기" 문구를 로그인 버튼 위에 보여줌
-    const id = await fetchClientId();
-    bootStage = 'resolveIdentity:guest-id-fetched';
-    return id;
-  }
-
   bootStage = 'resolveIdentity:awaiting-auth-choice';
   const result = await showAuthChoiceFlow();
-  if (result.mode === 'guest') {
-    try { localStorage.setItem('wb-guestChosen', '1'); } catch {}
-    guestSwitchBtn.classList.remove('hidden');
-    hofMemberPromptEl.classList.remove('hidden'); // 비회원에게만 "멤버되고 점수기록되기" 문구를 로그인 버튼 위에 보여줌
-    bootStage = 'resolveIdentity:new-guest-fetching-id';
-    const id = await fetchClientId();
-    bootStage = 'resolveIdentity:guest-id-fetched';
-    return id;
-  }
   isMemberMode = true;
   try { localStorage.setItem('wb-memberUid', result.uid); } catch {}
   memberLogoutBtn.classList.remove('hidden');
@@ -3482,8 +3467,8 @@ memberLogoutBtn.addEventListener('click', () => {
 
 // 회원 탈퇴 — 링크를 누르면 비밀번호 재확인 폼이 펼쳐짐(실수 방지). 취소하면 다시 접힘.
 // 폼 제출 시 /api/delete-account로 비밀번호를 재검증한 뒤 서버에서 계정 데이터를 지우고,
-// 성공하면 로그아웃과 마찬가지로 localStorage를 지우고 새로고침해 비회원/멤버 선택
-// 화면으로 돌아감(Apple 5.1.1(v): 앱 안에서 계정 삭제를 시작할 수 있어야 함)
+// 성공하면 로그아웃과 마찬가지로 localStorage를 지우고 새로고침해 로그인 화면으로
+// 돌아감(Apple 5.1.1(v): 앱 안에서 계정 삭제를 시작할 수 있어야 함)
 memberDeleteLink.addEventListener('click', () => {
   memberDeleteLink.classList.add('hidden');
   memberDeleteForm.classList.remove('hidden');
@@ -3519,14 +3504,6 @@ memberDeleteForm.addEventListener('submit', async (e) => {
     btn.disabled = false;
     btn.textContent = origLabel;
   }
-});
-
-// 비회원으로 시작한 사람이 다시 멤버/비회원 선택 화면을 보고 싶을 때 — "비회원으로
-// 시작했다"는 기억(localStorage)만 지우고 새로고침하면 resolveIdentity()가 다시
-// showAuthChoiceFlow()를 띄워줌
-guestSwitchBtn.addEventListener('click', () => {
-  try { localStorage.removeItem('wb-guestChosen'); } catch {}
-  location.reload();
 });
 
 // ---------- 푸시 알림(FCM, 네이티브 앱 전용) ----------
