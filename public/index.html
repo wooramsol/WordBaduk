@@ -214,15 +214,13 @@
     max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden;
   }
   #leaderboard.hidden { display: none; }
-  #leaderboard ol { list-style: none; counter-reset: lb; }
-  /* 등수마다 li의 font-size 자체가 다르고(1등이 제일 큼), 그 안의 등수/점/이름/점수는
-     전부 em 단위라 폰트 크기에 비례해서 같이 커지고 작아짐 — 고정 px로 된 "공통 크기" 요소가
-     하나도 없게 함. justify-content:center로 각 줄의 내용 전체를 가로 중앙에 정렬 */
+  #leaderboard ol { list-style: none; }
+  /* 등수마다 li의 font-size 자체가 다르고(1등이 제일 큼), 그 안의 이름/점수는 전부 em
+     단위라 폰트 크기에 비례해서 같이 커지고 작아짐 — 고정 px로 된 "공통 크기" 요소가
+     하나도 없게 함. justify-content:center로 각 줄의 내용 전체를 가로 중앙에 정렬.
+     "1등/2등" 텍스트는 뺌(아이콘 크기 차이만으로도 순위가 구분됨) */
   #leaderboard li { display: flex; align-items: center;
-    justify-content: center; gap: 0.5em; padding: 0.15em 0; font-size: 12px; white-space: nowrap;
-    counter-increment: lb; }
-  #leaderboard li::before { content: counter(lb) "등"; color: #9a927d;
-    font-size: 0.85em; flex: none; }
+    justify-content: center; gap: 0.5em; padding: 0.15em 0; font-size: 12px; white-space: nowrap; }
   /* 예전엔 색깔 점(●)만 찍었는데, 그 사람 고유 과일/아이콘 이모지를 그대로 보여주는 게
      더 직관적이라 교체함(비회원=과일, 회원=가입 때 고른 아이콘 — fruitOf()가 알아서 골라줌) */
   #leaderboard .icon { font-size: 1em; line-height: 1; flex: none; }
@@ -588,7 +586,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.32</div>
+<div id="verTagBottom">v1.9.33</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -662,7 +660,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.32'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.33'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
