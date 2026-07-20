@@ -364,6 +364,32 @@
   }
   #memberLogoutBtn.hidden, #guestSwitchBtn.hidden { display: none; }
   #memberLogoutBtn:hover, #guestSwitchBtn:hover { filter: brightness(0.97); }
+  /* 회원 탈퇴 — 로그아웃보다 눈에 덜 띄는 작은 텍스트 링크로 둬서 실수로 누르는 걸 방지.
+     누르면 비밀번호 재확인 폼이 펼쳐짐(memberDeleteForm) */
+  #memberDeleteLink {
+    text-align: center; margin-top: 10px; font-size: 12px; color: #b08a8a;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
+  #memberDeleteLink.hidden { display: none; }
+  #memberDeleteLink:hover { color: #a06a6a; }
+  #memberDeleteForm { margin-top: 10px; }
+  #memberDeleteForm.hidden { display: none; }
+  #memberDeletePassword {
+    display: block; width: 100%; box-sizing: border-box; padding: 10px 12px;
+    border-radius: 10px; border: 1px solid #d8d2c4; font-size: 14px;
+    background: #fff; color: #444;
+  }
+  #memberDeletePassword:focus { border-color: #8a7a4f; outline: none; }
+  #memberDeleteErr { font-size: 12px; color: #c0392b; min-height: 1em; margin-top: 6px; }
+  #memberDeleteBtnRow { display: flex; gap: 8px; margin-top: 6px; }
+  #memberDeleteCancelBtn, #memberDeleteConfirmBtn {
+    flex: 1; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
+    cursor: pointer; border: 1px solid #d8d2c4;
+  }
+  #memberDeleteCancelBtn { background: #f5f1e8; color: #444; }
+  #memberDeleteConfirmBtn { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
+  #memberDeleteCancelBtn:hover { filter: brightness(0.97); }
+  #memberDeleteConfirmBtn:hover { background: #f4caca; }
 
   /* 랭킹 — authOverlay/authCard와 같은 가운데 모달 패턴 재사용. 배경(#hofBackdrop)을
      눌러도 닫히게 해서 authOverlay처럼 익숙한 팝업 동작을 유지함 */
@@ -603,12 +629,23 @@
       <div id="hofMemberPrompt" class="hidden">멤버되고 점수기록되기</div>
       <button id="guestSwitchBtn" type="button" class="hidden">로그인</button>
       <button id="memberLogoutBtn" type="button" class="hidden">로그아웃</button>
+      <!-- 앱 안에서 계정 삭제를 시작할 수 있어야 함(Apple 5.1.1(v) 대응). 로그아웃과
+           헷갈리지 않도록 눈에 덜 띄는 링크로 두고, 누르면 비밀번호 재확인 폼이 펼쳐짐 -->
+      <div id="memberDeleteLink" class="hidden">회원 탈퇴</div>
+      <form id="memberDeleteForm" class="hidden">
+        <input id="memberDeletePassword" type="password" placeholder="비밀번호 확인" autocomplete="current-password" data-lpignore="true">
+        <div id="memberDeleteErr"></div>
+        <div id="memberDeleteBtnRow">
+          <button id="memberDeleteCancelBtn" type="button">취소</button>
+          <button id="memberDeleteConfirmBtn" type="submit">탈퇴하기</button>
+        </div>
+      </form>
     </div>
     <div id="hofCloseHint">눌러서 닫기</div>
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.40</div>
+<div id="verTagBottom">v1.9.41</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -685,7 +722,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.40'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.41'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2859,6 +2896,11 @@ const authLoginViewEl = document.getElementById('authLoginView');
 const authSignupViewEl = document.getElementById('authSignupView');
 const memberLogoutBtn = document.getElementById('memberLogoutBtn');
 const guestSwitchBtn = document.getElementById('guestSwitchBtn');
+const memberDeleteLink = document.getElementById('memberDeleteLink');
+const memberDeleteForm = document.getElementById('memberDeleteForm');
+const memberDeletePasswordInput = document.getElementById('memberDeletePassword');
+const memberDeleteErrEl = document.getElementById('memberDeleteErr');
+const memberDeleteCancelBtn = document.getElementById('memberDeleteCancelBtn');
 
 function authShowView(view) {
   authChoiceViewEl.classList.toggle('hidden', view !== 'choice');
@@ -2981,6 +3023,7 @@ async function resolveIdentity() {
     bootStage = 'resolveIdentity:member-uid-found';
     isMemberMode = true;
     memberLogoutBtn.classList.remove('hidden');
+    memberDeleteLink.classList.remove('hidden');
     return memberUid;
   }
 
@@ -3009,6 +3052,7 @@ async function resolveIdentity() {
   isMemberMode = true;
   try { localStorage.setItem('wb-memberUid', result.uid); } catch {}
   memberLogoutBtn.classList.remove('hidden');
+  memberDeleteLink.classList.remove('hidden');
   bootStage = 'resolveIdentity:new-member-done';
   return result.uid;
 }
@@ -3016,6 +3060,47 @@ async function resolveIdentity() {
 memberLogoutBtn.addEventListener('click', () => {
   try { localStorage.removeItem('wb-memberUid'); } catch {}
   location.reload();
+});
+
+// 회원 탈퇴 — 링크를 누르면 비밀번호 재확인 폼이 펼쳐짐(실수 방지). 취소하면 다시 접힘.
+// 폼 제출 시 /api/delete-account로 비밀번호를 재검증한 뒤 서버에서 계정 데이터를 지우고,
+// 성공하면 로그아웃과 마찬가지로 localStorage를 지우고 새로고침해 비회원/멤버 선택
+// 화면으로 돌아감(Apple 5.1.1(v): 앱 안에서 계정 삭제를 시작할 수 있어야 함)
+memberDeleteLink.addEventListener('click', () => {
+  memberDeleteLink.classList.add('hidden');
+  memberDeleteForm.classList.remove('hidden');
+  memberDeletePasswordInput.value = '';
+  memberDeleteErrEl.textContent = '';
+  memberDeletePasswordInput.focus();
+});
+memberDeleteCancelBtn.addEventListener('click', () => {
+  memberDeleteForm.classList.add('hidden');
+  memberDeleteLink.classList.remove('hidden');
+});
+memberDeleteForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const password = memberDeletePasswordInput.value;
+  if (!password) { memberDeleteErrEl.textContent = '비밀번호를 입력해주세요.'; return; }
+  const btn = document.getElementById('memberDeleteConfirmBtn');
+  btn.disabled = true;
+  const origLabel = btn.textContent;
+  btn.textContent = '탈퇴 처리 중...';
+  memberDeleteErrEl.textContent = '';
+  try {
+    const res = await fetch('/api/delete-account', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: clientId, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { memberDeleteErrEl.textContent = data.error || '탈퇴에 실패했어요.'; return; }
+    try { localStorage.removeItem('wb-memberUid'); } catch {}
+    location.reload();
+  } catch (err) {
+    memberDeleteErrEl.textContent = '탈퇴 처리 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
 });
 
 // 비회원으로 시작한 사람이 다시 멤버/비회원 선택 화면을 보고 싶을 때 — "비회원으로

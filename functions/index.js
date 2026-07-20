@@ -117,6 +117,44 @@ exports.signup = functions.https.onRequest(async (req, res) => {
   }
 });
 
+/**
+ * 회원 탈퇴 — 비밀번호를 다시 확인한 뒤 members/memberNicknames/memberProfiles/
+ * memberTotalScore에서 그 uid 관련 데이터를 전부 지운다. 애플 심사 가이드라인
+ * 5.1.1(v)(앱 안에서 계정 삭제를 시작할 수 있어야 함) 대응용.
+ * 이미 놓은 낱말/포획 영역(board.cells)은 지우지 않음 — 게임판은 다른 사람들과
+ * 공유하는 공용 상태라 회원 개인 데이터로 보지 않고, 어차피 다음 판 재시작 때
+ * 자연히 사라짐(low-stakes 신뢰 모델 유지).
+ */
+exports.deleteAccount = functions.https.onRequest(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (req.method !== 'POST') { res.status(405).json({ error: '허용되지 않은 요청이에요.' }); return; }
+  const { uid, password } = req.body || {};
+  if (typeof uid !== 'string' || !uid || typeof password !== 'string' || !password) {
+    res.status(400).json({ error: '잘못된 요청이에요.' }); return;
+  }
+
+  const db = admin.database();
+  const WRONG = '비밀번호가 올바르지 않아요.';
+  try {
+    const memberSnap = await db.ref('members/' + uid).once('value');
+    const member = memberSnap.val();
+    if (!member || !verifyPassword(password, member.passwordHash)) {
+      res.status(401).json({ error: WRONG }); return;
+    }
+    const nicknameLower = String(member.nickname || '').toLowerCase();
+    await Promise.all([
+      db.ref('members/' + uid).remove(),
+      db.ref('memberNicknames/' + nicknameLower).remove(),
+      db.ref('memberProfiles/' + uid).remove(),
+      db.ref('memberTotalScore/' + uid).remove(),
+    ]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('deleteAccount 실패:', e);
+    res.status(500).json({ error: '탈퇴 처리 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.' });
+  }
+});
+
 exports.login = functions.https.onRequest(async (req, res) => {
   res.set('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.status(405).json({ error: '허용되지 않은 요청이에요.' }); return; }

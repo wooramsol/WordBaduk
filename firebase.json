@@ -18,6 +18,10 @@
       {
         "source": "/api/login",
         "function": "login"
+      },
+      {
+        "source": "/api/delete-account",
+        "function": "deleteAccount"
       }
     ],
     "headers": [
