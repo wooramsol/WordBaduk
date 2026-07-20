@@ -217,7 +217,9 @@
   #leaderboard li:not(.lbMore) { counter-increment: lb; }
   #leaderboard li:not(.lbMore)::before { content: counter(lb) "등"; color: #9a927d;
     font-size: 0.85em; flex: none; }
-  #leaderboard .dot { width: 0.6em; height: 0.6em; border-radius: 50%; flex: none; }
+  /* 예전엔 색깔 점(●)만 찍었는데, 그 사람 고유 과일/아이콘 이모지를 그대로 보여주는 게
+     더 직관적이라 교체함(비회원=과일, 회원=가입 때 고른 아이콘 — fruitOf()가 알아서 골라줌) */
+  #leaderboard .icon { font-size: 1em; line-height: 1; flex: none; }
   /* 과일 이름은 항상 한 줄로 — 줄바꿈되면 다른 항목과 줄이 겹쳐 보여 지저분함 */
   #leaderboard .name { white-space: nowrap; }
   #leaderboard li.me .name { font-weight: 700; }
@@ -577,7 +579,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.27</div>
+<div id="verTagBottom">v1.9.28</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -651,7 +653,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.27'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.28'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2371,9 +2373,9 @@ function updateLeaderboard() {
     li.style.fontSize = (RANK_FONT_SIZES[i] || RANK_FONT_SIZES[RANK_FONT_SIZES.length - 1]) + 'px';
     const hue = ownerHue(owner);
     if (owner === clientId) li.className = 'me';
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    dot.style.background = `hsl(${hue}, 55%, 55%)`;
+    const icon = document.createElement('span');
+    icon.className = 'icon';
+    icon.textContent = ownerEmoji(owner);
     const name = document.createElement('span');
     name.className = 'name';
     name.textContent = ownerName(owner) + (owner === clientId ? ' (나)' : '');
@@ -2386,7 +2388,7 @@ function updateLeaderboard() {
     cnt.textContent = prev + '점';
     animateScore(cnt, prev, count);
     prevScores.set(owner, count);
-    li.append(dot, name, cnt);
+    li.append(icon, name, cnt);
     lbListEl.appendChild(li);
   });
   if (hasMore) {
