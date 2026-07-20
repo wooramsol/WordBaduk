@@ -35,6 +35,13 @@
       ".read": false,
       ".write": false
     },
+    "reports": {
+      ".read": false,
+      ".write": true,
+      "$reportId": {
+        ".validate": "newData.hasChildren(['reporterId', 'targetId', 'reason', 'ts']) && newData.child('reason').isString() && newData.child('reason').val().length <= 300"
+      }
+    },
     "memberNicknames": {
       ".read": false,
       ".write": false

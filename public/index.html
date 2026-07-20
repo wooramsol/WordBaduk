@@ -449,6 +449,34 @@
   }
   #hofEmpty { text-align: center; font-size: 13px; color: #999; padding: 20px 0; }
   #hofEmpty.hidden { display: none; }
+  /* 신고/차단 목록 — 랭킹 목록과 구분되도록 옅은 구분선을 위에 두고, 인원이 많아지면
+     #hofList처럼 자체 스크롤(140px)만 켜서 카드 전체 높이는 늘어나지 않게 함 */
+  #hofOnlineSection { margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0ece0; }
+  #hofOnlineSection.hidden { display: none; }
+  #hofOnlineTitle { font-size: 11px; font-weight: 700; color: #a89a78; margin-bottom: 6px; }
+  #hofOnlineList {
+    list-style: none; margin: 0; padding: 0;
+    max-height: 140px; overflow-y: auto; overflow-x: hidden;
+  }
+  #hofOnlineList li {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 2px; font-size: 13px;
+  }
+  #hofOnlineList .hofOnlineEmoji { flex: none; font-size: 1.1em; }
+  #hofOnlineList .hofOnlineName {
+    flex: 1; font-weight: 600; color: #444;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #hofOnlineList .hofOnlineBtn {
+    flex: none; padding: 4px 8px; margin-left: 4px;
+    border-radius: 8px; border: 1px solid #d8d2c4; background: #f5f1e8;
+    color: #666; font-size: 11px; font-weight: 700; cursor: pointer;
+  }
+  #hofOnlineList .hofOnlineBtn:hover { filter: brightness(0.97); }
+  #hofOnlineList .hofOnlineBtn.blocked { background: #eae5d8; color: #97907f; }
+  #hofOnlineList .hofOnlineBtn.reportBtn { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
+  #hofOnlineList .hofOnlineBtn.reportBtn:hover { background: #f4caca; }
+  #hofOnlineList .hofOnlineEmptyRow { justify-content: center; font-size: 12px; color: #999; padding: 8px 0; }
   /* 닫기 버튼 대신 하단에 작은 글자 힌트만 둠 — infoPanel의 "눌러서 닫기"와 동일한
      스타일(배경/테두리 없는 순수 텍스트). 카드 바깥(#hofBackdrop) 클릭으로도 닫히니
      이 텍스트 자체도 눌러서 닫을 수 있게 함 */
@@ -629,6 +657,13 @@
     <div id="hofSub">멤버 누적 점수 순위 (비회원 제외)</div>
     <ol id="hofList"></ol>
     <div id="hofEmpty" class="hidden">아직 기록이 없어요.</div>
+    <!-- 신고/차단: 지금 접속 중인 다른 플레이어 목록. 차단하면 그 사람의 실시간 타이핑
+         미리보기/입장·퇴장 알림이 내 화면에서만 숨겨짐(로컬 저장, 서버 전송 안 됨).
+         신고는 사유와 함께 운영자 확인용으로 서버에 기록됨(Apple 1.2 대응) -->
+    <div id="hofOnlineSection">
+      <div id="hofOnlineTitle">현재 접속 중</div>
+      <ul id="hofOnlineList"></ul>
+    </div>
     <div id="hofAccountSection">
       <div id="hofMemberPrompt" class="hidden">멤버되고 점수기록되기</div>
       <button id="guestSwitchBtn" type="button" class="hidden">로그인</button>
@@ -649,7 +684,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.42</div>
+<div id="verTagBottom">v1.9.43</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -726,7 +761,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.42'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.43'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -777,6 +812,25 @@ function minCellSizeForZoomOut() {
 let usedWords = new Set();          // 이미 보드에 쓰인 단어(canonical 기준) — 중복 사용 방지
 let userCount = 1;
 let onlineIds = new Set();          // 지금 접속 중인 플레이어 clientId 목록(나 포함) — 점수표 표시용
+
+// ---------- 차단(신고/차단 기능) ----------
+// 차단 목록은 서버로 전송하지 않고 이 기기(localStorage)에만 저장됨(privacy.html 명시).
+// 차단하면 그 사람의 실시간 타이핑 미리보기/선택 칸과 입장·퇴장 알림이 내 화면에서만
+// 숨겨짐 — 상대방 화면이나 게임판(놓은 낱말/포획 영역)에는 아무 영향 없음.
+let blockedIds = new Set();
+try {
+  const stored = JSON.parse(localStorage.getItem('wb-blockedIds') || '[]');
+  if (Array.isArray(stored)) blockedIds = new Set(stored);
+} catch {}
+function isPlayerBlocked(id) { return blockedIds.has(id); }
+function saveBlockedIds() {
+  try { localStorage.setItem('wb-blockedIds', JSON.stringify([...blockedIds])); } catch {}
+}
+function togglePlayerBlock(id) {
+  if (blockedIds.has(id)) blockedIds.delete(id); else blockedIds.add(id);
+  saveBlockedIds();
+}
+
 // 지금 보드에 떠 있는 판이 "시작될 때 혼자였는지" — board.soloRound를 그대로 반영(boot()의
 // boardRef.on('value')에서 갱신). checkMultiStartTrigger()가 이 값과 실시간 인원수(userCount)를
 // 같이 보고 "혼자 하던 판에 사람이 들어왔는지" 판단함
@@ -2511,6 +2565,7 @@ const hofListEl = document.getElementById('hofList');
 const hofEmptyEl = document.getElementById('hofEmpty');
 const hofMemberPromptEl = document.getElementById('hofMemberPrompt');
 const hofCloseHint = document.getElementById('hofCloseHint');
+const hofOnlineListEl = document.getElementById('hofOnlineList');
 const HOF_EMPTY_DEFAULT_MSG = hofEmptyEl.textContent;
 
 function closeHallOfFame() {
@@ -2520,10 +2575,76 @@ function closeHallOfFame() {
 hofCloseHint.addEventListener('click', closeHallOfFame);
 hofBackdrop.addEventListener('click', closeHallOfFame);
 
+// 접속 중인 다른 플레이어 목록 + 차단/신고 버튼. 신고/차단하려는 상대는 항상 "지금
+// 접속 중"이어야 의미가 있으므로(떠난 사람은 신고할 대상 존재 자체가 애매함) onlineIds를
+// 그대로 씀 — 랭킹(memberTotalScore, 회원 전용) 목록과 달리 비회원도 포함됨.
+function renderHofOnlineList() {
+  hofOnlineListEl.textContent = '';
+  const others = [...onlineIds].filter(id => id !== clientId);
+  if (others.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'hofOnlineEmptyRow';
+    li.textContent = '지금 함께 접속 중인 다른 플레이어가 없어요.';
+    hofOnlineListEl.appendChild(li);
+    return;
+  }
+  others.forEach(id => {
+    const li = document.createElement('li');
+    li.dataset.id = id;
+    const emoji = document.createElement('span');
+    emoji.className = 'hofOnlineEmoji';
+    emoji.textContent = ownerEmoji(id);
+    const name = document.createElement('span');
+    name.className = 'hofOnlineName';
+    name.textContent = ownerName(id);
+    const blockBtn = document.createElement('button');
+    blockBtn.type = 'button';
+    blockBtn.className = 'hofOnlineBtn blockBtn' + (isPlayerBlocked(id) ? ' blocked' : '');
+    blockBtn.dataset.action = 'block';
+    blockBtn.textContent = isPlayerBlocked(id) ? '차단 해제' : '차단';
+    const reportBtn = document.createElement('button');
+    reportBtn.type = 'button';
+    reportBtn.className = 'hofOnlineBtn reportBtn';
+    reportBtn.dataset.action = 'report';
+    reportBtn.textContent = '신고';
+    li.append(emoji, name, blockBtn, reportBtn);
+    hofOnlineListEl.appendChild(li);
+  });
+}
+
+hofOnlineListEl.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const li = btn.closest('li[data-id]');
+  if (!li) return;
+  const id = li.dataset.id;
+  if (btn.dataset.action === 'block') {
+    togglePlayerBlock(id);
+    showToast(isPlayerBlocked(id) ? '차단했어요. 이 사람의 입력/알림이 이제 안 보여요.' : '차단을 해제했어요.');
+    renderHofOnlineList();
+    return;
+  }
+  if (btn.dataset.action === 'report') {
+    const reason = (prompt(ownerName(id) + '님을 신고하는 이유를 알려주세요.') || '').trim();
+    if (!reason) return;
+    firebase.database().ref('reports').push({
+      reporterId: clientId || 'unknown',
+      targetId: id,
+      reason: reason.slice(0, 300),
+      ts: firebase.database.ServerValue.TIMESTAMP,
+    }).then(() => {
+      showToast('신고했어요. 확인 후 조치할게요.');
+    }).catch(() => {
+      showToast('신고 접수에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    });
+  }
+});
+
 hallOfFameBtn.addEventListener('click', async () => {
   hofListEl.textContent = '';
   hofEmptyEl.textContent = HOF_EMPTY_DEFAULT_MSG;
   hofEmptyEl.classList.add('hidden');
+  renderHofOnlineList();
   hofOverlay.classList.remove('hidden');
   hofBackdrop.classList.remove('hidden');
   try {
@@ -3183,12 +3304,12 @@ async function boot() {
     if (!presenceFirstSync) {
       let dinged = false;
       for (const id of newIds) {
-        if (id === clientId || onlineIds.has(id)) continue;
+        if (id === clientId || onlineIds.has(id) || isPlayerBlocked(id)) continue;
         if (!dinged) { playJoinDing(); dinged = true; }
         showPlayerAnnounce(id, '등장!');
       }
       for (const id of onlineIds) {
-        if (id === clientId || newIds.has(id)) continue;
+        if (id === clientId || newIds.has(id) || isPlayerBlocked(id)) continue;
         showPlayerAnnounce(id, '퇴장ㅠ');
       }
     }
@@ -3215,7 +3336,7 @@ async function boot() {
     livePeers.clear();
     const now = Date.now();
     for (const [id, p] of Object.entries(val)) {
-      if (id === clientId || !p || typeof p.x !== 'number') continue;
+      if (id === clientId || !p || typeof p.x !== 'number' || isPlayerBlocked(id)) continue;
       if (p.ts && now - p.ts > 15000) continue; // 오래 갱신 안 된 상태(비정상 종료 등)는 무시
       livePeers.set(id, p);
     }
