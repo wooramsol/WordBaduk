@@ -736,7 +736,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.55</div>
+<div id="verTagBottom">v1.9.56</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -813,7 +813,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.55'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.56'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1141,6 +1141,36 @@ function findCapturedRegions(getCell, K, newlyPlacedCoords) {
     }
   }
   return captured;
+}
+
+// 이미 포획된 칸 위에 새 글자를 써서 뺏을 때, 그 칸 하나만 글자로 바뀌는 게 아니라
+// 그 칸이 속해 있던 "같은 주인의 인접 포획 영역 전체"의 소유권도 함께 넘어옴 — 땅을
+// 한 칸씩 파먹는 게 아니라 상대가 확보해둔 영역을 통째로 뺏는 개념. board.cells를
+// 직접 4방향 flood-fill해서, (sx,sy)에서 시작해 captured:true && owner===owner인
+// 칸들만 이어서 모음(글자 칸이나 다른 주인의 영역을 만나면 그 자리에서 멈춤)
+function collectCapturedRegion(board, K, sx, sy, owner, visited) {
+  const NEI = (ax, ay) => [[ax + 1, ay], [ax - 1, ay], [ax, ay + 1], [ax, ay - 1]];
+  const startKey = K(sx, sy);
+  const region = [];
+  if (visited.has(startKey)) return region;
+  const c0 = board.cells[K(sx, sy)];
+  if (!c0 || !c0.captured || c0.owner !== owner) return region;
+  visited.add(startKey);
+  const queue = [[sx, sy]];
+  region.push([sx, sy]);
+  while (queue.length) {
+    const [cx, cy] = queue.shift();
+    for (const [ax, ay] of NEI(cx, cy)) {
+      const ak = K(ax, ay);
+      if (visited.has(ak)) continue;
+      const ac = board.cells[ak];
+      if (!ac || !ac.captured || ac.owner !== owner) continue;
+      visited.add(ak);
+      region.push([ax, ay]);
+      queue.push([ax, ay]);
+    }
+  }
+  return region;
 }
 
 // ---------- 캔버스 ----------
@@ -2214,10 +2244,14 @@ async function submit() {
 
       const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
       const placedCoords = [];
+      const stolenSeeds = []; // 이번에 덮어쓴 상대 소유 captured 칸들: [cx, cy, 이전 주인]
       for (let i = 0; i < r.word.length; i++) {
         const cx = r.startX + dx * i, cy = r.startY + dy * i;
         const k = K(cx, cy);
         const existing = board.cells[k];
+        if (existing && existing.captured && existing.owner && existing.owner !== clientId) {
+          stolenSeeds.push([cx, cy, existing.owner]);
+        }
         // 포획된 칸 위에 새로 글자를 쓰면(=상대 땅을 뺏으면) 예전 captured/owner 기록을
         // 그대로 재사용하지 않고 완전히 새 글자 칸으로 새로 만듦 — 재사용하면 captured:true가
         // 안 지워져서 글자가 있는데도 여전히 "포획된 칸"으로 남는 상태가 됨(렌더링/판정 둘 다 깨짐)
@@ -2226,6 +2260,23 @@ async function submit() {
         cell.by = clientId; // 완성 플래시 색을 놓은 사람 색으로 보여주기 위해 최근 배치자 기록
         board.cells[k] = cell;
         placedCoords.push([cx, cy]);
+      }
+
+      // 상대 땅을 뺏은 경우, 그 칸 하나만이 아니라 그 칸이 속해 있던 같은 주인의 인접
+      // 포획 영역 전체의 소유권을 나에게 넘김(위 collectCapturedRegion 주석 참고) —
+      // 방금 글자로 바뀐 칸 자체는 더 이상 captured가 아니므로 그 이웃들부터 탐색 시작
+      let stolenCount = 0;
+      if (stolenSeeds.length) {
+        const stolenVisited = new Set();
+        for (const [sx, sy, prevOwner] of stolenSeeds) {
+          for (const [nx, ny] of [[sx + 1, sy], [sx - 1, sy], [sx, sy + 1], [sx, sy - 1]]) {
+            const region = collectCapturedRegion(board, K, nx, ny, prevOwner, stolenVisited);
+            for (const [rx, ry] of region) {
+              board.cells[K(rx, ry)] = { captured: true, owner: clientId, ts: Date.now() };
+              stolenCount++;
+            }
+          }
+        }
       }
       board.words.push({
         word: r.word,
@@ -2250,7 +2301,7 @@ async function submit() {
       placedInfo = {
         word: r.word,
         canonical: r.canonical && r.canonical !== r.word ? r.canonical : null,
-        capturedCount: capturedCells.length,
+        capturedCount: capturedCells.length + stolenCount,
         startX: r.startX,
         startY: r.startY,
         chat: isChat,
@@ -2496,18 +2547,54 @@ fetch('seed-words.txt')
     if (list.length) SEED_WORDS = list;
   })
   .catch(() => {}); // 실패해도 위 폴백 5개로 계속 동작함
+// 씨앗 단어를 화면 정중앙에 1개만 고정으로 두지 않고, 1~3개를 보드 안 랜덤한 위치에
+// 흩어 놓음 — 서로 붙어있지만(맞닿아있지만) 않으면 되므로, 각 단어를 놓을 때마다 이미
+// 놓인 다른 단어의 칸과 8방향(대각선 포함)으로 겹치거나 맞닿지 않는 자리를 여러 번
+// 무작위로 시도해서 찾음. 자리를 못 찾으면(보드가 좁아서 등) 그 단어는 포기하고 넘어감 —
+// 최소 1개는 첫 시도에서 항상 성공하므로 빈 보드로 시작하는 일은 없음
 function buildSeedBoard() {
-  const word = SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)];
-  const dir = Math.random() < 0.5 ? 'h' : 'v';
-  const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
-  const startX = dir === 'h' ? -Math.floor(word.length / 2) : 0;
-  const startY = dir === 'v' ? -Math.floor(word.length / 2) : 0;
+  const numWords = 1 + Math.floor(Math.random() * 3); // 1~3개, 균등 확률
   const cells = {};
-  for (let i = 0; i < word.length; i++) {
-    const cx = startX + dx * i, cy = startY + dy * i;
-    cells[K(cx, cy)] = { ch: word[i], [dir]: true, by: null };
+  const words = [];
+  const placedCellSet = new Set(); // 지금까지 놓인 단어들의 칸 좌표(맞닿음 검사용)
+  const MAX_TRIES = 60;
+
+  for (let n = 0; n < numWords; n++) {
+    let ok = false;
+    for (let t = 0; t < MAX_TRIES && !ok; t++) {
+      const word = SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)];
+      const dir = Math.random() < 0.5 ? 'h' : 'v';
+      const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
+      const alongMin = BOARD_MIN, alongMax = BOARD_MAX - (word.length - 1);
+      if (alongMax < alongMin) continue; // 단어가 보드보다 길면(사실상 없음) 재시도
+      const alongStart = alongMin + Math.floor(Math.random() * (alongMax - alongMin + 1));
+      const crossStart = BOARD_MIN + Math.floor(Math.random() * (BOARD_MAX - BOARD_MIN + 1));
+      const startX = dir === 'h' ? alongStart : crossStart;
+      const startY = dir === 'v' ? alongStart : crossStart;
+
+      const coords = [];
+      for (let i = 0; i < word.length; i++) coords.push([startX + dx * i, startY + dy * i]);
+
+      // 이 단어의 칸이 기존 칸과 겹치거나(대각선 포함) 맞닿는지 검사
+      const collides = coords.some(([cx, cy]) => {
+        for (let ax = cx - 1; ax <= cx + 1; ax++) {
+          for (let ay = cy - 1; ay <= cy + 1; ay++) {
+            if (placedCellSet.has(K(ax, ay))) return true;
+          }
+        }
+        return false;
+      });
+      if (collides) continue;
+
+      for (let i = 0; i < coords.length; i++) {
+        const [cx, cy] = coords[i];
+        cells[K(cx, cy)] = { ch: word[i], [dir]: true, by: null };
+        placedCellSet.add(K(cx, cy));
+      }
+      words.push({ word, canonical: null, x: startX, y: startY, dir, by: null, ts: Date.now(), chat: false });
+      ok = true;
+    }
   }
-  const words = [{ word, canonical: null, x: startX, y: startY, dir, by: null, ts: Date.now(), chat: false }];
   // soloRound: 이 판이 "시작되는 순간" 접속 인원이 1명이었는지 기록 — 이후 누군가 들어와서
   // 2명 이상이 됐을 때 자동시작 확인 팝업(checkMultiStartTrigger)을 띄울지 판단하는 기준이 됨.
   // 처음부터 2명 이상으로 시작한 판(soloRound:false)에 중간에 3, 4번째가 들어오는 건 그냥
