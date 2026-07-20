@@ -388,10 +388,16 @@
   .hofScore { flex: none; font-weight: 800; color: #6b5e3f; font-variant-numeric: tabular-nums; }
   #hofList li.me { background: #f9f5ea; border-radius: 8px; }
   #hofList li.me .hofName { color: #6b5e3f; }
-  /* 1~3위는 살짝 강조 — 순위 글자색만 다르게 줘서 굳이 이미지 없이도 눈에 띄게 함 */
-  #hofList li[data-rank="1"] .hofRank { color: #c9971f; }
-  #hofList li[data-rank="2"] .hofRank { color: #9a9a9a; }
-  #hofList li[data-rank="3"] .hofRank { color: #b57a4a; }
+  /* 1·2위만 강조하고 3위부터는 전부 동일하게(동메달 구분 없음) — 1위가 가장 굵고
+     빛나게, 2위는 그보다 은은하게. 3위 이하는 .hofRank 기본값(회색, 글로우 없음) 그대로 */
+  #hofList li[data-rank="1"] .hofRank {
+    color: #c9971f; font-weight: 900;
+    text-shadow: 0 0 6px rgba(233,180,54,.85), 0 0 10px rgba(233,180,54,.45);
+  }
+  #hofList li[data-rank="2"] .hofRank {
+    color: #9a9a9a; font-weight: 800;
+    text-shadow: 0 0 3px rgba(154,154,154,.5);
+  }
   #hofEmpty { text-align: center; font-size: 13px; color: #999; padding: 20px 0; }
   #hofEmpty.hidden { display: none; }
   /* 닫기 버튼 대신 하단에 작은 글자 힌트만 둠 — infoPanel의 "눌러서 닫기"와 동일한
@@ -582,7 +588,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
-<div id="verTagBottom">v1.9.31</div>
+<div id="verTagBottom">v1.9.32</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -656,7 +662,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.31'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.32'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
