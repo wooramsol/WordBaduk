@@ -179,10 +179,13 @@
      맞춤 — 예전엔 접속 중일 때 초록 배경으로 통째로 바뀌어서 다른 상단 알약들과 톤이
      어긋났음. 지금은 점(●)의 깜빡임만으로 "접속 중"을 표시하고, 끊겼을 땐 알약 전체를
      살짝 흐리게(opacity)만 해서 튀지 않게 함 */
-  #userCountTag { font-size: 12px; padding: 6px 10px; border-radius: 20px;
-    background: #eee7d8; color: #7a6c45; white-space: nowrap;
+  /* n명을 누르면 접속 중인 플레이어 목록이 뜨므로(아래 #onlineOverlay) 이제 <button>임 —
+     기본 버튼 테두리/폰트를 리셋해서 예전 <div>였을 때와 똑같이 보이게 함 */
+  #userCountTag { font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 20px;
+    border: none; background: #eee7d8; color: #7a6c45; white-space: nowrap; cursor: pointer;
     display: inline-flex; align-items: center; gap: 5px;
     box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  #userCountTag:hover { background: #e2d9c2; }
   #userCountTag:not(.on) { opacity: .65; }
   /* 실시간(라이브) 화면처럼 보이도록, 접속 중일 때만 점이 계속 깜빡임 — 점 색도 초록이
      아니라 알약 글자색(#7a6c45)을 그대로 써서 크림톤 테마에서 튀지 않게 함 */
@@ -455,38 +458,57 @@
   }
   #hofEmpty { text-align: center; font-size: 13px; color: #999; padding: 20px 0; }
   #hofEmpty.hidden { display: none; }
-  /* 신고/차단 목록 — 랭킹 목록과 구분되도록 옅은 구분선을 위에 두고, 인원이 많아지면
-     #hofList처럼 자체 스크롤(140px)만 켜서 카드 전체 높이는 늘어나지 않게 함 */
-  #hofOnlineSection { margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0ece0; }
-  #hofOnlineSection.hidden { display: none; }
-  #hofOnlineTitle { font-size: 11px; font-weight: 700; color: #a89a78; margin-bottom: 6px; }
-  #hofOnlineList {
-    list-style: none; margin: 0; padding: 0;
-    max-height: 140px; overflow-y: auto; overflow-x: hidden;
-  }
-  #hofOnlineList li {
-    display: flex; align-items: center; gap: 6px;
-    padding: 5px 2px; font-size: 13px;
-  }
-  #hofOnlineList .hofOnlineEmoji { flex: none; font-size: 1.1em; }
-  #hofOnlineList .hofOnlineName {
-    flex: 1; font-weight: 600; color: #444;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  #hofOnlineList .hofOnlineBtn {
-    flex: none; padding: 4px 8px; margin-left: 4px;
-    border-radius: 8px; border: 1px solid #d8d2c4; background: #f5f1e8;
-    color: #666; font-size: 11px; font-weight: 700; cursor: pointer;
-  }
-  #hofOnlineList .hofOnlineBtn:hover { filter: brightness(0.97); }
-  #hofOnlineList .hofOnlineBtn.blocked { background: #eae5d8; color: #97907f; }
-  #hofOnlineList .hofOnlineBtn.reportBtn { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
-  #hofOnlineList .hofOnlineBtn.reportBtn:hover { background: #f4caca; }
-  #hofOnlineList .hofOnlineEmptyRow { justify-content: center; font-size: 12px; color: #999; padding: 8px 0; }
   /* 닫기 버튼 대신 하단에 작은 글자 힌트만 둠 — infoPanel의 "눌러서 닫기"와 동일한
      스타일(배경/테두리 없는 순수 텍스트). 카드 바깥(#hofBackdrop) 클릭으로도 닫히니
      이 텍스트 자체도 눌러서 닫을 수 있게 함 */
   #hofCloseHint {
+    text-align: center; margin-top: 16px;
+    font-size: 11px; color: #a89a78; cursor: pointer;
+  }
+
+  /* 접속 중인 플레이어 목록 — #hofBackdrop/#hofOverlay/#hofCard(랭킹 팝업)와 완전히 같은
+     가운데 모달 패턴을 그대로 재사용. 상단 "n명" 알약을 누르면 뜸(랭킹과는 별도 팝업) */
+  #onlineBackdrop { position: fixed; inset: 0; z-index: 67; background: rgba(40,36,26,.45); }
+  #onlineBackdrop.hidden { display: none; }
+  #onlineOverlay {
+    position: fixed; inset: 0; z-index: 68;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; pointer-events: none;
+  }
+  #onlineOverlay.hidden { display: none; }
+  #onlineCard {
+    pointer-events: auto;
+    background: #fff; border-radius: 18px; padding: 22px 20px;
+    width: 100%; max-width: 320px; box-shadow: 0 8px 28px rgba(0,0,0,.2);
+    max-height: calc(100vh - 32px); overflow-y: auto;
+  }
+  #onlineTitle { font-size: 18px; font-weight: 800; color: #1a1a1a; margin-bottom: 14px; text-align: center; }
+  /* 인원이 많아지면 카드 전체가 아니라 목록 안에서만 스크롤(#hofList와 같은 패턴) */
+  #onlineList {
+    list-style: none; margin: 0; padding: 0;
+    max-height: 260px; overflow-y: auto; overflow-x: hidden;
+  }
+  #onlineList li {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 2px; font-size: 14px; border-bottom: 1px solid #f0ece0;
+  }
+  #onlineList li:last-child { border-bottom: none; }
+  #onlineList .onlineEmoji { flex: none; font-size: 1.2em; }
+  #onlineList .onlineName {
+    flex: 1; font-weight: 700; color: #444;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #onlineList .onlineBtn {
+    flex: none; padding: 5px 9px; margin-left: 4px;
+    border-radius: 8px; border: 1px solid #d8d2c4; background: #f5f1e8;
+    color: #666; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  #onlineList .onlineBtn:hover { filter: brightness(0.97); }
+  #onlineList .onlineBtn.blocked { background: #eae5d8; color: #97907f; }
+  #onlineList .onlineBtn.reportBtn { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
+  #onlineList .onlineBtn.reportBtn:hover { background: #f4caca; }
+  #onlineList .onlineEmptyRow { justify-content: center; font-size: 13px; color: #999; padding: 12px 0; border-bottom: none; }
+  #onlineCloseHint {
     text-align: center; margin-top: 16px;
     font-size: 11px; color: #a89a78; cursor: pointer;
   }
@@ -647,7 +669,10 @@
 </div>
 <div id="topRight">
   <button id="hallOfFameBtn" type="button">🏆 랭킹</button>
-  <div id="userCountTag"><span id="userCountDot"></span><span id="userCountText">1명</span></div>
+  <!-- 예전엔 랭킹 팝업 안에 "현재 접속 중" 목록을 같이 넣었는데, 랭킹(누적 점수 기록)과
+       접속 현황은 성격이 다른 정보라 분리함 — 이 알약을 누르면 접속 중인 플레이어 목록이
+       따로 뜸(아래 #onlineOverlay) -->
+  <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명</span></button>
 </div>
 <div id="leaderboard" class="hidden">
   <ol id="lbList"></ol>
@@ -663,13 +688,6 @@
     <div id="hofSub">멤버 누적 점수 순위 (비회원 제외)</div>
     <ol id="hofList"></ol>
     <div id="hofEmpty" class="hidden">아직 기록이 없어요.</div>
-    <!-- 신고/차단: 지금 접속 중인 다른 플레이어 목록. 차단하면 그 사람의 실시간 타이핑
-         미리보기/입장·퇴장 알림이 내 화면에서만 숨겨짐(로컬 저장, 서버 전송 안 됨).
-         신고는 사유와 함께 운영자 확인용으로 서버에 기록됨(Apple 1.2 대응) -->
-    <div id="hofOnlineSection">
-      <div id="hofOnlineTitle">현재 접속 중</div>
-      <ul id="hofOnlineList"></ul>
-    </div>
     <div id="hofAccountSection">
       <div id="hofMemberPrompt" class="hidden">멤버되고 점수기록되기</div>
       <button id="guestSwitchBtn" type="button" class="hidden">로그인</button>
@@ -689,8 +707,21 @@
     <div id="hofCloseHint">눌러서 닫기</div>
   </div>
 </div>
+
+<!-- 접속 중인 플레이어 목록 — 상단 "n명" 알약(#userCountTag)을 누르면 뜸. 랭킹(누적 점수
+     기록)과는 별개 정보라 분리함. 차단하면 그 사람의 실시간 타이핑 미리보기/입장·퇴장
+     알림이 내 화면에서만 숨겨짐(로컬 저장, 서버 전송 안 됨). 신고는 사유와 함께 운영자
+     확인용으로 서버에 기록됨(Apple 1.2 대응) -->
+<div id="onlineBackdrop" class="hidden"></div>
+<div id="onlineOverlay" class="hidden">
+  <div id="onlineCard">
+    <div id="onlineTitle">현재 접속 중</div>
+    <ul id="onlineList"></ul>
+    <div id="onlineCloseHint">눌러서 닫기</div>
+  </div>
+</div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.46</div>
+<div id="verTagBottom">v1.9.47</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -767,7 +798,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.46'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.47'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2571,7 +2602,6 @@ const hofListEl = document.getElementById('hofList');
 const hofEmptyEl = document.getElementById('hofEmpty');
 const hofMemberPromptEl = document.getElementById('hofMemberPrompt');
 const hofCloseHint = document.getElementById('hofCloseHint');
-const hofOnlineListEl = document.getElementById('hofOnlineList');
 const HOF_EMPTY_DEFAULT_MSG = hofEmptyEl.textContent;
 
 function closeHallOfFame() {
@@ -2581,76 +2611,10 @@ function closeHallOfFame() {
 hofCloseHint.addEventListener('click', closeHallOfFame);
 hofBackdrop.addEventListener('click', closeHallOfFame);
 
-// 접속 중인 다른 플레이어 목록 + 차단/신고 버튼. 신고/차단하려는 상대는 항상 "지금
-// 접속 중"이어야 의미가 있으므로(떠난 사람은 신고할 대상 존재 자체가 애매함) onlineIds를
-// 그대로 씀 — 랭킹(memberTotalScore, 회원 전용) 목록과 달리 비회원도 포함됨.
-function renderHofOnlineList() {
-  hofOnlineListEl.textContent = '';
-  const others = [...onlineIds].filter(id => id !== clientId);
-  if (others.length === 0) {
-    const li = document.createElement('li');
-    li.className = 'hofOnlineEmptyRow';
-    li.textContent = '지금 함께 접속 중인 다른 플레이어가 없어요.';
-    hofOnlineListEl.appendChild(li);
-    return;
-  }
-  others.forEach(id => {
-    const li = document.createElement('li');
-    li.dataset.id = id;
-    const emoji = document.createElement('span');
-    emoji.className = 'hofOnlineEmoji';
-    emoji.textContent = ownerEmoji(id);
-    const name = document.createElement('span');
-    name.className = 'hofOnlineName';
-    name.textContent = ownerName(id);
-    const blockBtn = document.createElement('button');
-    blockBtn.type = 'button';
-    blockBtn.className = 'hofOnlineBtn blockBtn' + (isPlayerBlocked(id) ? ' blocked' : '');
-    blockBtn.dataset.action = 'block';
-    blockBtn.textContent = isPlayerBlocked(id) ? '차단 해제' : '차단';
-    const reportBtn = document.createElement('button');
-    reportBtn.type = 'button';
-    reportBtn.className = 'hofOnlineBtn reportBtn';
-    reportBtn.dataset.action = 'report';
-    reportBtn.textContent = '신고';
-    li.append(emoji, name, blockBtn, reportBtn);
-    hofOnlineListEl.appendChild(li);
-  });
-}
-
-hofOnlineListEl.addEventListener('click', e => {
-  const btn = e.target.closest('button[data-action]');
-  if (!btn) return;
-  const li = btn.closest('li[data-id]');
-  if (!li) return;
-  const id = li.dataset.id;
-  if (btn.dataset.action === 'block') {
-    togglePlayerBlock(id);
-    showToast(isPlayerBlocked(id) ? '차단했어요. 이 사람의 입력/알림이 이제 안 보여요.' : '차단을 해제했어요.');
-    renderHofOnlineList();
-    return;
-  }
-  if (btn.dataset.action === 'report') {
-    const reason = (prompt(ownerName(id) + '님을 신고하는 이유를 알려주세요.') || '').trim();
-    if (!reason) return;
-    firebase.database().ref('reports').push({
-      reporterId: clientId || 'unknown',
-      targetId: id,
-      reason: reason.slice(0, 300),
-      ts: firebase.database.ServerValue.TIMESTAMP,
-    }).then(() => {
-      showToast('신고했어요. 확인 후 조치할게요.');
-    }).catch(() => {
-      showToast('신고 접수에 실패했어요. 잠시 후 다시 시도해 주세요.');
-    });
-  }
-});
-
 hallOfFameBtn.addEventListener('click', async () => {
   hofListEl.textContent = '';
   hofEmptyEl.textContent = HOF_EMPTY_DEFAULT_MSG;
   hofEmptyEl.classList.add('hidden');
-  renderHofOnlineList();
   hofOverlay.classList.remove('hidden');
   hofBackdrop.classList.remove('hidden');
   try {
@@ -2687,6 +2651,90 @@ hallOfFameBtn.addEventListener('click', async () => {
     hofEmptyEl.textContent = '불러오는 중 오류가 발생했어요.';
     hofEmptyEl.classList.remove('hidden');
   }
+});
+
+// ---------- 접속 중인 플레이어 목록(+ 차단/신고) ----------
+// 랭킹(memberTotalScore 누적 점수, 회원 전용)과는 별개 팝업 — 상단 "n명" 알약을 누르면
+// 뜸. 신고/차단하려는 상대는 항상 "지금 접속 중"이어야 의미가 있으므로(떠난 사람은
+// 신고할 대상 존재 자체가 애매함) onlineIds를 그대로 씀 — 랭킹과 달리 비회원도 포함됨.
+const onlineBackdrop = document.getElementById('onlineBackdrop');
+const onlineOverlay = document.getElementById('onlineOverlay');
+const onlineListEl = document.getElementById('onlineList');
+const onlineCloseHint = document.getElementById('onlineCloseHint');
+
+function closeOnlineOverlay() {
+  onlineOverlay.classList.add('hidden');
+  onlineBackdrop.classList.add('hidden');
+}
+onlineCloseHint.addEventListener('click', closeOnlineOverlay);
+onlineBackdrop.addEventListener('click', closeOnlineOverlay);
+
+function renderOnlineList() {
+  onlineListEl.textContent = '';
+  const others = [...onlineIds].filter(id => id !== clientId);
+  if (others.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'onlineEmptyRow';
+    li.textContent = '지금 함께 접속 중인 다른 플레이어가 없어요.';
+    onlineListEl.appendChild(li);
+    return;
+  }
+  others.forEach(id => {
+    const li = document.createElement('li');
+    li.dataset.id = id;
+    const emoji = document.createElement('span');
+    emoji.className = 'onlineEmoji';
+    emoji.textContent = ownerEmoji(id);
+    const name = document.createElement('span');
+    name.className = 'onlineName';
+    name.textContent = ownerName(id);
+    const blockBtn = document.createElement('button');
+    blockBtn.type = 'button';
+    blockBtn.className = 'onlineBtn blockBtn' + (isPlayerBlocked(id) ? ' blocked' : '');
+    blockBtn.dataset.action = 'block';
+    blockBtn.textContent = isPlayerBlocked(id) ? '차단 해제' : '차단';
+    const reportBtn = document.createElement('button');
+    reportBtn.type = 'button';
+    reportBtn.className = 'onlineBtn reportBtn';
+    reportBtn.dataset.action = 'report';
+    reportBtn.textContent = '신고';
+    li.append(emoji, name, blockBtn, reportBtn);
+    onlineListEl.appendChild(li);
+  });
+}
+
+onlineListEl.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const li = btn.closest('li[data-id]');
+  if (!li) return;
+  const id = li.dataset.id;
+  if (btn.dataset.action === 'block') {
+    togglePlayerBlock(id);
+    showToast(isPlayerBlocked(id) ? '차단했어요. 이 사람의 입력/알림이 이제 안 보여요.' : '차단을 해제했어요.');
+    renderOnlineList();
+    return;
+  }
+  if (btn.dataset.action === 'report') {
+    const reason = (prompt(ownerName(id) + '님을 신고하는 이유를 알려주세요.') || '').trim();
+    if (!reason) return;
+    firebase.database().ref('reports').push({
+      reporterId: clientId || 'unknown',
+      targetId: id,
+      reason: reason.slice(0, 300),
+      ts: firebase.database.ServerValue.TIMESTAMP,
+    }).then(() => {
+      showToast('신고했어요. 확인 후 조치할게요.');
+    }).catch(() => {
+      showToast('신고 접수에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    });
+  }
+});
+
+userCountTagEl.addEventListener('click', () => {
+  renderOnlineList();
+  onlineOverlay.classList.remove('hidden');
+  onlineBackdrop.classList.remove('hidden');
 });
 
 // ---------- 게임 종료 판정 + 승리 축하 연출 ----------
