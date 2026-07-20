@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>개인정보처리방침 - 낱말바둑</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #f5f1e8; color: #2a2a2a;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    line-height: 1.7;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1 { font-size: 22px; margin-bottom: 4px; color: #1a1a1a; }
+  .meta { font-size: 13px; color: #8a7a4f; margin-bottom: 32px; }
+  h2 { font-size: 16px; margin: 28px 0 8px; color: #1a1a1a; }
+  p, li { font-size: 14px; color: #444; }
+  ul { padding-left: 20px; margin: 6px 0; }
+  a { color: #8a7a4f; }
+  .back { display: inline-block; margin-bottom: 24px; font-size: 13px; color: #8a7a4f; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">&larr; 낱말바둑으로 돌아가기</a>
+  <h1>개인정보처리방침</h1>
+  <div class="meta">시행일: 2026년 7월 20일</div>
+
+  <p>낱말바둑(이하 "서비스")은 이용자의 개인정보를 소중히 다루며, 꼭 필요한 최소한의 정보만 수집·이용합니다.</p>
+
+  <h2>1. 수집하는 정보</h2>
+  <p><b>비회원으로 이용하는 경우</b></p>
+  <ul>
+    <li>실제 IP 주소는 저장하지 않으며, 서버에서 일방향 해시(HMAC-SHA256)로 변환한 익명 식별자만 생성해 사용합니다. 같은 네트워크를 쓰는 경우 같은 식별자로 묶일 수 있습니다.</li>
+    <li>접속 여부, 마지막 접속 시각, 게임 중 배정된 과일 이름/색상이 저장되며 같은 게임에 접속한 다른 이용자에게 실시간으로 표시됩니다.</li>
+  </ul>
+  <p><b>회원으로 가입하는 경우</b></p>
+  <ul>
+    <li>가입 시 입력한 닉네임, 선택한 아이콘, 누적 점수를 저장합니다.</li>
+    <li>비밀번호는 원문으로 저장하지 않고, 복호화가 불가능한 방식(salt + scrypt 해시)으로 변환해 저장합니다.</li>
+  </ul>
+  <p>실명, 이메일, 전화번호, 주소, 위치 정보는 수집하지 않으며, 광고 SDK나 제3자 분석 도구를 사용하지 않습니다.</p>
+
+  <h2>2. 저장 위치</h2>
+  <p>모든 정보는 Google Firebase Realtime Database(아시아 지역 서버)에 저장됩니다.</p>
+
+  <h2>3. 기기 안 로컬 저장소</h2>
+  <p>로그인 상태 유지를 위해 기기의 로컬 저장소(localStorage)에 회원 식별자 또는 "비회원으로 시작함" 여부를 저장합니다. 제3자에게 전송되는 추적 쿠키가 아니며, 브라우저/앱 저장소를 지우면 함께 삭제됩니다.</p>
+
+  <h2>4. 실시간 정보 공개 범위</h2>
+  <p>게임 특성상 놓은 낱말, 점수, 닉네임/아이콘(또는 과일 이름), 접속 여부, 입력 중인 글자 미리보기는 같은 게임에 접속한 다른 이용자 전원에게 실시간으로 공개됩니다.</p>
+
+  <h2>5. 보관 기간 및 삭제</h2>
+  <p>비회원 식별자·접속 기록은 30분 이상 미접속 시 자리 배정이 회수될 수 있으며 별도 절차 없이 자연 소멸됩니다. 회원 계정 정보는 이용자가 앱 안의 "회원 탈퇴" 기능으로 언제든 직접, 즉시 삭제할 수 있습니다.</p>
+
+  <h2>6. 신고·차단 정보</h2>
+  <p>다른 이용자를 신고하면 신고자 식별자, 대상 식별자, 신고 사유, 접수 시각이 운영자 확인용으로만 저장됩니다. 차단 목록은 이용자 기기 안에만 저장되며 서버로 전송되지 않습니다.</p>
+
+  <h2>7. 만 14세 미만 이용자</h2>
+  <p>서비스는 만 14세 미만 아동으로부터 개인정보를 의도적으로 수집하지 않습니다.</p>
+
+  <h2>8. 이용자 권리</h2>
+  <p>회원은 앱 안에서 언제든 로그아웃, 계정 삭제를 직접 수행할 수 있습니다. 정보 처리에 대해 문의하실 사항이 있으면 아래 연락처로 알려주세요.</p>
+
+  <h2>9. 문의</h2>
+  <p>Instagram <a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">@wooramsol</a></p>
+
+  <h2>10. 방침 변경</h2>
+  <p>이 방침은 서비스 개선에 따라 변경될 수 있으며, 변경 시 이 페이지에 최신 내용을 반영합니다.</p>
+</main>
+</body>
+</html>
