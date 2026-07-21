@@ -736,7 +736,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.78</div>
+<div id="verTagBottom">v1.9.79</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -813,7 +813,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.78'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.79'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2163,7 +2163,12 @@ function updateModeBadge() {
 // e.isComposing이 true인 동안(한글 조합 중)은 절대 건드리지 않아야 조합이 안 끊어짐.
 const HAS_ENGLISH_RE = /[A-Za-z]/; // 영문이 하나라도 섞이면 실제 배치(제출)는 항상 막음 — 타이핑만 허용
 const HAS_PUNCT_RE = /[?!]/; // 물음표/느낌표가 하나라도 섞여도 마찬가지로 배치는 항상 막음 — 타이핑만 허용
-const CHAT_CHARS_RE = /[0-9]/; // 숫자만 섞이면(영문·물음표·느낌표 없이) 사전 검증 없이 채팅처럼 배치 허용
+// 원래 의도는 "숫자만" 입력일 때 채팅처럼 자유 배치를 허용하는 것이었는데, 예전 정규식은
+// "숫자가 하나라도 섞이면"(/[0-9]/, 한글과 섞여 있어도 매치)이라 "안녕1"처럼 한글+숫자
+// 조합도 전부 채팅 모드로 새서 단어잇기 규칙(연결/사전) 없이 그냥 놓여버리는 문제가 있었음.
+// 이제 순수 숫자로만 이루어진 입력일 때만("^숫자만^") 채팅 모드로 처리하고, 한글이 하나라도
+// 섞이면 일반 낱말 검증(연결/사전) 경로를 그대로 타게 함
+const CHAT_CHARS_RE = /^[0-9]+$/; // 전부 숫자로만 이루어졌을 때만 사전 검증 없이 채팅처럼 배치 허용
 let invalidCharNotified = false;
 wordInput.addEventListener('input', e => {
   playTypeTick();
