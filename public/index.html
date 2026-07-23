@@ -348,21 +348,25 @@
   #modeBadge.show { display: flex; }
   #modeBadge.ok { background: #dcefdb; color: #2c6e2f; border-color: #8fcf93; }
   #modeBadge.err { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
-  /* v1.9.116: 최초 방문자 안내 말풍선 — 자동 선택된 칸 위에 떠서 "단어를 입력해보세요"를
-     알려줌. pointer-events:none으로 아래 칸 탭을 절대 가로채지 않게 하고, 살짝 위아래로
-     들썩이는 애니메이션으로 눈에 띄게 함(타이핑을 시작하거나 다른 칸을 고르면 사라짐 — JS 참고) */
+  /* v1.9.116/v1.9.117: 최초 방문자 안내 말풍선 — 자동 선택된 칸 위에 떠서 "단어를
+     입력해보세요"를 알려줌. pointer-events:none으로 아래 칸 탭을 절대 가로채지 않게 하고,
+     살짝 위아래로 들썩이는 애니메이션으로 눈에 띄게 함(타이핑을 시작하거나 다른 칸을 고르면
+     사라짐 — JS 참고). 배색은 #modeBadge/#brand/#userCountTag와 같은 앱 전체 테마
+     팔레트(크림 배경 #eee7d8 + 갈색 글자 #6b5e3f)로 맞춤 — 처음엔 눈에 띄라고 초록색을
+     썼었는데, 다른 어떤 UI에도 없는 색이라 테마와 겉돈다는 피드백을 받아 통일함 */
   #onboardBubble {
     position: fixed; z-index: 22; display: none;
     padding: 8px 14px; border-radius: 14px; font-size: 13px; font-weight: 700;
-    background: #2c6e2f; color: #fff; white-space: nowrap;
+    background: #eee7d8; color: #6b5e3f; border: 1.5px solid #cfc7b5; white-space: nowrap;
     box-shadow: 0 3px 10px rgba(0,0,0,.22);
     pointer-events: none;
   }
   #onboardBubble.show { display: block; animation: onboardBubbleBounce 1.4s ease-in-out infinite; }
   #onboardBubble::after {
-    content: ''; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
-    border-left: 7px solid transparent; border-right: 7px solid transparent;
-    border-top: 7px solid #2c6e2f;
+    content: ''; position: absolute; left: 50%; bottom: -7.5px;
+    width: 12px; height: 12px; background: #eee7d8;
+    border-right: 1.5px solid #cfc7b5; border-bottom: 1.5px solid #cfc7b5;
+    transform: translateX(-50%) rotate(45deg);
   }
   @keyframes onboardBubbleBounce {
     0%, 100% { transform: translate(-50%, calc(-100% - 14px)); }
@@ -828,7 +832,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.116</div>
+<div id="verTagBottom">v1.9.117</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -914,7 +918,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.116'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.117'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2387,12 +2391,42 @@ function pickOnboardingCell() {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
+// v1.9.117: 최초 접속(wasFirst) 때뿐 아니라, 판이 새로 시작될 때마다(게임시작/재시작으로
+// 단어가 통째로 재배치될 때) 다시 불러서 자동 선택 칸과 안내 말풍선을 새 배치에 맞게
+// 갱신함 — 안 그러면 재배치 전 좌표를 그대로 가리키는 채로 남아서 엉뚱한 자리를 가리키거나,
+// 하필 그 자리에 새 글자가 놓여 말풍선만 조용히 사라져버림
+function runOnboardingAutoSelect() {
+  // 혼자 하던 판에 사람이 들어와 "게임시작" 확인 팝업이 떠 있는 동안엔 모든 입력을 막으므로
+  // (openPopup() 가드 참고) 자동 선택도 여기서 아예 시도하지 않음 — 버튼을 눌러 판이 정식
+  // 시작된 뒤에(roundJustRestarted 경로로) 다시 불려서 그때 채워짐
+  if (inMultiStartPrompt) return;
+  const onboardCell = pickOnboardingCell();
+  if (!onboardCell) return;
+  openPopup(onboardCell[0], onboardCell[1]);
+  // v1.9.116: 안내 말풍선("단어를 입력해보세요")은 최초 방문자에게만 보여줌 — 안내
+  // 패널을 자동으로 띄우는 것과 같은 기준(isReturningUser). 자동 선택 자체는
+  // v1.9.115부터 재방문자도 똑같이 받지만, 말풍선 문구는 이미 방법을 아는
+  // 재방문자에게는 굳이 필요 없으므로 여기서만 구분함
+  if (!isReturningUser) {
+    onboardCellCoord = { x: onboardCell[0], y: onboardCell[1] };
+    positionOnboardBubble();
+  }
+}
+
 function openPopup(cx, cy, px, py) {
   // 격자판(10x10) 바깥의 어두운 여백을 탭/클릭하면, 별도의 "키보드 닫기" 버튼 없이도
   // 선택을 풀고 키보드를 내릴 수 있게 함(closePopup()이 wordInput도 blur()시킴).
   // 모바일에서 스크롤이 일어나면 안 되는데, 이 경로로 들어오는 호출들은 이미 touchend/
   // mouseup 쪽에서 필요한 preventDefault()를 다 해준 뒤라 안전함.
   if (!inBounds(cx, cy)) { closePopup(); return; }
+  // v1.9.117: 혼자 하던 판에 사람이 들어와 "게임시작" 확인 팝업이 떠 있는 동안엔, 버튼을
+  // 누르기 전까지 칸 선택(및 그로 인한 타이핑/미리보기)을 포함한 모든 입력을 막음 — 실제
+  // 배치(submit())는 이미 gameOverOverlay 표시 여부로 막고 있었는데, 칸 선택 자체는 안
+  // 막혀 있어서 "입력은 안 되는데 칸은 계속 고를 수 있는" 애매한 상태였음
+  if (inMultiStartPrompt) {
+    showToast('다른 사람이 들어왔어요. 시작 버튼을 누르면 새 판이 열려요.');
+    return;
+  }
   // v1.9.116: 안내 말풍선이 가리키던 칸과 다른 칸을 선택하면(=사용자가 그 칸을 직접
   // 골라 이동했다는 뜻) 더 이상 가리킬 이유가 없으므로 말풍선을 치움. 말풍선이 가리키던
   // 바로 그 칸을 다시 선택한 경우(onboardCellCoord와 동일)엔 그대로 유지함.
@@ -3774,6 +3808,10 @@ function showMultiplayerStartPrompt() {
   gameOverOverlay.classList.remove('hidden');
   gameOverRestartWrap.classList.remove('hidden');
   updateRestartPromptText();
+  // v1.9.117: 이 팝업이 뜨는 순간부터는 버튼을 누르기 전까지 모든 입력을 막으므로, 혹시
+  // 이미 칸을 선택해 타이핑하던 중이었다면(예: 안내 말풍선이 가리키던 칸) 그 선택도 같이
+  // 접어서 "선택은 돼 있는데 아무 입력도 안 먹는" 어정쩡한 상태로 남지 않게 함
+  closePopup();
 }
 
 // 매번 presence/board가 갱신될 때마다 불러서, "솔로로 시작된 판인데 지금 인원이 2명
@@ -4485,6 +4523,10 @@ async function boot() {
     // 자연히 전원에게 동시에 들림. 초기 로드(wasFirst) 때는 기존 상태를 기억만 하고
     // 소리는 내지 않음(안 그러면 접속하자마자 이미 놓인 모든 단어만큼 소리가 남).
     const capturedNow = [...cells.values()].filter(c => c.captured).length;
+    // v1.9.117: 단어 수는 정상적인 플레이 중엔 절대 줄어들지 않고(놓기만 하지 지우지 않음),
+    // 판이 통째로 재시작(buildSeedBoard로 board.set)될 때만 확 줄어듦 — 이 사실을 이용해서
+    // "방금 판이 새로 시작됐다"를 별도 필드 없이 감지함(runOnboardingAutoSelect 재호출용)
+    const roundJustRestarted = !wasFirst && words.length < prevWordCount;
     if (!wasFirst) {
       if (words.length > prevWordCount) {
         const newest = words[words.length - 1];
@@ -4530,20 +4572,14 @@ async function boot() {
       // 기존 글자 옆 빈 칸 하나를 미리 선택된 상태로 시작하게 해서 "여기 이어서 타이핑하면
       // 되는구나"를 바로 알 수 있게 함 — v1.9.114에서는 신규 유저에게만 줬었는데, 재방문자도
       // 매번 들어올 때마다 똑같이 받길 원해서 그 구분을 없앰
-      const onboardCell = pickOnboardingCell();
-      if (onboardCell) {
-        openPopup(onboardCell[0], onboardCell[1]);
-        // v1.9.116: 안내 말풍선("단어를 입력해보세요")은 최초 방문자에게만 보여줌 — 안내
-        // 패널을 자동으로 띄우는 것과 같은 기준(isReturningUser). 자동 선택 자체는
-        // v1.9.115부터 재방문자도 똑같이 받지만, 말풍선 문구는 이미 방법을 아는
-        // 재방문자에게는 굳이 필요 없으므로 여기서만 구분함
-        if (!isReturningUser) {
-          onboardCellCoord = { x: onboardCell[0], y: onboardCell[1] };
-          positionOnboardBubble();
-        }
-      }
+      runOnboardingAutoSelect();
+    } else {
+      draw();
+      // v1.9.117: 게임시작/재시작으로 판이 완전히 새로 시작됐으면, 자동 선택 칸과 안내
+      // 말풍선도 새로 뒤섞인 단어 배치에 맞게 다시 골라줌 — 안 그러면 이전 판 좌표를 그대로
+      // 가리키다가 엉뚱한 자리를 가리키거나 조용히 사라져버림
+      if (roundJustRestarted) runOnboardingAutoSelect();
     }
-    else draw();
   });
 }
 // boot() 안에서 처리 안 된 예외가 나면(원래는 그냥 콘솔에만 조용히 찍히고 로딩 화면이
