@@ -780,7 +780,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.98</div>
+<div id="verTagBottom">v1.9.99</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -864,7 +864,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.98'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.99'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2997,14 +2997,16 @@ function updateLeaderboard(affectedOwners) {
   // (인원 제한 없이) 점수 순으로 보여줌. 대신 과일/색이 8종뿐이라 접속자가 많아지면
   // 서로 다른 사람이 같은 과일로 겹쳐 보일 수 있는데, 그중 지금 실제로 접속 중인 사람은
   // 오른쪽에 작은 점(초록 = 접속 중)으로 표시해서 최소한 "지금 활동 중인지"는 구분되게 함
-  // 화면 중앙 위쪽 박스에는 자리가 한정적이므로 상위 2명까지만 보여줌 — 그 밑은 "..."도
+  // 화면 중앙 위쪽 박스에는 자리가 한정적이므로 상위 3명까지만 보여줌 — 그 밑은 "..."도
   // 없이 그냥 표시 안 함(적을수록 배경 뒤 보드 글자를 덜 가림)
   const rankedAll = [...tally.entries()].sort((a, b) => b[1] - a[1]);
-  const ranked = rankedAll.slice(0, 2);
+  const ranked = rankedAll.slice(0, 3);
   lbListEl.textContent = '';
   // 1등부터 아래로 갈수록 글자 크기가 작아지게 — li의 font-size를 기준(em)으로 두면
-  // 안의 이름/점수/등수 등이 전부 비례해서 같이 작아짐
-  const RANK_FONT_SIZES = [17, 15];
+  // 안의 이름/점수/등수 등이 전부 비례해서 같이 작아짐. v1.9.99: 3등까지 보여주게 되면서
+  // 한 줄 더 늘어난 만큼, 전체적으로 살짝씩 더 작게 줄여서(17/15 -> 15/13/11) 박스가
+  // 너무 커 보이지 않게 함
+  const RANK_FONT_SIZES = [15, 13, 11];
   // 과일은 clientId 해시값으로 접속 즉시 고정 배정됨(fruitOf) — 다른 플레이어와 겹칠 수
   // 있는데("사과 2"처럼 번호를 붙여 구분하지 않음), 대신 절대 안 바뀌는 걸 우선한 트레이드오프
   // owner(clientId)는 유저가 localStorage를 조작하면 임의 문자열일 수 있으므로
@@ -3061,8 +3063,8 @@ const scoreFlyLayerEl = document.getElementById('scoreFlyLayer');
 // "도착"하는 시점에 맞춰 점수 숫자를 올려야 날아오는 개수와 오르는 점수가 박자가 맞음
 const FLY_DURATION_MS = 650;
 
-// owner의 점수를 delta(+1 또는 -1)만큼 바꾸고, 지금 리더보드 목록(상위 2명)에 보이고
-// 있으면 그 줄의 숫자도 같이 갱신하면서 살짝 튀는(bump) 강조를 줌. 목록에 없는(3등 이하)
+// owner의 점수를 delta(+1 또는 -1)만큼 바꾸고, 지금 리더보드 목록(상위 3명)에 보이고
+// 있으면 그 줄의 숫자도 같이 갱신하면서 살짝 튀는(bump) 강조를 줌. 목록에 없는(4등 이하)
 // owner는 화면에 반영할 곳이 없으니 숫자만(prevScores) 기억해둠
 function bumpScore(owner, delta) {
   const next = Math.max(0, (prevScores.has(owner) ? prevScores.get(owner) : 0) + delta);
@@ -3128,8 +3130,8 @@ function reconcileScoreDisplay(owners, attempt) {
   if (stillPending.length) setTimeout(() => reconcileScoreDisplay(stillPending, attempt + 1), 200);
 }
 
-// 그 owner가 지금 리더보드 목록(상위 2명)에 실제로 표시되고 있으면 그 줄의 정확한 위치로,
-// 3등 이하라 목록엔 없는 사람이면 리더보드 패널 전체(하단 중앙)를 목적지로 삼음 — 어느
+// 그 owner가 지금 리더보드 목록(상위 3명)에 실제로 표시되고 있으면 그 줄의 정확한 위치로,
+// 4등 이하라 목록엔 없는 사람이면 리더보드 패널 전체(하단 중앙)를 목적지로 삼음 — 어느
 // 쪽이든 "점수가 쌓이는 곳"으로 빨려들어가는 것처럼 보이면 되므로 이 정도면 충분함
 function destinationForOwner(owner) {
   for (const li of lbListEl.children) {
