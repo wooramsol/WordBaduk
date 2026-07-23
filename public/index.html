@@ -445,7 +445,11 @@
   #hofGuestNotice a { color: #8a7a4f; font-weight: 700; font-size: 13px; text-decoration: none; }
   #hofGuestNotice a:hover { text-decoration: underline; }
   /* 로그인/로그아웃 버튼 — 이제 상단 바가 아니라 랭킹 팝업(#hofCard) 안에 있음.
-     팝업 안 버튼과 같은 폭 100% 스타일로 통일 */
+     팝업 안 버튼과 같은 폭 100% 스타일로 통일.
+     v1.9.105: 비회원일 땐 안의 로그아웃/탈퇴 버튼이 전부 hidden이라 내용물 없이
+     구분선(border-top)+여백만 남아 카드 맨 아래에 빈 줄처럼 보였음 — 이 섹션 자체를
+     회원일 때만 보이게 함(boot()에서 토글) */
+  #hofAccountSection.hidden { display: none; }
   #hofAccountSection { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0ece0; }
   #memberLogoutBtn {
     display: block; width: 100%; padding: 11px; margin-top: 0;
@@ -766,7 +770,7 @@
       <div id="hofGuestNoticeLabel">비회원은 기록이 남지 않아요</div>
       <a href="#" id="hofGuestSignupLink">5초컷 회원가입</a>
     </div>
-    <div id="hofAccountSection">
+    <div id="hofAccountSection" class="hidden">
       <button id="memberLogoutBtn" type="button" class="hidden">로그아웃</button>
       <!-- 앱 안에서 계정 삭제를 시작할 수 있어야 함(Apple 5.1.1(v) 대응). 로그아웃과
            헷갈리지 않도록 눈에 덜 띄는 링크로 두고, 누르면 비밀번호 재확인 폼이 펼쳐짐 -->
@@ -795,7 +799,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.104</div>
+<div id="verTagBottom">v1.9.105</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -878,7 +882,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.104'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.105'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3698,6 +3702,7 @@ const authLoginViewEl = document.getElementById('authLoginView');
 const authSignupViewEl = document.getElementById('authSignupView');
 const authGuestLineEl = document.getElementById('authGuestLine');
 const hofGuestNoticeEl = document.getElementById('hofGuestNotice');
+const hofAccountSectionEl = document.getElementById('hofAccountSection');
 const memberLogoutBtn = document.getElementById('memberLogoutBtn');
 const memberDeleteLink = document.getElementById('memberDeleteLink');
 const memberDeleteForm = document.getElementById('memberDeleteForm');
@@ -4054,6 +4059,9 @@ async function boot() {
   bootStage = 'boot:got-clientId';
   // 비회원일 때만 랭킹 팝업에 "비회원은 기록되지 않습니다 + 5초컷 회원가입" 안내를 보여줌
   hofGuestNoticeEl.classList.toggle('hidden', isMemberMode);
+  // 로그아웃/탈퇴 섹션은 회원일 때만 보여줌 — 비회원은 안의 버튼들이 다 hidden이라
+  // 섹션 자체를 안 감추면 구분선+여백만 남은 빈 줄처럼 보임(#hofAccountSection 주석 참고)
+  hofAccountSectionEl.classList.toggle('hidden', !isMemberMode);
 
   const db = firebase.database();
   boardRef = db.ref('board');
