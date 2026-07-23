@@ -770,7 +770,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.94</div>
+<div id="verTagBottom">v1.9.95</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -854,7 +854,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.94'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.95'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -870,11 +870,11 @@ const APP_VERSION = 'v1.9.94'; // #verTagBottom 및 public/version.txt와 항상
 const cells = new Map();            // "x,y" -> { ch, dirs:[], fresh }
 const K = (x, y) => x + ',' + y;
 
-// ---------- 보드 크기 제한(13x13, 무한 아님) ----------
-// 원점(0,0)이 대략 화면 중앙에 오도록 살짝 좌상단으로 치우치게 잡음(30은 짝수라 정확히
+// ---------- 보드 크기 제한(10x10, 무한 아님) ----------
+// 원점(0,0)이 대략 화면 중앙에 오도록 살짝 좌상단으로 치우치게 잡음(10은 짝수라 정확히
 // 가운데인 칸은 없음). 이 범위 밖은 항상 "벽"(포획된 칸과 동일 취급)으로 처리해서 글자를
 // 놓을 수도, 그 너머로 단어를 이어붙일 수도 없게 막음
-const BOARD_MIN = -6, BOARD_MAX = 6; // 13칸: -6 ~ 6
+const BOARD_MIN = -5, BOARD_MAX = 4; // 10칸: -5 ~ 4
 const inBounds = (x, y) => x >= BOARD_MIN && x <= BOARD_MAX && y >= BOARD_MIN && y <= BOARD_MAX;
 const OUT_OF_BOUNDS_WALL = { ch: null, dirs: [], captured: true, owner: null };
 // 줌 기능을 없애면서(아래 "팬 / 줌" 섹션 참고) cellSize가 화면 크기만으로 결정되는 고정값이 됨에
@@ -898,7 +898,7 @@ const MAX_ZOOM_OUT_MARGIN_Y = PAN_MARGIN_Y;
 // 그래야 두 축 다 "목표 여백 이하"가 보장되고, 화면 비율상 더 여유로운 축(대개 세로)은
 // 그만큼 여백이 더 커지는 것만 허용됨(반대로 부족해지진 않음)
 function minCellSizeForZoomOut() {
-  const boardSpan = BOARD_MAX + 1 - BOARD_MIN; // 13
+  const boardSpan = BOARD_MAX + 1 - BOARD_MIN; // 10
   const maxViewSpanX = boardSpan + MAX_ZOOM_OUT_MARGIN_X * 2;
   const maxViewSpanY = boardSpan + MAX_ZOOM_OUT_MARGIN_Y * 2;
   // 세로는 innerHeight가 아니라 visibleHeight()를 씀 — 모바일(폰)에서는 키보드가 항상
@@ -1176,7 +1176,7 @@ function resolveChatPlace(typed, x, y, dir, getCell) {
 }
 
 // ---------- 땅따먹기: 완전히 둘러싸인 빈 칸 포획(flood-fill) ----------
-// getCell(x,y): 벽(글자, 이미 포획된 칸, 13x13 경계 밖)이면 truthy, 진짜 빈 칸이면 null
+// getCell(x,y): 벽(글자, 이미 포획된 칸, 10x10 경계 밖)이면 truthy, 진짜 빈 칸이면 null
 // newlyPlacedCoords: 이번에 새로 놓인 글자 칸 좌표들 — 이 칸들의 인접 빈 칸에서만 탐색 시작
 // 보드 경계도 벽으로 치기 때문에, 단어 하나가 보드 한쪽 끝에서 반대쪽 끝까지만 가로질러도
 // (나머지 삼면은 전부 보드 가장자리) "포획"으로 인정되어 버리는 문제가 있었음 — 단어 한
@@ -1536,7 +1536,7 @@ function dirAvailable(x, y, dir) {
   return true;
 }
 
-// 카메라(camX/camY)가 13x13 보드 밖으로 끝없이 스크롤되지 않도록 여유(PAN_MARGIN_X/Y)를 두고
+// 카메라(camX/camY)가 10x10 보드 밖으로 끝없이 스크롤되지 않도록 여유(PAN_MARGIN_X/Y)를 두고
 // 제한함 — 경계선이 잘 보일 정도의 여백은 남기되, 그 너머 빈 공간으로 무한히 나가지는 못하게.
 // 가로는 PAN_MARGIN_X칸, 세로는 PAN_MARGIN_Y칸. 세로(vh)는 innerHeight가 아니라 실제 값을 그대로
 // 반영하는 visibleHeight()를 씀 — 키보드가 닫혀있으면 화면 전체 높이와 같아서 그냥 화면
@@ -1567,7 +1567,7 @@ function draw() {
   const x0 = Math.floor(camX), y0 = Math.floor(camY);
   const x1 = Math.ceil(camX + innerWidth / cellSize), y1 = Math.ceil(camY + innerHeight / cellSize);
 
-  // 보드 범위(13x13) 바깥은 살짝 어둡게 칠해서 여기까지가 한계라는 걸 시각적으로 보여줌
+  // 보드 범위(10x10) 바깥은 살짝 어둡게 칠해서 여기까지가 한계라는 걸 시각적으로 보여줌
   const [boardSx0, boardSy0] = worldToScreen(BOARD_MIN, BOARD_MIN);
   const [boardSx1, boardSy1] = worldToScreen(BOARD_MAX + 1, BOARD_MAX + 1);
   ctx.fillStyle = 'rgba(60,50,30,.055)';
@@ -1576,7 +1576,7 @@ function draw() {
   ctx.strokeStyle = '#c3b490'; ctx.lineWidth = 2;
   ctx.strokeRect(boardSx0, boardSy0, boardSx1 - boardSx0, boardSy1 - boardSy0);
 
-  // 격자선도 보드(13x13) 안쪽에서만 그림 — 예전엔 경계 밖 어두운 영역에도 격자선이
+  // 격자선도 보드(10x10) 안쪽에서만 그림 — 예전엔 경계 밖 어두운 영역에도 격자선이
   // 계속 이어져서 마치 그 바깥에도 칸이 있는 것처럼 보였음
   ctx.strokeStyle = '#e3ddd0'; ctx.lineWidth = 1;
   ctx.beginPath();
@@ -1879,9 +1879,9 @@ function visibleTop() {
   return Math.max(0, vv.offsetTop - rect.top);
 }
 
-// 보드 전체(13x13 고정 범위)가 화면에 딱 맞게 들어오도록. 예전엔 무한보드라 "지금까지
+// 보드 전체(10x10 고정 범위)가 화면에 딱 맞게 들어오도록. 예전엔 무한보드라 "지금까지
 // 놓인 글자들의 범위"에 맞춰 카메라를 잡았지만, 이제 보드 크기가 고정이라 항상 전체
-// 13x13를 한 화면에 보여주는 게 더 직관적임(빈 보드든 아니든 항상 같은 뷰로 시작)
+// 10x10를 한 화면에 보여주는 게 더 직관적임(빈 보드든 아니든 항상 같은 뷰로 시작)
 // 줌 기능이 없어진 뒤로는 이 "처음 맞춤"이 곧 유일한 화면 크기이기도 함 — 그래서 별도
 // 계산식 대신 resize()와 똑같이 minCellSizeForZoomOut()을 그대로 씀(카메라 중앙 정렬은
 // clampCamera()가 draw() 안에서 자동으로 해줌)
@@ -2109,7 +2109,7 @@ function autoDetectDir(cx, cy) {
 }
 
 function openPopup(cx, cy, px, py) {
-  // 격자판(13x13) 바깥의 어두운 여백을 탭/클릭하면, 별도의 "키보드 닫기" 버튼 없이도
+  // 격자판(10x10) 바깥의 어두운 여백을 탭/클릭하면, 별도의 "키보드 닫기" 버튼 없이도
   // 선택을 풀고 키보드를 내릴 수 있게 함(closePopup()이 wordInput도 blur()시킴).
   // 모바일에서 스크롤이 일어나면 안 되는데, 이 경로로 들어오는 호출들은 이미 touchend/
   // mouseup 쪽에서 필요한 preventDefault()를 다 해준 뒤라 안전함.
@@ -2287,7 +2287,7 @@ modeBadge.addEventListener('click', () => {
 });
 
 const getLocalCell = (x, y) => {
-  if (!inBounds(x, y)) return OUT_OF_BOUNDS_WALL; // 13x13 밖은 항상 벽 취급
+  if (!inBounds(x, y)) return OUT_OF_BOUNDS_WALL; // 10x10 밖은 항상 벽 취급
   return cells.get(K(x, y)) || null;
 };
 
@@ -2381,7 +2381,7 @@ function checkPreview() {
     }
   }
   // 타이핑하면서 미리보기가 화면 밖으로 나가면 자동으로 카메라를 옮기는 것도 모바일 전용 —
-  // 웹에서는 13x13 보드가 항상 한 화면에 다 보이므로 이 자동 이동이 필요 없고, 그냥 다시 그림
+  // 웹에서는 10x10 보드가 항상 한 화면에 다 보이므로 이 자동 이동이 필요 없고, 그냥 다시 그림
   if (HAS_TOUCH) ensureVisible();
   else draw();
 }
@@ -2423,7 +2423,7 @@ async function submit() {
       const board = b || { cells: {}, words: [], version: 0 };
       board.cells = board.cells || {};
       board.words = board.words || [];
-      // 13x13 밖은 벽으로 취급 — 배치(접두/접미 연결)뿐 아니라 포획(땅따먹기) 판정에서도
+      // 10x10 밖은 벽으로 취급 — 배치(접두/접미 연결)뿐 아니라 포획(땅따먹기) 판정에서도
       // 마찬가지. 다만 보드 가장자리를 그냥 벽으로만 치면 단어 한 줄로 보드 끝에서 끝까지
       // 그어버리는 것만으로도(나머지 삼면은 전부 가장자리) 포획이 되어버려 너무 쉬우므로,
       // findCapturedRegions에서 "포위한 네 변 중 적어도 2면은 실제 글자로 이뤄져야" 포획을
@@ -3215,7 +3215,7 @@ userCountTagEl.addEventListener('click', () => {
 });
 
 // ---------- 게임 종료 판정 + 승리 축하 연출 ----------
-// 보드(13x13, 총 169칸)에 빈칸이 하나도 없으면(전부 낱말이거나 이미 포획된 칸) 더 이상
+// 보드(10x10, 총 100칸)에 빈칸이 하나도 없으면(전부 낱말이거나 이미 포획된 칸) 더 이상
 // 새로 포획할 영역이 생길 수 없으므로 게임 종료로 봄. 포획한 칸이 가장 많은 사람이 승자.
 // 포획 규칙이 "포위한 4면 중 2면 이상이 실제 글자여야" 함으로 까다로워지면서, 보드가 다
 // 찰 때까지 아무도 한 번도 포획을 못 하는 경우도 생길 수 있음 — 이때는 승자 없이 무승부로 종료.
@@ -3441,7 +3441,7 @@ window.addEventListener('keydown', (e) => {
 addEventListener('resize', () => { if (!gameOverOverlay.classList.contains('hidden')) resizeConfettiCanvas(); });
 
 function checkGameOver() {
-  const totalCells = (BOARD_MAX - BOARD_MIN + 1) * (BOARD_MAX - BOARD_MIN + 1); // 169
+  const totalCells = (BOARD_MAX - BOARD_MIN + 1) * (BOARD_MAX - BOARD_MIN + 1); // 100
   // 아직 낱말도 없고 포획도 안 된 순수 빈칸 수 — 앞으로 "누구든" 최대로 더 확보할 수 있는
   // 칸 수의 상한선임(낱말이 더 놓이면 그만큼 벽이 늘어서 실제로는 이보다 줄어들기만 함)
   const remainingEmpty = totalCells - cells.size;
