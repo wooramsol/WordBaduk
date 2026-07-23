@@ -6,11 +6,34 @@ const fs = require('fs');
 
 const PROJECT = process.env.FIREBASE_PROJECT || 'wordbaduk';
 
-function fb(cmd) {
+function fbOnce(cmd) {
   return execSync(`firebase ${cmd} --project ${PROJECT} --json`, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+}
+
+// firebase CLI가 내부적으로 Google API를 호출하는데(apps:sdkconfig 등), 코드 문제가 전혀
+// 없어도 그쪽 일시적인 오류(네트워크 hiccup, 순간적인 rate limit 등)로 "Failed to get WEB
+// app configuration" 같은 애매한 에러를 던지며 CI가 실패하는 경우가 있음(2026-07-23 실제
+// 발생 확인). 재시도로 대부분의 일시적 실패는 넘어갈 수 있으므로, 몇 번 더 시도해보고
+// 그래도 안 되면 그때 진짜 에러로 취급함
+function fb(cmd, attempts = 3) {
+  let lastErr;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return fbOnce(cmd);
+    } catch (e) {
+      lastErr = e;
+      console.log(`firebase ${cmd} 실패(시도 ${i}/${attempts}):`, e.message.slice(0, 300));
+      if (i < attempts) {
+        const waitMs = 3000 * i;
+        console.log(`${waitMs}ms 후 재시도…`);
+        execSync(`sleep ${waitMs / 1000}`);
+      }
+    }
+  }
+  throw lastErr;
 }
 
 function parse(out) {
