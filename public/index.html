@@ -770,7 +770,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.95</div>
+<div id="verTagBottom">v1.9.96</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -854,7 +854,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.95'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.96'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1249,7 +1249,14 @@ function enclosureOk(region) {
 //   조각만 넘겨받으면 됨(쪼개진 조각이라도 다른 쪽이 아직 열려 있으면 진짜 닫힌 게 아님)
 function stolenRegionPieces(preCells, K, overwrittenCoords, owner) {
   const NEI = (ax, ay) => [[ax + 1, ay], [ax - 1, ay], [ax, ay + 1], [ax, ay - 1]];
+  // inBounds도 함께 확인해야 함: 예전(더 큰) 보드 시절에 놓였다가 이번 보드 축소로 범위
+  // 밖에 남은 "유령 칸"이 preCells에 여전히 있을 수 있는데, 그걸 같은 영역으로 계속
+  // 이어붙이면 조각의 bounding box가 새 경계 밖까지 늘어나 enclosureOk의 "board 가장자리에
+  // 닿았는지" 판정이 틀어짐(닿았는데도 안 닿은 것처럼 보여 큰 조각까지 넘어가 버림).
+  // getCell이 범위 밖을 항상 벽으로 취급하는 것과 똑같이, 여기서도 범위 밖은 절대 같은
+  // 영역으로 치지 않음
   const inRegion = (x, y) => {
+    if (!inBounds(x, y)) return false;
     const c = preCells[K(x, y)];
     return !!(c && c.captured && c.owner === owner);
   };
@@ -1297,6 +1304,51 @@ function stolenRegionPieces(preCells, K, overwrittenCoords, owner) {
     pieces.push(piece);
   }
   return pieces;
+}
+
+// v1.9.96: 한 번의 단어 배치가 같은 상대의 완전히 "서로 무관한"(원래부터 안 이어져 있던)
+// captured 영역을 동시에 두 군데 이상 덮어쓸 수 있음 — 보드가 10x10으로 줄면서 단어 하나가
+// 차지하는 비중이 커져 이런 경우가 훨씬 잦아짐. stolenRegionPieces에 여러 무관한 영역의
+// 좌표를 한꺼번에 넘기면, 그 영역들이 원래 안 이어져 있었을 뿐인데도 "덮어쓴 뒤에 두
+// 조각으로 쪼개졌다"고 착각해서(remainingSet이 애초부터 두 덩어리이므로) 둘 중 더 작은
+// "무관한 영역 전체"를 통째로 뺏어버리는 버그가 생김(진짜 "쪼개짐"이 전혀 아닌데도). 그래서
+// 실제로 뺏는 로직을 태우기 전에, 덮어쓴 좌표들을 "덮어쓰기 전 기준으로 원래 같은 연결
+// 영역에 속해 있던 것끼리만" 먼저 묶어서, 서로 다른 원래 영역은 완전히 독립적으로 판정되게 함
+function groupCoordsByPreRegion(preCells, K, coords, owner) {
+  const NEI = (ax, ay) => [[ax + 1, ay], [ax - 1, ay], [ax, ay + 1], [ax, ay - 1]];
+  const inRegion = (x, y) => {
+    if (!inBounds(x, y)) return false;
+    const c = preCells[K(x, y)];
+    return !!(c && c.captured && c.owner === owner);
+  };
+  const coordKeys = coords.map(([x, y]) => K(x, y));
+  const coordSet = new Set(coordKeys);
+  const seededFrom = new Set(); // 이미 어느 그룹에서 자신이 속한 원래 영역 전체를 훑었으면 다시 훑지 않음
+  const groups = [];
+  for (const [sx, sy] of coords) {
+    const startKey = K(sx, sy);
+    if (seededFrom.has(startKey)) continue;
+    // 이 좌표가 덮어쓰기 전 속해 있던 원래 연결 영역 전체를 훑으면서, 그중 이번에 실제로
+    // 덮어쓴 좌표만 이번 그룹으로 모음(나머지 overwrittenCoords 중 이 영역에 속한 것들도
+    // 같이 찾아서 한 번에 묶고, 다음 바깥 for문에서 또 안 밟히게 seededFrom에 표시)
+    const visited = new Set([startKey]);
+    const queue = [[sx, sy]];
+    const groupCoords = [];
+    if (coordSet.has(startKey)) groupCoords.push([sx, sy]);
+    while (queue.length) {
+      const [cx, cy] = queue.shift();
+      for (const [ax, ay] of NEI(cx, cy)) {
+        const ak = K(ax, ay);
+        if (visited.has(ak) || !inRegion(ax, ay)) continue;
+        visited.add(ak);
+        if (coordSet.has(ak)) groupCoords.push([ax, ay]);
+        queue.push([ax, ay]);
+      }
+    }
+    for (const k of visited) if (coordSet.has(k)) seededFrom.add(k);
+    groups.push(groupCoords);
+  }
+  return groups;
 }
 
 // ---------- 캔버스 ----------
@@ -2423,6 +2475,16 @@ async function submit() {
       const board = b || { cells: {}, words: [], version: 0 };
       board.cells = board.cells || {};
       board.words = board.words || [];
+      // v1.9.96: 예전에 보드가 더 컸을 때(13x13 등) 놓였던 칸이 이번 보드 축소로 새
+      // BOARD_MIN/MAX 범위 밖에 "유령 칸"으로 남아있을 수 있음. 이런 유령 칸은 화면에
+      // 안 보이고 새로 놓을 수도 없지만, board.cells 안에는 그대로 남아있어서
+      // stolenRegionPieces/enclosureOk가 좌표 범위 밖까지 이어붙여 영역의 bounding box를
+      // 잘못 계산하게 만듦(경계에 닿았는데도 "안 닿았다"고 오판 → 큰 조각까지 통째로
+      // 넘어가는 버그의 원인). 트랜잭션이 실행될 때마다 조금씩 청소해서 결국 없어지게 함
+      for (const k of Object.keys(board.cells)) {
+        const [gx, gy] = k.split(',').map(Number);
+        if (!inBounds(gx, gy)) delete board.cells[k];
+      }
       // 10x10 밖은 벽으로 취급 — 배치(접두/접미 연결)뿐 아니라 포획(땅따먹기) 판정에서도
       // 마찬가지. 다만 보드 가장자리를 그냥 벽으로만 치면 단어 한 줄로 보드 끝에서 끝까지
       // 그어버리는 것만으로도(나머지 삼면은 전부 가장자리) 포획이 되어버려 너무 쉬우므로,
@@ -2500,19 +2562,27 @@ async function submit() {
       // 다시 완전히 둘러싸인(enclosureOk) 조각들 중에서도 "가장 작은" 조각 하나만 넘어옴 —
       // 쪼개진 조각이 여럿이면(예: 위 6칸/아래 9칸) 큰 쪽까지 통째로 덤으로 딸려오지 않게,
       // 딱 이번에 새로 고립시킨 만큼(가장 작게 잘린 만큼)만 확보되도록 제한함
+      // 한 단어가 같은 상대의 서로 무관한(원래부터 안 이어져 있던) captured 영역을 동시에
+      // 여러 군데 덮어쓸 수도 있으므로, 먼저 "덮어쓰기 전 기준으로 원래 같은 연결 영역"
+      // 끼리만 묶어서 그룹별로 완전히 독립적으로 판정함(자세한 이유는 groupCoordsByPreRegion
+      // 주석 참고) — 안 그러면 원래부터 안 이어져 있던 작은 영역 전체가 "쪼개진 조각"으로
+      // 착각돼 통째로 넘어가 버림
       let stolenCount = 0;
       for (const [owner, coords] of stolenCoordsByOwner) {
-        const pieces = stolenRegionPieces(preMoveCells, K, coords, owner);
-        if (pieces.length <= 1) continue; // 안 쪼개졌으면 스킵
-        const enclosedPieces = pieces.filter(enclosureOk);
-        if (!enclosedPieces.length) continue;
-        let smallest = enclosedPieces[0];
-        for (const piece of enclosedPieces) {
-          if (piece.length < smallest.length) smallest = piece;
-        }
-        for (const [px, py] of smallest) {
-          board.cells[K(px, py)] = { captured: true, owner: clientId, ts: Date.now() };
-          stolenCount++;
+        const groups = groupCoordsByPreRegion(preMoveCells, K, coords, owner);
+        for (const groupCoords of groups) {
+          const pieces = stolenRegionPieces(preMoveCells, K, groupCoords, owner);
+          if (pieces.length <= 1) continue; // 안 쪼개졌으면 스킵
+          const enclosedPieces = pieces.filter(enclosureOk);
+          if (!enclosedPieces.length) continue;
+          let smallest = enclosedPieces[0];
+          for (const piece of enclosedPieces) {
+            if (piece.length < smallest.length) smallest = piece;
+          }
+          for (const [px, py] of smallest) {
+            board.cells[K(px, py)] = { captured: true, owner: clientId, ts: Date.now() };
+            stolenCount++;
+          }
         }
       }
 
@@ -4036,7 +4106,13 @@ async function boot() {
     updateRestartPromptText();
     const bc = board.cells || {};
     const now = Date.now();
-    const remote = new Set(Object.keys(bc));
+    // v1.9.96: 예전(더 큰) 보드 시절 놓였던 "유령 칸"이 새 BOARD_MIN/MAX 범위 밖에 아직
+    // 남아있을 수 있음(트랜잭션이 한 번이라도 실행돼야 정리됨). 그때까지는 클라이언트
+    // 쪽에서도 이런 칸을 무시해야 화면 표시/점수 집계/게임종료 판정이 전부 안 꼬임
+    const remote = new Set(Object.keys(bc).filter(k => {
+      const [gx, gy] = k.split(',').map(Number);
+      return inBounds(gx, gy);
+    }));
     for (const k of [...cells.keys()]) if (!remote.has(k)) cells.delete(k);
     // 이번 동기화에서 "새로 포획됐거나(직전엔 captured가 아니었거나) 주인이 바뀐(뺏긴)" 칸을
     // 모아둠 — 리더보드로 아이콘이 빨려들어가는 연출(flyScoreIcons)에 씀. prevOwner는 진짜
@@ -4045,6 +4121,7 @@ async function boot() {
     // 무관하고 순전히 시각 효과용 부가 데이터라, wasFirst(최초 접속)일 땐 아래에서 그냥 버림
     const captureEvents = [];
     for (const [k, c] of Object.entries(bc)) {
+      if (!remote.has(k)) continue; // 유령 칸(범위 밖)은 무시
       const prev = cells.get(k);
       const fresh = prev ? prev.fresh : (firstSync ? 0 : now);
       if (c.captured) {
