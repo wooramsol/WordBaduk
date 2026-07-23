@@ -348,6 +348,26 @@
   #modeBadge.show { display: flex; }
   #modeBadge.ok { background: #dcefdb; color: #2c6e2f; border-color: #8fcf93; }
   #modeBadge.err { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
+  /* v1.9.116: 최초 방문자 안내 말풍선 — 자동 선택된 칸 위에 떠서 "단어를 입력해보세요"를
+     알려줌. pointer-events:none으로 아래 칸 탭을 절대 가로채지 않게 하고, 살짝 위아래로
+     들썩이는 애니메이션으로 눈에 띄게 함(타이핑을 시작하거나 다른 칸을 고르면 사라짐 — JS 참고) */
+  #onboardBubble {
+    position: fixed; z-index: 22; display: none;
+    padding: 8px 14px; border-radius: 14px; font-size: 13px; font-weight: 700;
+    background: #2c6e2f; color: #fff; white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(0,0,0,.22);
+    pointer-events: none;
+  }
+  #onboardBubble.show { display: block; animation: onboardBubbleBounce 1.4s ease-in-out infinite; }
+  #onboardBubble::after {
+    content: ''; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
+    border-left: 7px solid transparent; border-right: 7px solid transparent;
+    border-top: 7px solid #2c6e2f;
+  }
+  @keyframes onboardBubbleBounce {
+    0%, 100% { transform: translate(-50%, calc(-100% - 14px)); }
+    50% { transform: translate(-50%, calc(-100% - 20px)); }
+  }
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: rgba(40,40,40,.92); color: #fff; padding: 9px 18px;
@@ -808,7 +828,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.115</div>
+<div id="verTagBottom">v1.9.116</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -830,6 +850,9 @@
      "off"로 바꿔서 키체인 개입 자체를 막음(서드파티 매니저 억제는 data-lpignore 등으로 계속함). -->
 <input id="wordInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" lang="ko" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
 <div id="modeBadge"></div>
+<!-- v1.9.116: 최초 방문자에게만 보이는 안내 말풍선 — 자동 선택된 칸 위에 떠서
+     "단어를 입력해보세요"를 알려줌. pointer-events:none이라 그 아래 칸 탭을 가로채지 않음 -->
+<div id="onboardBubble">단어를 입력해보세요</div>
 
 <div id="toast"></div>
 <!-- 새 플레이어가 들어올 때 화면 위쪽에서 내려오듯 "{아이콘} {이름}님 등장!"을 보여주는
@@ -891,7 +914,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.115'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.116'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2035,6 +2058,7 @@ function draw() {
   }
 
   positionSelUI(); // 팬/줌 중에도 모드 배지가 선택 칸을 계속 따라다니게 (wordInput은 여기서 안 건드림)
+  positionOnboardBubble(); // v1.9.116: 안내 말풍선도 마찬가지로 팬/줌 중에 그 칸을 계속 따라다니게
 }
 
 setInterval(() => {
@@ -2162,6 +2186,7 @@ if (window.visualViewport) {
         positionSelUI();
         positionWordInput();
       }
+      positionOnboardBubble();
     }, 150);
   });
 }
@@ -2269,6 +2294,25 @@ function positionSelUI() {
   modeBadge.classList.add('show');
 }
 
+// v1.9.116: 최초 방문자 안내 말풍선("단어를 입력해보세요") — 자동 선택된 칸(onboardCellCoord)
+// 위에 떠서 그 칸을 가리킴. positionSelUI()와 같은 시점(팬/줌/뷰포트 변화)마다 같이 호출돼서
+// 계속 그 칸을 따라다님. 다른 사람이 먼저 그 칸에 글자를 놓아버리면(실시간 동기화) 더 이상
+// 가리킬 대상이 없으므로 스스로 숨김.
+const onboardBubbleEl = document.getElementById('onboardBubble');
+let onboardCellCoord = null; // 말풍선이 가리키는 칸 좌표({x,y}) — 안 쓰는 중이면 null
+function hideOnboardBubble() {
+  onboardCellCoord = null;
+  onboardBubbleEl.classList.remove('show');
+}
+function positionOnboardBubble() {
+  if (!onboardCellCoord) { onboardBubbleEl.classList.remove('show'); return; }
+  if (cells.has(K(onboardCellCoord.x, onboardCellCoord.y))) { hideOnboardBubble(); return; }
+  const [sx, sy] = worldToScreen(onboardCellCoord.x, onboardCellCoord.y);
+  onboardBubbleEl.style.left = (sx + cellSize / 2) + 'px';
+  onboardBubbleEl.style.top = sy + 'px';
+  onboardBubbleEl.classList.add('show');
+}
+
 // wordInput은 더 이상 선택된 칸 위치를 따라다니지 않음(CSS에서 화면 맨 위 구석에 고정) —
 // iOS가 그 칸 위에 붙여넣기/자동완성 말풍선을 띄워 게임판을 가리는 문제 때문에 일부러
 // 뗐고, v1.9.98부터는 안드로이드 브라우저의 키보드 회피 스크롤을 피하려고 아예 키보드가
@@ -2349,6 +2393,10 @@ function openPopup(cx, cy, px, py) {
   // 모바일에서 스크롤이 일어나면 안 되는데, 이 경로로 들어오는 호출들은 이미 touchend/
   // mouseup 쪽에서 필요한 preventDefault()를 다 해준 뒤라 안전함.
   if (!inBounds(cx, cy)) { closePopup(); return; }
+  // v1.9.116: 안내 말풍선이 가리키던 칸과 다른 칸을 선택하면(=사용자가 그 칸을 직접
+  // 골라 이동했다는 뜻) 더 이상 가리킬 이유가 없으므로 말풍선을 치움. 말풍선이 가리키던
+  // 바로 그 칸을 다시 선택한 경우(onboardCellCoord와 동일)엔 그대로 유지함.
+  if (onboardCellCoord && (cx !== onboardCellCoord.x || cy !== onboardCellCoord.y)) hideOnboardBubble();
   const dir = autoDetectDir(cx, cy);
   sel = { x: cx, y: cy, dir };
   preview = null;
@@ -2368,6 +2416,7 @@ function openPopup(cx, cy, px, py) {
   updateModeBadge();
   positionWordInput();
   positionSelUI();
+  positionOnboardBubble(); // v1.9.116: 팬/줌 없이 그냥 선택만 바뀌어도 말풍선 위치/표시 상태를 즉시 반영
   // 모바일 키보드 자체의 "닫기"(내려가기) 버튼을 눌러 키보드를 숨기면, 일부 브라우저
   // (특히 안드로이드)는 키보드만 사라질 뿐 wordInput은 여전히 document.activeElement로
   // 남아있음. 그 상태에서 같은 칸(혹은 다른 칸)을 다시 탭해도 이미 "포커스돼 있다"고
@@ -2388,6 +2437,7 @@ function openPopup(cx, cy, px, py) {
 function closePopup() {
   sel = null; preview = null; placing = false; dupHighlight = null;
   modeBadge.classList.remove('show');
+  hideOnboardBubble(); // v1.9.116: 선택을 완전히 접으면 안내 말풍선도 같이 치움
   // 선택을 풀 때 포커스도 같이 끊어서(모바일) 소프트 키보드가 실제로 닫히게 함.
   // 이미 포커스가 없는 상태(예: 데스크톱 Escape)에서 호출돼도 아무 부작용 없음.
   wordInput.blur();
@@ -2454,6 +2504,9 @@ wordInput.addEventListener('input', e => {
     const cleaned = wordInput.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9?!]/g, '');
     if (cleaned !== wordInput.value) wordInput.value = cleaned;
   }
+  // v1.9.116: 안내 말풍선이 시키는 대로 뭐라도 타이핑을 시작했으면(조합 중간 글자도 포함),
+  // 이미 목적을 달성한 것이므로 바로 치움
+  if (onboardCellCoord && wordInput.value.length > 0) hideOnboardBubble();
   checkPreview();
   broadcastTyping();
   // 일부 브라우저는 한글 IME 조합 중엔 캔버스 리페인트를 미뤄뒀다가 조합이 끝나야 반영하는
@@ -4478,7 +4531,17 @@ async function boot() {
       // 되는구나"를 바로 알 수 있게 함 — v1.9.114에서는 신규 유저에게만 줬었는데, 재방문자도
       // 매번 들어올 때마다 똑같이 받길 원해서 그 구분을 없앰
       const onboardCell = pickOnboardingCell();
-      if (onboardCell) openPopup(onboardCell[0], onboardCell[1]);
+      if (onboardCell) {
+        openPopup(onboardCell[0], onboardCell[1]);
+        // v1.9.116: 안내 말풍선("단어를 입력해보세요")은 최초 방문자에게만 보여줌 — 안내
+        // 패널을 자동으로 띄우는 것과 같은 기준(isReturningUser). 자동 선택 자체는
+        // v1.9.115부터 재방문자도 똑같이 받지만, 말풍선 문구는 이미 방법을 아는
+        // 재방문자에게는 굳이 필요 없으므로 여기서만 구분함
+        if (!isReturningUser) {
+          onboardCellCoord = { x: onboardCell[0], y: onboardCell[1] };
+          positionOnboardBubble();
+        }
+      }
     }
     else draw();
   });
