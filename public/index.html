@@ -770,7 +770,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.93</div>
+<div id="verTagBottom">v1.9.94</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -854,7 +854,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.93'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.94'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2882,9 +2882,10 @@ const lbListEl = document.getElementById('lbList');
 // 갱신하는 카운터도 겸함 — 아래 "영역 포획 시 아이콘이 리더보드로 빨려들어감" 섹션 참고.
 let prevScores = new Map();
 
-// capturingOwners: 이번 동기화에서 실제로 새 영역을 확보한(=flyScoreIcons가 곧 아이콘을
-// 날릴) owner들의 Set. 없으면(최초 접속 등) 모든 점수를 그냥 바로 최종값으로 표시함.
-function updateLeaderboard(capturingOwners) {
+// affectedOwners: 이번 동기화에서 flyScoreIcons가 곧 아이콘을 날릴(=점수가 오르거나
+// 내리는 게 그 연출로 표현될) owner들의 Set. 없으면(최초 접속 등) 모든 점수를 그냥
+// 바로 최종값으로 표시함.
+function updateLeaderboard(affectedOwners) {
   // 인앱 브라우저 탈출 안내 화면이 떠 있는 중이면 리더보드도 표시하지 않음
   if (window.__wvExitScreen) { leaderboardEl.classList.add('hidden'); return; }
   const tally = new Map();
@@ -2928,15 +2929,16 @@ function updateLeaderboard(capturingOwners) {
     if (owner === clientId) name.style.color = `hsl(${hue}, 60%, 40%)`;
     const cnt = document.createElement('span');
     cnt.className = 'cnt';
-    // 이번 동기화에서 이 owner가 실제로 새 영역을 확보한 참이면(capturingOwners) 여기서
-    // 바로 최종값으로 안 채우고 이전 값만 보여준 채로 둠 — 몇 점 올랐는지는
-    // flyScoreIcons가 아이콘을 하나씩 리더보드로 보낼 때마다 landIcon()이 도착하는 족족
-    // +1씩 반영해서, "날아오는 개수 = 오르는 점수"로 박자가 맞게 함(바로 아래 "영역 포획
-    // 연출" 섹션 참고). 그 외(처음 접속해서 이미 있던 점수를 바로 보여줘야 하는 경우,
-    // 점수가 줄어든 경우 등)는 애니메이션 없이 바로 최종값을 반영함
+    // 이번 동기화에서 이 owner가 실제로 영역을 새로 확보했거나(점수 상승) 반대로 뺏겨서
+    // (점수 하락) 아이콘 연출이 걸려있는 참이면(affectedOwners) 여기서 바로 최종값으로 안
+    // 채우고 이전 값만 보여준 채로 둠 — 몇 점 오르내렸는지는 flyScoreIcons가 아이콘을
+    // 하나씩 리더보드로 보낼 때마다 landIcon()이 도착하는 족족 +1/-1씩 반영해서, "날아오는
+    // 개수 = 오르내리는 점수"로 뺏는 쪽/뺏기는 쪽 둘 다 같은 박자가 맞게 함(바로 아래
+    // "영역 포획 연출" 섹션 참고). 그 외(처음 접속해서 이미 있던 점수를 바로 보여줘야
+    // 하는 경우 등)는 애니메이션 없이 바로 최종값을 반영함
     const prev = prevScores.has(owner) ? prevScores.get(owner) : 0;
-    if (capturingOwners && capturingOwners.has(owner) && count > prev) {
-      cnt.textContent = prev + '점'; // landIcon()이 올려줄 때까지 이전 값 유지
+    if (affectedOwners && affectedOwners.has(owner) && count !== prev) {
+      cnt.textContent = prev + '점'; // landIcon()이 맞춰줄 때까지 이전 값 유지
     } else {
       cnt.textContent = count + '점';
       prevScores.set(owner, count);
@@ -2957,11 +2959,11 @@ const scoreFlyLayerEl = document.getElementById('scoreFlyLayer');
 // "도착"하는 시점에 맞춰 점수 숫자를 올려야 날아오는 개수와 오르는 점수가 박자가 맞음
 const FLY_DURATION_MS = 650;
 
-// 아이콘 하나가 리더보드에 도착할 때마다 호출 — 점수를 딱 +1만 올리고, 그 owner가 지금
-// 리더보드 목록(상위 2명)에 보이고 있으면 그 줄의 숫자도 같이 갱신하면서 살짝 튀는(bump)
-// 강조를 줌. 목록에 없는(3등 이하) owner는 화면에 반영할 곳이 없으니 숫자만 기억해둠
-function landIcon(owner) {
-  const next = (prevScores.has(owner) ? prevScores.get(owner) : 0) + 1;
+// owner의 점수를 delta(+1 또는 -1)만큼 바꾸고, 지금 리더보드 목록(상위 2명)에 보이고
+// 있으면 그 줄의 숫자도 같이 갱신하면서 살짝 튀는(bump) 강조를 줌. 목록에 없는(3등 이하)
+// owner는 화면에 반영할 곳이 없으니 숫자만(prevScores) 기억해둠
+function bumpScore(owner, delta) {
+  const next = Math.max(0, (prevScores.has(owner) ? prevScores.get(owner) : 0) + delta);
   prevScores.set(owner, next);
   for (const li of lbListEl.children) {
     if (li.dataset.owner === owner) {
@@ -2975,6 +2977,14 @@ function landIcon(owner) {
       break;
     }
   }
+}
+
+// 아이콘 하나가 리더보드에 실제로 "도착"할 때마다 호출 — 새 주인(ev.owner) 점수를 +1.
+// 뺏긴 칸이었다면(ev.prevOwner) 그 이전 주인 점수도 정확히 같은 순간 -1 해서, 뺏는
+// 쪽이 오르는 속도와 뺏기는 쪽이 내려가는 속도가 항상 같은 박자로 맞게 함
+function landIcon(ev) {
+  bumpScore(ev.owner, 1);
+  if (ev.prevOwner) bumpScore(ev.prevOwner, -1);
 }
 
 // 아이콘 개수 제한(MAX_ICONS)이나 화면 밖 컷 때문에 실제 확보한 칸 수보다 landIcon()
@@ -3042,7 +3052,7 @@ function spawnFlyIcon(ev) {
   });
   setTimeout(() => el.remove(), 800);
   // 아이콘이 목적지에 실제로 "도착"하는 시점(CSS transition 길이와 동일)에 맞춰 점수를 올림
-  setTimeout(() => landIcon(ev.owner), FLY_DURATION_MS);
+  setTimeout(() => landIcon(ev), FLY_DURATION_MS);
 }
 
 function flyScoreIcons(events) {
@@ -4029,7 +4039,9 @@ async function boot() {
     const remote = new Set(Object.keys(bc));
     for (const k of [...cells.keys()]) if (!remote.has(k)) cells.delete(k);
     // 이번 동기화에서 "새로 포획됐거나(직전엔 captured가 아니었거나) 주인이 바뀐(뺏긴)" 칸을
-    // 모아둠 — 리더보드로 아이콘이 빨려들어가는 연출(flyScoreIcons)에 씀. 실제 판정과는
+    // 모아둠 — 리더보드로 아이콘이 빨려들어가는 연출(flyScoreIcons)에 씀. prevOwner는 진짜
+    // "뺏긴" 경우에만(직전에도 captured였고 주인만 바뀐 경우) 채워서, 새 주인 점수가 오르는
+    // 것과 동시에 그 이전 주인 점수가 같은 박자로 내려가게 함(landIcon 참고). 실제 판정과는
     // 무관하고 순전히 시각 효과용 부가 데이터라, wasFirst(최초 접속)일 땐 아래에서 그냥 버림
     const captureEvents = [];
     for (const [k, c] of Object.entries(bc)) {
@@ -4038,7 +4050,8 @@ async function boot() {
       if (c.captured) {
         if (!prev || !prev.captured || prev.owner !== c.owner) {
           const [cx, cy] = k.split(',').map(Number);
-          captureEvents.push({ x: cx, y: cy, owner: c.owner });
+          const prevOwner = (prev && prev.captured && prev.owner !== c.owner) ? prev.owner : null;
+          captureEvents.push({ x: cx, y: cy, owner: c.owner, prevOwner });
         }
         cells.set(k, { ch: null, dirs: [], captured: true, owner: c.owner, fresh });
       } else {
@@ -4070,18 +4083,27 @@ async function boot() {
     prevWordCount = words.length;
     prevCapturedCount = capturedNow;
     updateStats();
-    // wasFirst(최초 접속)일 땐 capturingOwners를 안 넘겨서, 이미 있던 점수를 애니메이션
-    // 없이 바로 보여줌 — 그 점수는 내가 지금 막 만든 게 아니라 이미 예전에 확보된 것이므로
-    const capturingOwners = (!wasFirst && captureEvents.length) ? new Set(captureEvents.map(e => e.owner)) : null;
-    updateLeaderboard(capturingOwners);
+    // wasFirst(최초 접속)일 땐 affectedOwners를 안 넘겨서, 이미 있던 점수를 애니메이션
+    // 없이 바로 보여줌 — 그 점수는 내가 지금 막 만든 게 아니라 이미 예전에 확보된 것이므로.
+    // 뺏은 사람(owner)뿐 아니라 뺏긴 사람(prevOwner)도 같은 박자로 점수가 내려가야 하므로
+    // 둘 다 하나의 Set으로 합쳐서 넘김
+    let affectedOwners = null;
+    if (!wasFirst && captureEvents.length) {
+      affectedOwners = new Set();
+      for (const e of captureEvents) {
+        affectedOwners.add(e.owner);
+        if (e.prevOwner) affectedOwners.add(e.prevOwner);
+      }
+    }
+    updateLeaderboard(affectedOwners);
     // updateLeaderboard() 직후라야 리더보드 DOM(li들)이 이번 점수 변화를 반영한 최신
     // 위치에 있으므로, 반드시 그 다음에 호출해야 목적지 좌표가 정확함
-    if (capturingOwners) {
+    if (affectedOwners) {
       flyScoreIcons(captureEvents);
       // flyScoreIcons는 최대 24개까지 25ms 간격으로 순차 발사하고, 각각 도착까지
       // FLY_DURATION_MS가 더 걸리므로, 가장 늦게 도착할 아이콘 이후로 충분히 여유를
       // 두고 최종 점수로 보정함(중간에 캡/화면밖 컷으로 덜 반영된 부분까지 확실히 맞춤)
-      setTimeout(() => reconcileScoreDisplay(capturingOwners), 24 * 25 + FLY_DURATION_MS + 150);
+      setTimeout(() => reconcileScoreDisplay(affectedOwners), 24 * 25 + FLY_DURATION_MS + 150);
     }
     checkGameOver();
     // checkGameOver()가 방금 showGameOver()를 새로 띄웠을 수 있음(예: 이미 다른 사람들은
