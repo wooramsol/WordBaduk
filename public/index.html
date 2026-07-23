@@ -337,7 +337,7 @@
     transform: translateY(-0.09em);
   }
 
-  /* 최초 접속 시 바로 뜨는 로그인/회원가입 폼. 게스트로 시작하기 링크도 함께 있어서
+  /* 최초 접속 시 바로 뜨는 로그인/회원가입 폼. 비회원으로 시작하기 링크도 함께 있어서
      계정 없이도 바로 게임을 시작할 수 있음(Apple 5.1.1(v) 대응).
      게임 보드 위를 완전히 덮고(gameOverOverlay와 달리 클릭을 막음) 선택을 마쳐야 사라짐. */
   #authOverlay {
@@ -370,6 +370,10 @@
   .authSwitchLine { text-align: center; font-size: 12px; color: #888; margin-top: 12px; }
   .authSwitchLine a { color: #8a7a4f; font-weight: 700; text-decoration: none; }
   .authSwitchLine a:hover { text-decoration: underline; }
+  /* 랭킹 팝업의 "5초컷 회원가입" 링크로 authOverlay를 다시 열었을 때만 보이는 힌트 —
+     최초 접속 시 반드시 로그인/비회원 선택을 해야 하는 상황에서는 안 보여야 하므로
+     기본은 숨김이고, openAccountUpgradeFlow()에서만 노출함 */
+  #authDismissHint.hidden { display: none; }
   .authIconLabel { font-size: 12px; color: #777; margin-top: 14px; margin-bottom: 6px; }
   /* 아이콘 종류가 많아져서 카드 전체가 한없이 길어지지 않도록, 그리드 자체에
      높이를 주고 그 안에서만 스크롤되게 함(카드의 나머지 부분은 늘 그 자리에 보임) */
@@ -382,6 +386,9 @@
     font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
   .authIconBtn.sel { border-color: #8a7a4f; background: #eee7d8; }
+  /* 비회원이 랭킹 팝업을 열었을 때 보여주는 안내 — "비회원은 기록되지 않습니다" +
+     회원가입 유도 링크. authSwitchLine과 같은 스타일 재사용, 숨김 처리만 별도 추가 */
+  #hofGuestNotice.hidden { display: none; }
   /* 로그인/로그아웃 버튼 — 이제 상단 바가 아니라 랭킹 팝업(#hofCard) 안에 있음.
      팝업 안 버튼과 같은 폭 100% 스타일로 통일 */
   #hofAccountSection { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0ece0; }
@@ -706,6 +713,8 @@
     <div id="hofSub">누적 점수 순위</div>
     <ol id="hofList"></ol>
     <div id="hofEmpty" class="hidden">아직 기록이 없어요.</div>
+    <!-- 비회원이 랭킹을 열었을 때만 노출 — boot()에서 isMemberMode에 따라 hidden 토글함 -->
+    <div class="authSwitchLine hidden" id="hofGuestNotice">비회원은 기록되지 않습니다. <a href="#" id="hofGuestSignupLink">5초컷 회원가입</a></div>
     <div id="hofAccountSection">
       <button id="memberLogoutBtn" type="button" class="hidden">로그아웃</button>
       <!-- 앱 안에서 계정 삭제를 시작할 수 있어야 함(Apple 5.1.1(v) 대응). 로그아웃과
@@ -737,7 +746,7 @@
   </div>
 </div>
 <div id="footerCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.85</div>
+<div id="verTagBottom">v1.9.86</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -766,7 +775,7 @@
 <div id="joinAnnounce"><span id="joinAnnounceIcon"></span><span id="joinAnnounceText"></span></div>
 
 <!-- 최초 접속 시 바로 로그인/회원가입 화면부터 띄우되, 계정 없이도 핵심 게임플레이(낱말
-     놓기, 실시간 멀티플레이)는 자유롭게 할 수 있도록 "게스트로 시작하기"를 항상 노출함
+     놓기, 실시간 멀티플레이)는 자유롭게 할 수 있도록 "비회원으로 시작하기"를 항상 노출함
      (Apple 5.1.1(v) 반려 대응 — "계정 기반이 아닌 기능까지 가입을 강제하면 안 된다").
      로그인 폼에서 회원가입 폼으로 넘어갈 수 있고, authGuestLine은 두 폼 밖에 있어서 어느
      화면에서든 항상 보임. 랭킹/누적 점수처럼 진짜 계정이 필요한 기능만 여전히 로그인을
@@ -794,7 +803,8 @@
       <button type="submit" class="authBtn authBtnPrimary">가입하기</button>
       <div class="authSwitchLine">이미 계정이 있으신가요? <a href="#" id="authGoLoginLink">로그인</a></div>
     </form>
-    <div class="authSwitchLine" id="authGuestLine">또는 <a href="#" id="authGoGuestLink">가입 없이 게스트로 시작하기</a></div>
+    <div class="authSwitchLine" id="authGuestLine">또는 <a href="#" id="authGoGuestLink">가입 없이 비회원으로 시작하기</a></div>
+    <div class="authSwitchLine hidden" id="authDismissHint">바깥을 눌러서 닫기</div>
   </div>
 </div>
 
@@ -820,7 +830,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.85'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.86'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3397,6 +3407,8 @@ setTimeout(() => {
 const authOverlayEl = document.getElementById('authOverlay');
 const authLoginViewEl = document.getElementById('authLoginView');
 const authSignupViewEl = document.getElementById('authSignupView');
+const authDismissHintEl = document.getElementById('authDismissHint');
+const hofGuestNoticeEl = document.getElementById('hofGuestNotice');
 const memberLogoutBtn = document.getElementById('memberLogoutBtn');
 const memberDeleteLink = document.getElementById('memberDeleteLink');
 const memberDeleteForm = document.getElementById('memberDeleteForm');
@@ -3408,6 +3420,102 @@ function authShowView(view) {
   authLoginViewEl.classList.toggle('hidden', view !== 'login');
   authSignupViewEl.classList.toggle('hidden', view !== 'signup');
 }
+
+// 최초 접속 시 뜨는 authOverlay(showAuthChoiceFlow)는 반드시 선택을 마쳐야 닫히는 필수
+// 관문이라 배경을 눌러도 안 닫혀야 함. 반면 비회원이 랭킹 팝업에서 "5초컷 회원가입"을
+// 눌러 다시 연 authOverlay(openAccountUpgradeFlow)는 언제든 취소하고 계속 비회원으로
+// 플레이할 수 있어야 하므로 배경 클릭으로 닫을 수 있게 함 — 이 플래그로 두 상황을 구분함
+let authOverlayDismissible = false;
+authOverlayEl.addEventListener('click', e => {
+  if (e.target === authOverlayEl && authOverlayDismissible) {
+    authOverlayEl.classList.add('hidden');
+  }
+});
+
+// 비회원이 게임 도중 랭킹 팝업의 "5초컷 회원가입"으로 계정을 만들 때 씀 — boot()가 이미
+// 끝난 뒤라 showAuthChoiceFlow()의 Promise는 이미 소비됐으므로, 로그인/회원가입 폼
+// onsubmit을 여기서 새로 덮어써서 성공 시 곧장 localStorage에 저장하고 페이지를
+// 새로고침함(재부팅되면서 resolveIdentity()가 저장된 memberUid를 그대로 집어 씀).
+function openAccountUpgradeFlow() {
+  closeHallOfFame();
+  authOverlayDismissible = true;
+  authDismissHintEl.classList.remove('hidden');
+  authOverlayEl.classList.remove('hidden');
+  authShowView('signup');
+  buildAuthIconGrid();
+  document.getElementById('authLoginErr').textContent = '';
+  document.getElementById('authSignupErr').textContent = '';
+
+  document.getElementById('authGoSignupLink').onclick = e => { e.preventDefault(); authShowView('signup'); };
+  document.getElementById('authGoLoginLink').onclick = e => { e.preventDefault(); authShowView('login'); };
+
+  function setSubmitBusy(formEl, busy, busyLabel) {
+    const btn = formEl.querySelector('button[type="submit"]');
+    if (busy) {
+      btn.dataset.origLabel = btn.textContent;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="btnSpinner"></span>${busyLabel}`;
+    } else {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.origLabel || btn.textContent;
+    }
+  }
+  function becomeMember(uid) {
+    try { localStorage.setItem('wb-memberUid', uid); } catch {}
+    location.reload();
+  }
+
+  authLoginViewEl.onsubmit = async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('authLoginErr');
+    errEl.textContent = '';
+    const nickname = document.getElementById('authLoginNickname').value.trim();
+    const password = document.getElementById('authLoginPassword').value;
+    if (!nickname || !password) { errEl.textContent = '닉네임과 비밀번호를 입력해주세요.'; return; }
+    setSubmitBusy(authLoginViewEl, true, '로그인 중...');
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || '로그인에 실패했어요.'; setSubmitBusy(authLoginViewEl, false); return; }
+      becomeMember(data.uid);
+    } catch (err) {
+      errEl.textContent = '로그인 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.';
+      setSubmitBusy(authLoginViewEl, false);
+    }
+  };
+
+  authSignupViewEl.onsubmit = async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('authSignupErr');
+    errEl.textContent = '';
+    const nickname = document.getElementById('authSignupNickname').value.trim();
+    const password = document.getElementById('authSignupPassword').value;
+    const password2 = document.getElementById('authSignupPassword2').value;
+    if (!/^[가-힣A-Za-z0-9]{2,10}$/.test(nickname)) { errEl.textContent = '닉네임은 한글/영문/숫자 2~10자로 입력해주세요.'; return; }
+    if (password.length < 4) { errEl.textContent = '비밀번호는 4자 이상으로 입력해주세요.'; return; }
+    if (password !== password2) { errEl.textContent = '비밀번호가 서로 달라요.'; return; }
+    setSubmitBusy(authSignupViewEl, true, '가입 중...');
+    try {
+      const res = await fetch('/api/signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, password, iconIdx: authSelectedIconIdx }),
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || '회원가입에 실패했어요.'; setSubmitBusy(authSignupViewEl, false); return; }
+      becomeMember(data.uid);
+    } catch (err) {
+      errEl.textContent = '가입 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.';
+      setSubmitBusy(authSignupViewEl, false);
+    }
+  };
+}
+document.getElementById('hofGuestSignupLink').addEventListener('click', e => {
+  e.preventDefault();
+  openAccountUpgradeFlow();
+});
 
 let authSelectedIconIdx = 0;
 function buildAuthIconGrid() {
@@ -3426,9 +3534,9 @@ function buildAuthIconGrid() {
   });
 }
 
-// 최초 접속 시 바로 로그인 폼을 보여주되, 계정 없이도 바로 시작할 수 있는 게스트 옵션도
+// 최초 접속 시 바로 로그인 폼을 보여주되, 계정 없이도 바로 시작할 수 있는 비회원 옵션도
 // 함께 제공함(Apple 5.1.1(v) 대응 — 계정 기반이 아닌 핵심 기능은 가입 강제 금지).
-// 로그인/회원가입이 끝나면 { mode: 'member', uid }로, 게스트를 선택하면
+// 로그인/회원가입이 끝나면 { mode: 'member', uid }로, 비회원을 선택하면
 // { mode: 'guest', uid }로 resolve됨.
 function showAuthChoiceFlow() {
   return new Promise(resolve => {
@@ -3522,8 +3630,8 @@ function showAuthChoiceFlow() {
 
 // 접속할 때마다 이 순서로 신원을 확정함:
 // 1) 예전에 로그인/가입에 성공해서 uid가 localStorage에 남아있으면 조용히 그 uid로
-// 2) 아니면(최초 접속이거나 로그아웃 상태) 로그인/회원가입/게스트 선택 화면을 띄워서 물어봄
-//    — 게스트를 고르면 계정 없이 바로 핵심 게임플레이(낱말 놓기, 실시간 멀티플레이)를 시작할
+// 2) 아니면(최초 접속이거나 로그아웃 상태) 로그인/회원가입/비회원 선택 화면을 띄워서 물어봄
+//    — 비회원을 고르면 계정 없이 바로 핵심 게임플레이(낱말 놓기, 실시간 멀티플레이)를 시작할
 //    수 있고, 랭킹 등록/누적 점수처럼 진짜 계정이 필요한 기능만 여전히 로그인을 요구함
 //    (Apple 5.1.1(v) — 계정 기반이 아닌 기능까지 가입을 강제하면 안 된다는 반려 대응)
 async function resolveIdentity() {
@@ -3647,6 +3755,8 @@ async function boot() {
   bootStage = 'boot:firebase-initialized';
   clientId = await resolveIdentity();
   bootStage = 'boot:got-clientId';
+  // 비회원일 때만 랭킹 팝업에 "비회원은 기록되지 않습니다 + 5초컷 회원가입" 안내를 보여줌
+  hofGuestNoticeEl.classList.toggle('hidden', isMemberMode);
 
   const db = firebase.database();
   boardRef = db.ref('board');
