@@ -385,10 +385,11 @@
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     /* v1.9.125: 예전엔 거의 불투명한 검정(rgba(40,40,40,.92))이라 뒤에 있는 게임판을
-       가렸음 — #gameOverRestartBtn("게임시작" 버튼)과 같은 반투명 흰 카드 톤으로 맞춰서
-       일관성도 맞추고, 뒤쪽 플레이 화면(놓인 글자/포획된 칸)이 비쳐 보이게 함 */
-    background: rgba(255,255,255,.9); color: #1a1a1a; padding: 9px 18px;
-    border: 1px solid #d8d2c4; box-shadow: 0 8px 28px rgba(0,0,0,.18);
+       가렸음 — 흰 카드 톤으로 맞춤. v1.9.126: 그마저도 여전히 게임판을 가린다는 피드백
+       으로 더 투명하게(.9 -> .55) 낮추고, 그림자(box-shadow)도 완전히 뺌(입체감 있는
+       "카드"보다는 화면 위에 살짝 얹힌 느낌만 남기는 쪽으로) */
+    background: rgba(255,255,255,.55); color: #1a1a1a; padding: 9px 18px;
+    border: 1px solid rgba(216,210,196,.7);
     border-radius: 20px; font-size: 13px; z-index: 30; display: none;
     max-width: 90vw; text-align: center;
     /* width를 따로 안 주면(position:fixed + left:50%만 있고 right는 없음) 내용 길이에
@@ -853,7 +854,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.125</div>
+<div id="verTagBottom">v1.9.126</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -939,7 +940,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.125'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.126'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
