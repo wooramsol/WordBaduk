@@ -214,7 +214,7 @@ exports.notifyOnJoin = functions.database.ref('/presence/{clientId}').onCreate(a
       tokens: entries.map(([, t]) => t.token),
       notification: {
         title: '낱말바둑',
-        body: '새로운 플레이어가 접속했어요! 함께 낱말바둑 해요 🍎',
+        body: '새로운 플레이어 등장!',
       },
       apns: {
         payload: { aps: { sound: 'default' } },

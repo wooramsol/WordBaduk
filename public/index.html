@@ -838,7 +838,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.134</div>
+<div id="verTagBottom">v1.9.135</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -924,7 +924,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.134'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.135'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2930,6 +2930,8 @@ async function submit() {
         // 모든 사람에게 들려야 하므로, boardRef.on('value') 쪽에서 이전/이후 스냅샷을 비교해
         // 재생함(모든 클라이언트가 같은 값 변화를 구독하고 있어서 자연히 다 같이 들림)
       }
+      // 진동은 효과음과 달리 순전히 로컬(내 입력) 피드백이라 여기서 바로 재생함
+      haptic('word');
       // 완성되면 선택 칸을 방금 완성한 단어의 "마지막 글자" 칸으로 옮김 — 이어서 다음 글자를
       // 바로 입력하기 좋은 위치(예: 단어 끝에 새 글자를 붙여 다른 단어를 잇는 흐름)이기 때문
       if (sel) {
@@ -3117,16 +3119,17 @@ function playCellSelect() {
   try { playTone(700, 0, 0.05, 'sine', 0.22); } catch (e) {}
 }
 // ---------- 진동(햅틱) ----------
-// v1.9.134: 실기기로 직접 느껴본 뒤, 단어 인정/점수 획득 진동은 빼고 타이핑 중(약)과
-// 잘못 입력해 흔들림 애니메이션이 뜰 때(강) 이 두 가지만 남김. iOS는 Safari/WKWebView가
+// v1.9.135: 단어가 완성됐을 때(중간 세기) 진동을 다시 추가함 — 타이핑 중(약) < 단어 완성(중)
+// < 잘못 입력해 흔들림 애니메이션이 뜰 때(강) 순으로 세기를 키움. iOS는 Safari/WKWebView가
 // navigator.vibrate 자체를 지원하지 않아, Capacitor 네이티브 앱에서는 @capacitor/haptics의
 // impact()로 실제 기기 햅틱 엔진을 씀(iOS에서 진동을 내려면 이 방법이 유일함). 플러그인이
 // 없는 일반 웹/모바일 브라우저(주로 안드로이드 크롬)에서는 navigator.vibrate()로 폴백함.
 // 항상 로컬(내 입력)에서만 호출되고, 두 방식 모두 실패해도(플러그인 미설치, 브라우저 미지원,
 // 사용자가 진동을 꺼둠 등) 게임 진행에 영향 없도록 try/catch로 감쌈.
 const HAPTIC_LEVELS = {
-  type:  { impactStyle: 'Light', ms: 8 },  // 타이핑 중
-  error: { impactStyle: 'Heavy', ms: 30 }, // 잘못 입력해 흔들림 애니메이션이 뜰 때
+  type:  { impactStyle: 'Light',  ms: 8 },  // 타이핑 중
+  word:  { impactStyle: 'Medium', ms: 18 }, // 단어가 완성됐을 때
+  error: { impactStyle: 'Heavy',  ms: 30 }, // 잘못 입력해 흔들림 애니메이션이 뜰 때
 };
 function haptic(level) {
   try {
