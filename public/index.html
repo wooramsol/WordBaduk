@@ -796,8 +796,9 @@
   <ol id="lbList"></ol>
 </div>
 
-<!-- 랭킹(구 명예의전당): 회원(비회원 제외)의 역대 누적 포획 점수 1~20위. memberTotalScore는
-     보드가 초기화/재시작돼도 절대 리셋되지 않는 별도 RTDB 경로(submit() 참고).
+<!-- 랭킹(구 명예의전당): 회원(비회원 제외) 전원의 역대 누적 포획 점수 순위. 0점인 회원도
+     포함해서 전부 보여줌 — 목록 자체가 #hofList 안에서 스크롤되므로 인원 수 제한을 두지 않음.
+     memberTotalScore는 보드가 초기화/재시작돼도 절대 리셋되지 않는 별도 RTDB 경로(submit() 참고).
      로그인/로그아웃도 여기 안으로 옮겨서, 상단 바에는 접속자 수만 남게 함 -->
 <div id="hofBackdrop" class="hidden"></div>
 <div id="hofOverlay" class="hidden">
@@ -840,7 +841,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.129</div>
+<div id="verTagBottom">v1.9.130</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -926,7 +927,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.129'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.130'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3554,11 +3555,12 @@ hallOfFameBtn.addEventListener('click', async () => {
   try {
     const snap = await firebase.database().ref('memberTotalScore').once('value');
     const scores = snap.val() || {};
-    const ranked = Object.entries(scores)
-      .map(([uid, score]) => ({ uid, score: Number(score) || 0 }))
-      .filter(e => e.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+    // 0점이라도 가입한 회원은 전부 보여줌 — memberTotalScore엔 한 번도 포획한 적 없는
+    // 회원의 항목 자체가 아예 없으므로(첫 포획 때 submit()이 처음 써넣음), 점수가 아니라
+    // ownerMemberProfile(=memberProfiles 전체, 가입한 회원 전원)을 기준으로 순회함
+    const ranked = Array.from(ownerMemberProfile.keys())
+      .map(uid => ({ uid, score: Number(scores[uid]) || 0 }))
+      .sort((a, b) => b.score - a.score);
     if (ranked.length === 0) { hofEmptyEl.classList.remove('hidden'); return; }
     ranked.forEach((entry, i) => {
       const profile = ownerMemberProfile.get(entry.uid);
