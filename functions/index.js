@@ -196,7 +196,16 @@ exports.notifyOnJoin = functions.database.ref('/presence/{clientId}').onCreate(a
   const db = admin.database();
   const tokensSnap = await db.ref('pushTokens').once('value');
   const tokens = tokensSnap.val() || {};
-  const entries = Object.entries(tokens).filter(([uid]) => uid !== joinerId);
+  // v1.9.135: 같은 물리 기기가 예전 세션의 다른 clientId(게스트 ID가 바뀌는 등)로 이미
+  // pushTokens에 등록돼 있는 채로 남아있는 경우가 실제로 확인됨 — 이땐 clientId만 비교하면
+  // "본인 제외"가 안 먹혀서, 자기 자신이 접속했을 때도 같은 폰으로 알림이 감. joiner 본인의
+  // 등록 토큰 "값"을 먼저 찾아서, uid가 다르더라도 토큰 값이 같은 항목까지 함께 제외함
+  const joinerToken = tokens[joinerId] && tokens[joinerId].token;
+  const entries = Object.entries(tokens).filter(([uid, t]) => {
+    if (uid === joinerId) return false;
+    if (joinerToken && t.token === joinerToken) return false;
+    return true;
+  });
   if (entries.length === 0) return null;
 
   let response;
