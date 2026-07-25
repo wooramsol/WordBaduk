@@ -838,7 +838,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.135</div>
+<div id="verTagBottom">v1.9.136</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -924,7 +924,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.135'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.136'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4368,8 +4368,20 @@ function setupPushNotifications() {
 
   function savePushToken(token) {
     const platform = (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'unknown';
+    // v1.9.135: 로그인/로그아웃/게스트→회원 전환은 전부 location.reload()를 거치므로 매번
+    // clientId가 바뀔 수 있는데, 예전엔 새 clientId로만 저장하고 예전 clientId의 등록은
+    // 그대로 방치돼 있었음 — 같은 기기가 pushTokens에 두 개(옛 ID/새 ID)로 중복 등록되고,
+    // notifyOnJoin이 clientId만으로 "본인 제외"를 하다 보니 본인 접속에도 알림이 가는
+    // 실제 버그로 이어졌던 부분. 이 기기가 마지막으로 등록했던 clientId를 로컬에 기억해뒀다가,
+    // 지금 clientId와 다르면 그 예전 등록을 지움
+    const prevOwnerId = localStorage.getItem('wb-pushTokenOwnerId');
+    if (prevOwnerId && prevOwnerId !== clientId) {
+      firebase.database().ref('pushTokens/' + prevOwnerId).remove().catch(() => {});
+    }
     firebase.database().ref('pushTokens/' + clientId).set({
       token, platform, ts: firebase.database.ServerValue.TIMESTAMP,
+    }).then(() => {
+      localStorage.setItem('wb-pushTokenOwnerId', clientId);
     }).catch(() => {});
   }
 

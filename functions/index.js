@@ -201,8 +201,12 @@ exports.notifyOnJoin = functions.database.ref('/presence/{clientId}').onCreate(a
   // "본인 제외"가 안 먹혀서, 자기 자신이 접속했을 때도 같은 폰으로 알림이 감. joiner 본인의
   // 등록 토큰 "값"을 먼저 찾아서, uid가 다르더라도 토큰 값이 같은 항목까지 함께 제외함
   const joinerToken = tokens[joinerId] && tokens[joinerId].token;
+  // t가 예상과 다른 형태(예: null, 문자열 등 손상된 데이터)로 들어있을 가능성을 방어함 —
+  // t.token 접근에서 예외가 나면 이 필터가 try/catch 밖(위쪽)에 있어서 함수 전체가
+  // 죽어버리므로, 여기서 미리 형태를 확인하고 이상한 항목은 그냥 걸러냄
   const entries = Object.entries(tokens).filter(([uid, t]) => {
     if (uid === joinerId) return false;
+    if (!t || typeof t.token !== 'string' || !t.token) return false;
     if (joinerToken && t.token === joinerToken) return false;
     return true;
   });
