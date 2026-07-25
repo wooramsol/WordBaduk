@@ -39,4 +39,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 진동(타이핑/단어 인정/포획) 햅틱 피드백에 필요 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>
