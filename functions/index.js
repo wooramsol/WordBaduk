@@ -207,16 +207,27 @@ exports.notifyOnJoin = functions.database.ref('/presence/{clientId}').onCreate(a
         title: '낱말바둑',
         body: '새로운 플레이어가 접속했어요! 함께 낱말바둑 해요 🍎',
       },
+      apns: {
+        payload: { aps: { sound: 'default' } },
+      },
     });
   } catch (e) {
     console.error('notifyOnJoin 전송 실패:', e);
     return null;
   }
 
+  // v1.9.134: 실제 기기에서 푸시가 안 온다는 문제를 디버깅하기 위해 상세 로그 추가.
+  // 기존엔 성공/실패 여부를 응답에서 조용히만 처리해서(무효 토큰 삭제 외엔 아무 기록도
+  // 안 남겨서) sendEachForMulticast() 자체는 에러 없이 끝나도 APNs 단에서 개별 토큰이
+  // 실패하는 경우(예: apns-환경 불일치, 잘못된 APNs 키 설정 등) 원인을 전혀 알 수 없었음
+  console.log(`notifyOnJoin: ${entries.length}개 토큰에 발송 시도, 성공 ${response.successCount}건, 실패 ${response.failureCount}건`);
+
   const removals = [];
   response.responses.forEach((r, i) => {
     if (!r.success) {
       const code = r.error && r.error.code;
+      const msg = r.error && r.error.message;
+      console.error(`notifyOnJoin: 토큰 [${entries[i][0]}] 발송 실패 — ${code}: ${msg}`);
       if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
         removals.push(db.ref('pushTokens/' + entries[i][0]).remove());
       }
