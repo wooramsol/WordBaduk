@@ -185,20 +185,23 @@ exports.login = functions.https.onRequest(async (req, res) => {
 });
 
 /**
- * 푸시 알림 — 새 플레이어가 접속하면(presence/{clientId} 노드가 새로 생김) 등록된 다른
- * 기기들에 알림을 보낸다. 앱을 백그라운드/종료 상태로 둔 사람도 "누가 들어왔는지" 알고
- * 다시 들어와 같이 놀 수 있게 하려는 목적. 토큰은 pushTokens/{uid}에 클라이언트가 저장
- * (public/index.html의 setupPushNotifications, 네이티브 앱에서만 동작). 만료/무효
- * 토큰은 응답에서 걸러 그 자리에서 지워서 계속 실패하는 토큰이 쌓이지 않게 한다.
+ * v1.9.138: 푸시 알림(FCM) 기능은 제거함 — 앱을 완전 종료한 상태에서는 iOS 구조상
+ * (APNs가 앱 프로세스와 무관하게 OS 단에서 직접 알림을 띄움) 알림을 막을 방법이 없어서,
+ * "이제 그만할 때는 알림을 끄고 싶다"는 요구를 만족시킬 수 없다고 판단해 기능 자체를
+ * 뺐다(public/index.html의 setupPushNotifications도 함께 제거됨). pushTokens/{uid}에
+ * 남아있는 예전 등록은 이제 아무도 안 읽으므로 무해하게 방치.
+ *
+ * 다만 이 함수가 맡고 있던 presence 정리(온라인 인원 수가 안 줄어드는 버그 완화)는
+ * 별개로 계속 필요해서 이름만 바꿔 그대로 유지함 — presence는 onDisconnect(연결이
+ * 정상 종료될 때만)로 지워지는데, 모바일 네트워크 전환이나 앱 강제 종료처럼 연결이
+ * 조용히 끊기는 상황에선 서버가 그 끊김을 늦게(또는 못) 감지해서 "나간 사람이 접속자
+ * 수에 계속 남는" 문제가 있었음. 클라이언트가 살아있는 동안 presence.ts를 20초마다
+ * 갱신하므로(public/index.html의 presenceHeartbeatTimer), 여기선 그 갱신이 한참
+ * (PRESENCE_STALE_MS) 끊긴 항목을 발견하는 대로 정리한다. 별도 예약(cron) 함수를 새로
+ * 만들지 않고, 누가 들어올 때마다 자연히 자주 호출되는 presence onCreate 트리거에
+ * 얹어서 처리 — 온라인 인원이 실제로 중요해지는 바로 그 시점(누군가 새로 접속해서
+ * 목록을 보는 시점)에 맞춰 정리되는 효과도 있음.
  */
-// v1.9.137: presence는 onDisconnect(연결이 정상 종료될 때만)로 지워지는데, 모바일
-// 네트워크 전환이나 앱 강제 종료처럼 연결이 조용히 끊기는 상황에선 서버가 그 끊김을
-// 늦게(또는 못) 감지해서 "나간 사람이 접속자 수에 계속 남는" 버그가 있었음. 클라이언트가
-// 살아있는 동안 presence.ts를 20초마다 갱신하도록 바꿨으니(public/index.html의
-// presenceHeartbeatTimer), 여기선 그 갱신이 한참(PRESENCE_STALE_MS) 끊긴 항목을 발견하는
-// 대로 정리한다. 별도 예약(cron) 함수를 새로 만들지 않고, 이미 배포돼 있고 누가 들어올
-// 때마다 자연히 자주 호출되는 이 함수(notifyOnJoin)에 얹어서 처리 — 온라인 인원이 실제로
-// 중요해지는 바로 그 시점(누군가 새로 접속해서 목록을 보는 시점)에 맞춰 정리되는 효과도 있음.
 const PRESENCE_STALE_MS = 90 * 1000;
 async function sweepStalePresence(db, joinerId) {
   const now = Date.now();
@@ -218,66 +221,13 @@ async function sweepStalePresence(db, joinerId) {
   if (removals.length) await Promise.all(removals);
 }
 
-exports.notifyOnJoin = functions.database.ref('/presence/{clientId}').onCreate(async (snap, context) => {
+exports.cleanupStalePresenceOnJoin = functions.database.ref('/presence/{clientId}').onCreate(async (snap, context) => {
   const joinerId = context.params.clientId;
   const db = admin.database();
   try {
     await sweepStalePresence(db, joinerId);
   } catch (e) {
-    console.error('notifyOnJoin: presence 정리 실패:', e);
+    console.error('cleanupStalePresenceOnJoin: presence 정리 실패:', e);
   }
-  const tokensSnap = await db.ref('pushTokens').once('value');
-  const tokens = tokensSnap.val() || {};
-  // v1.9.135: 같은 물리 기기가 예전 세션의 다른 clientId(게스트 ID가 바뀌는 등)로 이미
-  // pushTokens에 등록돼 있는 채로 남아있는 경우가 실제로 확인됨 — 이땐 clientId만 비교하면
-  // "본인 제외"가 안 먹혀서, 자기 자신이 접속했을 때도 같은 폰으로 알림이 감. joiner 본인의
-  // 등록 토큰 "값"을 먼저 찾아서, uid가 다르더라도 토큰 값이 같은 항목까지 함께 제외함
-  const joinerToken = tokens[joinerId] && tokens[joinerId].token;
-  // t가 예상과 다른 형태(예: null, 문자열 등 손상된 데이터)로 들어있을 가능성을 방어함 —
-  // t.token 접근에서 예외가 나면 이 필터가 try/catch 밖(위쪽)에 있어서 함수 전체가
-  // 죽어버리므로, 여기서 미리 형태를 확인하고 이상한 항목은 그냥 걸러냄
-  const entries = Object.entries(tokens).filter(([uid, t]) => {
-    if (uid === joinerId) return false;
-    if (!t || typeof t.token !== 'string' || !t.token) return false;
-    if (joinerToken && t.token === joinerToken) return false;
-    return true;
-  });
-  if (entries.length === 0) return null;
-
-  let response;
-  try {
-    response = await admin.messaging().sendEachForMulticast({
-      tokens: entries.map(([, t]) => t.token),
-      notification: {
-        title: '낱말바둑',
-        body: '새로운 플레이어 등장!',
-      },
-      apns: {
-        payload: { aps: { sound: 'default' } },
-      },
-    });
-  } catch (e) {
-    console.error('notifyOnJoin 전송 실패:', e);
-    return null;
-  }
-
-  // v1.9.134: 실제 기기에서 푸시가 안 온다는 문제를 디버깅하기 위해 상세 로그 추가.
-  // 기존엔 성공/실패 여부를 응답에서 조용히만 처리해서(무효 토큰 삭제 외엔 아무 기록도
-  // 안 남겨서) sendEachForMulticast() 자체는 에러 없이 끝나도 APNs 단에서 개별 토큰이
-  // 실패하는 경우(예: apns-환경 불일치, 잘못된 APNs 키 설정 등) 원인을 전혀 알 수 없었음
-  console.log(`notifyOnJoin: ${entries.length}개 토큰에 발송 시도, 성공 ${response.successCount}건, 실패 ${response.failureCount}건`);
-
-  const removals = [];
-  response.responses.forEach((r, i) => {
-    if (!r.success) {
-      const code = r.error && r.error.code;
-      const msg = r.error && r.error.message;
-      console.error(`notifyOnJoin: 토큰 [${entries[i][0]}] 발송 실패 — ${code}: ${msg}`);
-      if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
-        removals.push(db.ref('pushTokens/' + entries[i][0]).remove());
-      }
-    }
-  });
-  if (removals.length) await Promise.all(removals);
   return null;
 });
