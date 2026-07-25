@@ -14,7 +14,7 @@
   },
   "plugins": {
     "FirebaseMessaging": {
-      "presentationOptions": ["alert", "badge", "sound"]
+      "presentationOptions": []
     }
   },
   "experimental": {

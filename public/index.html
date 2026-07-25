@@ -838,7 +838,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.136</div>
+<div id="verTagBottom">v1.9.137</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -924,7 +924,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.136'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.137'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1026,6 +1026,8 @@ let DICT = null;                    // 사전 (Hosting에서 로드)
 let clientId = null;                // /api/identify(IP 기반 익명 ID) 로 비동기 확정됨 — boot() 참고
 let boardRef = null;                // Firebase 준비되면 boot()에서 할당
 let myPresenceRef = null;           // 내 프레즌스 노드(선택 칸/입력 중인 글자 브로드캐스트용)
+let presenceHeartbeatTimer = null;  // 아래 PRESENCE_HEARTBEAT_MS 주기로 내 presence.ts를 갱신하는 타이머
+const PRESENCE_HEARTBEAT_MS = 20000; // functions/index.js의 PRESENCE_STALE_MS(90초)와 함께 튜닝할 것
 const livePeers = new Map();        // clientId -> { x, y, dir, typed, ts } — 다른 유저의 실시간 입력 상황
 
 // v1.9.109: 잘못된 단어를 입력해 에러음이 날 때, 지금 입력 중이던 칸이 짧게 흔들리는
@@ -4433,11 +4435,21 @@ async function boot() {
     bootStage = 'boot:connected=' + connected;
     userCountTagEl.classList.toggle('on', connected);
     updateStats();
+    // 재연결 등으로 이 콜백이 여러 번 불릴 수 있으니, 새 하트비트를 걸기 전에 이전 걸 정리
+    if (presenceHeartbeatTimer) { clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
     if (connected) {
       // 접속자 표시 + 선택 칸/입력 중인 글자 브로드캐스트 (연결이 끊기면 자동 제거)
       myPresenceRef = db.ref('presence/' + clientId);
       myPresenceRef.set({ ts: Date.now() });
       myPresenceRef.onDisconnect().remove();
+      // v1.9.137: onDisconnect는 정상적인 종료(FIN)에서만 즉시 발동하고, 모바일 네트워크
+      // 전환/강제 종료처럼 연결이 조용히 끊기는 상황에선 서버가 감지할 때까지 늦게(또는
+      // 매우 드물게 못) 발동할 수 있음 — 이게 "상대방이 나갔는데 접속자 수가 안 줄어드는"
+      // 버그의 원인. 대신 살아있는 동안 presence.ts를 주기적으로 갱신해두면, 서버
+      // (functions/index.js의 notifyOnJoin)가 오래 안 갱신된 presence를 정리할 수 있음.
+      presenceHeartbeatTimer = setInterval(() => {
+        if (myPresenceRef) myPresenceRef.update({ ts: Date.now() }).catch(() => {});
+      }, PRESENCE_HEARTBEAT_MS);
       // "마지막으로 접속해 있던 시각" 기록 — presence와 달리 연결이 끊겨도 남아있어야
       // claimFruitIndex가 나중에 "이 사람이 30분 넘게 안 보였는지" 판단할 수 있음.
       // 지금 접속하는 순간엔 서버 시각으로 즉시 갱신하고, 끊길 때도(onDisconnect) 그
