@@ -12,20 +12,5 @@
   "android": {
     "allowMixedContent": false
   },
-  "plugins": {
-    "FirebaseMessaging": {
-      "presentationOptions": []
-    }
-  },
-  "experimental": {
-    "ios": {
-      "spm": {
-        "packageOptions": {
-          "@capacitor-firebase/messaging": {
-            "symlink": true
-          }
-        }
-      }
-    }
-  }
+  "plugins": {}
 }
