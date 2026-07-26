@@ -841,7 +841,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.144</div>
+<div id="verTagBottom">v1.9.145</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -927,7 +927,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.144'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.145'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3754,6 +3754,13 @@ function updateLeaderboard(affectedOwners) {
   for (const id of onlineIds) {
     if (!tally.has(id)) tally.set(id, 0);
   }
+  // v1.9.145: 연습봇은 접속자 수 판정(onlineIds)에서는 의도적으로 빠지지만(봇이 자기
+  // 자신을 "다른 사람"으로 착각해 멈추면 안 되므로 — 위 db.ref('presence') 구독 참고),
+  // 이 화면 리더보드에는 다른 플레이어와 똑같이 0점이어도 보여야 함(요청 반영) — 봇이
+  // 아직 땅을 하나도 못 땄어도 "지금 같이 놓고 있다"는 게 바로 보이게 함. 실제로 혼자
+  // 있어서 봇이 활동 중일 때만 추가하고(다른 사람이 들어와 봇이 멈추면 더는 새로
+  // 추가하지 않음 — 이미 딴 땅이 있으면 위 cells 루프에서 그대로 계속 잡힘)
+  if (botIsAlone() && !tally.has(BOT_ID)) tally.set(BOT_ID, 0);
   if (tally.size === 0) { leaderboardEl.classList.add('hidden'); return; }
   // 점수표는 지금 접속 중인 사람(0점 포함) + 과거에 땅을 딴 적 있는 사람을 전원
   // (인원 제한 없이) 점수 순으로 보여줌. 대신 과일/색이 8종뿐이라 접속자가 많아지면
