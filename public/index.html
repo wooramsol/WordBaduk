@@ -841,7 +841,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.146</div>
+<div id="verTagBottom">v1.9.147</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -927,7 +927,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.146'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.147'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3361,7 +3361,8 @@ async function botAttemptMove() {
     }
     if (result.committed && !botIntroduced) {
       botIntroduced = true;
-      showToast('🤖 연습봇이 같이 낱말을 놓고 있어요 — 다른 사람이 들어오면 멈춰요');
+      // v1.9.147: 이 안내만 다른 토스트(기본 2500ms)보다 2배(5000ms) 오래 떠 있게 해달라는 요청
+      showToast('🤖 연습봇이 같이 낱말을 놓고 있어요 — 다른 사람이 들어오면 멈춰요', 5000);
     }
   } catch (e) {
     // 연결 실패 등 — 다음 턴에 다시 시도하면 되므로 조용히 넘어감
@@ -3379,11 +3380,14 @@ setInterval(() => {
 // ---------- 토스트 ----------
 const toast = document.getElementById('toast');
 let toastTimer;
-function showToast(msg) {
+// v1.9.147: 대부분의 토스트는 기존처럼 2500ms만 떠 있으면 되지만, 연습봇 등장 안내처럼
+// 조금 더 오래 보여줘야 하는 경우도 있어서 durationMs를 선택적으로 받을 수 있게 함
+// (안 넘기면 기존과 완전히 동일한 2500ms 기본값 유지 — 다른 호출부는 전혀 안 바뀜)
+function showToast(msg, durationMs) {
   toast.textContent = msg;
   toast.style.display = 'block';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.style.display = 'none', 2500);
+  toastTimer = setTimeout(() => toast.style.display = 'none', durationMs || 2500);
 }
 
 // ---------- 플레이어 등장/퇴장 알림("{아이콘} {이름}님 등장!"/"퇴장ㅠ") ----------
