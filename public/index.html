@@ -860,7 +860,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.151</div>
+<div id="verTagBottom">v1.9.152</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -946,7 +946,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.151'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.152'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3383,7 +3383,12 @@ async function botAttemptMove() {
       // v1.9.147: 이 안내만 다른 토스트(기본 2500ms)보다 2배(5000ms) 오래 떠 있게 해달라는 요청
       // v1.9.149: 하이픈(—)으로 한 줄에 이어 쓰던 걸 마침표로 문장을 끊음 — showToast()가
       // 마침표 뒤에서 자동으로 줄바꿈해주므로(위 "토스트" 섹션 참고) 자연스럽게 2줄로 보임
-      showToast('🤖 연습봇이 같이 낱말을 놓고 있어요. 다른 사람이 들어오면 멈춰요.', 5000);
+      // v1.9.152: 실기기(모바일)에서 "다른 사람이 들어오면 멈춰요."(12자)는 한 줄에 들어가는데
+      // 첫 문장 "🤖 연습봇이 같이 낱말을 놓고 있어요."(로봇 이모지+14자)는 그보다 길어서 마침표
+      // 줄바꿈 전에 먼저 자체적으로 줄바꿈돼 3줄이 됨 — 토스트 폭(v1.9.150/151)을 두 번 늘려도
+      // 안 고쳐져서(실기기 확인 완료), 폭을 더 키우는 대신 첫 문장 자체를 줄여 두 문장이 비슷한
+      // 길이가 되게 함
+      showToast('🤖 연습봇이 참여 중이에요. 다른 사람이 들어오면 멈춰요.', 5000);
     }
   } catch (e) {
     // 연결 실패 등 — 다음 턴에 다시 시도하면 되므로 조용히 넘어감
