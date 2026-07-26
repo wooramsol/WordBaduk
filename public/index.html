@@ -365,7 +365,10 @@
     50% { transform: translate(-50%, calc(-100% - 20px)); }
   }
   #toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    /* v1.9.141: 예전엔 데스크톱/웹에서만 화면 하단(격자 아래)에 떠서 격자에 집중하고
+       있으면 시야 밖으로 벗어나기 쉬웠음 — 모바일(@media 아래 참고)과 통일해서 항상
+       상단 알약 줄과 격자 사이(리더보드 바로 아래)에 뜨게 함 */
+    position: fixed; top: 92px; left: 50%; transform: translateX(-50%);
     /* v1.9.125: 예전엔 거의 불투명한 검정(rgba(40,40,40,.92))이라 뒤에 있는 게임판을
        가렸음 — 흰 카드 톤으로 맞춤. v1.9.126: 그마저도 여전히 게임판을 가린다는 피드백
        으로 더 투명하게(.9 -> .55) 낮추고, 그림자(box-shadow)도 완전히 뺌(입체감 있는
@@ -838,7 +841,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.140</div>
+<div id="verTagBottom">v1.9.141</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -924,7 +927,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.140'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.141'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3001,18 +3004,31 @@ async function submit() {
 // v1.9.140: 혼자 접속해 있을 때(다른 실제 플레이어가 없을 때) 심심하지 않게, 그리고
 // 게임 규칙(끝말잇기 연결 + 땅따먹기 포획)을 직접 보면서 익힐 수 있게, 사전 기반으로
 // 실제 보드에 낱말을 놓는 연습용 상대. 다른 사람이 들어오면(onlineIds.size > 1) 그 즉시
-// 더 이상 새로 놓지 않음. presence 노드는 절대 만들지 않음(중요: BOT_ID로 presence를
-// 만들면 "혼자 있음" 판정 자체가 깨져서 다른 사람이 들어와도 계속 도는 버그가 됨) —
-// 접속자 수/온라인 목록엔 전혀 안 잡히고, 오직 board.words의 by 필드로만 존재를 드러냄.
-// 실제 공유 보드(applyWordPlacement, submit()과 완전히 같은 규칙 재사용)에 그대로 쓰기
-// 때문에 포획/점수 규칙을 진짜로 체험할 수 있음(연습이 끝나고 다른 사람이 들어와도 지금까지
-// 놓인 낱말은 그대로 게임에 남음). "느긋하고 쉬운 연습용" 요청에 맞춰, 실력을 겨루려 하지
-// 않고 SEED_WORDS(온보딩 씨앗 낱말과 같은, 기초~중급 쉬운 명사 목록)에서 무작위로 골라
-// 아무 연결 가능한 자리에나 놓음 — 상대를 이기려는 전략적 판단은 전혀 하지 않음.
+// 더 이상 새로 놓지 않음. 실제 공유 보드(applyWordPlacement, submit()과 완전히 같은 규칙
+// 재사용)에 그대로 쓰기 때문에 포획/점수 규칙을 진짜로 체험할 수 있음(연습이 끝나고 다른
+// 사람이 들어와도 지금까지 놓인 낱말은 그대로 게임에 남음). "느긋하고 쉬운 연습용" 요청에
+// 맞춰, 실력을 겨루려 하지 않고 SEED_WORDS(온보딩 씨앗 낱말과 같은, 기초~중급 쉬운 명사
+// 목록)에서 무작위로 골라 아무 연결 가능한 자리에나 놓음 — 상대를 이기려는 전략적 판단은
+// 전혀 하지 않음.
+// v1.9.141: 다른 실제 유저처럼 커서 이동/타이핑도 보이게 해달라는 요청으로, botPresenceRef
+// (presence/BOT_ID)에 실제 플레이어와 같은 모양({x,y,dir,typed,ts})을 브로드캐스트함.
+// 단, presence.on('value') 구독의 newIds 계산에서 BOT_ID를 명시적으로 제외하므로(위 참고)
+// "접속자 수"/botIsAlone()의 "혼자 있음" 판정에는 전혀 영향을 주지 않음 — 오직 커서 렌더링
+// (livePeers)과 타이핑 틱 소리에만 자연스럽게 섞여 들어감.
 const BOT_MOVE_MIN_MS = 4000, BOT_MOVE_MAX_MS = 9000; // 매번 이 사이 랜덤 간격으로 한 수씩
+const BOT_TYPE_MS_MIN = 140, BOT_TYPE_MS_MAX = 320; // 한 글자 "타이핑"마다 이 사이 랜덤 딜레이
 let botNextMoveAt = 0;
 let botIntroduced = false; // 이번에 혼자가 된 뒤 첫 수를 둘 때 한 번만 안내 토스트
 let botMoveInFlight = false; // 트랜잭션 진행 중 다음 틱이 겹쳐 시도하지 않도록
+let botPresenceRef = null; // boot()에서 db.ref('presence/'+BOT_ID)로 채워짐
+let botPresenceActive = false; // 지금 presence에 봇 항목이 올라가 있는지(불필요한 remove 호출 방지용)
+function botSleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+// 다른 사람이 들어와 봇이 멈출 때 커서를 즉시 치워서 "정지된 유령 커서"가 남지 않게 함
+function botClearPresence() {
+  if (!botPresenceActive || !botPresenceRef) return;
+  botPresenceActive = false;
+  botPresenceRef.remove().catch(() => {});
+}
 
 function botIsAlone() {
   return onlineIds.size <= 1; // presence엔 나 자신만 포함되므로, 이게 1 이하면 진짜 혼자
@@ -3029,6 +3045,70 @@ function shuffled(arr) {
   }
   return a;
 }
+// v1.9.141: 이 낱말을 (x,y,dir)에 놓았을 때 실제로 몇 칸을 새로 포획/스틸하게 되는지
+// 미리 계산함(실제 cells는 전혀 건드리지 않는 순수 시뮬레이션) — "그냥 아무 자리에나
+// 연결만" 하지 않고 "땅을 넓히는" 자리를 우선하도록 botFindMove()의 후보 채점에 씀.
+// applyWordPlacement()의 포획/스틸 로직(findCapturedRegions + groupCoordsByPreRegion +
+// stolenRegionPieces + enclosureOk)과 완전히 같은 계산을, 실제 board 대신 로컬 cells
+// 스냅샷 위에서 그대로 재사용함(cells Map의 각 칸이 이미 getCell()과 같은
+// {ch,dirs,captured,owner} 모양이라 그대로 씀 — boot()의 프레즌스 동기화 부분 참고).
+function simulateCaptureScore(word, x, y, dir) {
+  const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
+  const overlay = new Set(); // 이번 가상 배치로 새로 채워질(원래 완전히 비어있던) 칸
+  const placedCoords = [];
+  const stolenCoordsByOwner = new Map();
+  for (let i = 0; i < word.length; i++) {
+    const cx = x + dx * i, cy = y + dy * i;
+    const k = K(cx, cy);
+    const existing = cells.get(k);
+    if (existing && existing.captured && existing.owner && existing.owner !== BOT_ID) {
+      if (!stolenCoordsByOwner.has(existing.owner)) stolenCoordsByOwner.set(existing.owner, []);
+      stolenCoordsByOwner.get(existing.owner).push([cx, cy]);
+    }
+    if (!existing) { overlay.add(k); placedCoords.push([cx, cy]); }
+  }
+  const getCellSim = (gx, gy) => {
+    if (!inBounds(gx, gy)) return OUT_OF_BOUNDS_WALL;
+    const k = K(gx, gy);
+    if (overlay.has(k)) return { ch: '#', dirs: ['h', 'v'], captured: false }; // 이번에 새로 놓일 글자(벽)
+    const c = cells.get(k);
+    if (!c) return null;
+    return c; // cells Map은 이미 {ch,dirs,captured,owner} 모양이라 그대로 씀
+  };
+  let score = findCapturedRegions(getCellSim, K, placedCoords).length;
+  if (stolenCoordsByOwner.size) {
+    const preCellsObj = {};
+    for (const [k2, c2] of cells.entries()) preCellsObj[k2] = c2;
+    for (const [owner, coords] of stolenCoordsByOwner) {
+      const groups = groupCoordsByPreRegion(preCellsObj, K, coords, owner);
+      for (const groupCoords of groups) {
+        const pieces = stolenRegionPieces(preCellsObj, K, groupCoords, owner);
+        if (pieces.length <= 1) continue; // 안 쪼개졌으면 스틸 아님
+        const enclosedPieces = pieces.filter(enclosureOk);
+        if (!enclosedPieces.length) continue;
+        let maxLen = 0;
+        for (const piece of enclosedPieces) { if (piece.length > maxLen) maxLen = piece.length; }
+        score += maxLen;
+      }
+    }
+  }
+  return score;
+}
+// 후보들 중 포획/스틸 점수가 가장 높은 것을 고름(동점이면 무작위) — 포획 가능한 자리가
+// 전혀 없으면(아직 감쌀 만한 빈 영역이 안 만들어진 초반 등) 어쩔 수 없이 무작위로 이어붙임
+// (게임 규칙상 항상 기존 글자와 연결해야만 놓을 수 있어 "붙여쓰기" 자체는 피할 수 없음 —
+// 대신 감쌀 수 있는 상황이면 반드시 그 자리를 고르게 해서 "땅을 넓히는" 게 목적임을 보여줌).
+function pickBestMove(found) {
+  if (!found.length) return null;
+  let best = 0;
+  const scored = found.map(m => {
+    const s = simulateCaptureScore(m.word, m.x, m.y, m.dir);
+    if (s > best) best = s;
+    return { m, s };
+  });
+  const top = scored.filter(({ s }) => s === best).map(({ m }) => m);
+  return top[Math.floor(Math.random() * top.length)];
+}
 // SEED_WORDS(쉬운 명사 목록)를 첫 글자/끝 글자 기준으로 미리 색인해뒀다가, 보드 위 기존
 // 글자와 정확히 "끝말잇기"로 이어지는 낱말만 후보로 삼음 — 무작위 낱말을 아무 빈 칸에나
 // 시도하면(예전 초안) 접두/접미가 우연히 사전 단어로 안 이어지는 한 거의 항상 실패해서
@@ -3037,11 +3117,14 @@ function shuffled(arr) {
 // (사람이 직접 끝말잇기 하듯이). resolvePlace()를 그대로 재사용해서 연결/사전/중복 규칙이
 // 사람의 제출과 완전히 동일하게 적용됨 — 여기서 로컬(cells)로 통과한 후보만 추리고, 최종
 // 확정은 아래 트랜잭션에서 서버 최신 상태로 다시 검증함(사람이 직접 입력할 때와 같은 흐름).
+// v1.9.141: 예전엔 후보를 몇 개만(4~5개) 모으는 즉시 멈추고 그중 무작위로 골랐는데, 그러면
+// "땅을 넓히는" 좋은 자리를 발견하기도 전에 멈춰버릴 수 있음 — 포획 기회를 더 잘 찾아내도록
+// 후보 풀을 넉넉히 모은 뒤(pickBestMove) 점수로 고름.
 function botFindMove() {
   const boardEmpty = cells.size === 0;
   const found = [];
   let tries = 0;
-  const MAX_TRIES = 300;
+  const MAX_TRIES = 500;
 
   if (boardEmpty) {
     // 아주 드문 경우(보드가 완전히 빈 상태)만 — 중앙 부근에 자유롭게 첫 낱말을 놓음
@@ -3071,10 +3154,17 @@ function botFindMove() {
     if (!wordsByLast.has(l)) wordsByLast.set(l, []);
     wordsByLast.get(l).push(w);
   }
-  // 진짜 빈 칸이든, 포획됐지만(임자 있는 땅) 덮어쓸 수 있는 칸이든 둘 다 "열려있다"고 봄
-  // (submit()이 포획 칸 위에 새 글자를 써서 뺏을 수 있는 것과 동일 — pickOnboardingCell()
-  // 옆의 usable() 판별 기준과 같음)
-  const isOpen = (x, y) => { if (!inBounds(x, y)) return false; const c = cells.get(K(x, y)); return !c || c.captured; };
+  // 진짜 빈 칸이든, "다른 사람"이 포획한 땅(덮어써서 뺏을 수 있음)이든 둘 다 "열려있다"고
+  // 봄(submit()이 포획 칸 위에 새 글자를 써서 뺏을 수 있는 것과 동일 — pickOnboardingCell()
+  // 옆의 usable() 판별 기준과 같음). 단, 봇 "자기 자신"이 이미 포획한 칸은 절대 제외함 —
+  // 안 그러면 봇이 스스로 확보해둔 땅 위에 다시 글자를 써서(captured 해제) 그 점수를
+  // 스스로 날려버리는 낭비가 생김(v1.9.141에서 발견/수정)
+  const isOpen = (x, y) => {
+    if (!inBounds(x, y)) return false;
+    const c = cells.get(K(x, y));
+    if (!c) return true;
+    return !!c.captured && c.owner !== BOT_ID;
+  };
 
   const letterCells = shuffled([...cells.entries()].filter(([, c]) => c.ch && !c.captured));
   const dirs = [['h', 1, 0], ['v', 0, 1]];
@@ -3092,7 +3182,7 @@ function botFindMove() {
           const typed = w.slice(1);
           if (!typed) continue;
           const r = resolvePlace(typed, nx, ny, dir, getLocalCell, false, usedWords);
-          if (r.ok) { found.push({ word: typed, x: nx, y: ny, dir }); if (found.length >= 5) break outer; }
+          if (r.ok) { found.push({ word: typed, x: nx, y: ny, dir }); if (found.length >= 25) break outer; }
         }
       }
       // (B) 이 글자 바로 앞 칸이 열려있으면 -> 이 글자로 "끝나는" 낱말을 찾아 앞에 이어붙임
@@ -3104,12 +3194,12 @@ function botFindMove() {
           if (!typed) continue;
           const sx = ex - dx * typed.length, sy = ey - dy * typed.length;
           const r = resolvePlace(typed, sx, sy, dir, getLocalCell, false, usedWords);
-          if (r.ok) { found.push({ word: typed, x: sx, y: sy, dir }); if (found.length >= 5) break outer; }
+          if (r.ok) { found.push({ word: typed, x: sx, y: sy, dir }); if (found.length >= 25) break outer; }
         }
       }
     }
   }
-  return found.length ? found[Math.floor(Math.random() * found.length)] : null;
+  return pickBestMove(found); // 포획/스틸 가능한 자리를 최우선으로, 없으면 무작위
 }
 async function botAttemptMove() {
   if (botMoveInFlight || !botIsAlone() || !botGameReady()) return;
@@ -3117,10 +3207,29 @@ async function botAttemptMove() {
   if (!move) return; // 마땅한 자리를 못 찾음 — 다음 턴에 다시 시도
   botMoveInFlight = true;
   try {
+    // v1.9.141: 실제로 놓기 전에, 다른 유저처럼 칸을 "선택"하고 한 글자씩 "타이핑"하는
+    // 과정을 presence로 브로드캐스트함 — livePeers/타이핑 틱 소리가 이를 그대로 픽업해서
+    // 사람이 입력할 때와 똑같이 보이고 들림. 타이핑 도중에 실제 사람이 들어오면(=더 이상
+    // 혼자가 아니면) 조용히 커서를 지우고 중단함(둘이 동시에 같은 낱말을 놓는 어색함 방지).
+    if (botPresenceRef) {
+      botPresenceRef.set({ x: move.x, y: move.y, dir: move.dir, typed: '', ts: Date.now() }).catch(() => {});
+      botPresenceActive = true;
+      await botSleep(300 + Math.random() * 300); // 칸을 고르고 잠깐 "생각"하는 느낌
+      for (let i = 1; i <= move.word.length; i++) {
+        if (!botIsAlone()) { botClearPresence(); botMoveInFlight = false; return; }
+        botPresenceRef.update({ typed: move.word.slice(0, i), ts: Date.now() }).catch(() => {});
+        await botSleep(BOT_TYPE_MS_MIN + Math.random() * (BOT_TYPE_MS_MAX - BOT_TYPE_MS_MIN));
+      }
+      if (!botIsAlone()) { botClearPresence(); botMoveInFlight = false; return; } // 타이핑 다 끝난 시점에도 한 번 더 확인
+    }
     const result = await boardRef.transaction(b => {
       const res = applyWordPlacement(b, BOT_ID, move.word, move.x, move.y, move.dir, false);
       return res.board; // 실패(undefined)면 그대로 abort — 사람과 달리 에러 표시 없이 조용히 넘어감
     });
+    if (botPresenceRef) {
+      // 사람이 제출 직후 그 낱말 끝 칸에 커서가 남아있는 것처럼, 방금 놓은 자리에 "쉬는" 커서만 남김
+      botPresenceRef.update({ typed: '', ts: Date.now() }).catch(() => {});
+    }
     if (result.committed && !botIntroduced) {
       botIntroduced = true;
       showToast('🤖 연습봇이 같이 낱말을 놓고 있어요 — 다른 사람이 들어오면 멈춰요');
@@ -3132,7 +3241,7 @@ async function botAttemptMove() {
   }
 }
 setInterval(() => {
-  if (!botIsAlone()) { botIntroduced = false; return; } // 다시 혼자가 되면 다음번엔 또 안내
+  if (!botIsAlone()) { botIntroduced = false; botClearPresence(); return; } // 다시 혼자가 되면 다음번엔 또 안내
   if (Date.now() < botNextMoveAt) return;
   botNextMoveAt = Date.now() + BOT_MOVE_MIN_MS + Math.random() * (BOT_MOVE_MAX_MS - BOT_MOVE_MIN_MS);
   botAttemptMove();
@@ -4548,6 +4657,7 @@ async function boot() {
 
   const db = firebase.database();
   boardRef = db.ref('board');
+  botPresenceRef = db.ref('presence/' + BOT_ID); // v1.9.141: 연습봇 커서/타이핑 브로드캐스트용(아래 "연습봇" 섹션)
 
   // 연결 상태 + 내 프레즌스(접속 표시 + 실시간 입력 상황 브로드캐스트) — 연결 상태는
   // 별도 태그 없이 접속자 태그의 점(●)/색으로만 표시
@@ -4604,7 +4714,13 @@ async function boot() {
   const peerTypedPrev = new Map(); // 다른 사람의 타이핑 효과음 브로드캐스트용 — peer id -> 마지막으로 본 typed 문자열
   db.ref('presence').on('value', snap => {
     const val = snap.val() || {};
-    const newIds = new Set(Object.keys(val));
+    // v1.9.141: 연습봇도 이제 presence/{BOT_ID}에 자기 커서 위치/타이핑 상태를 올려서(아래
+    // "연습봇" 섹션 참고) 다른 사람처럼 커서 이동+타이핑이 보이게 함. 다만 접속자 수/"혼자
+    // 있음" 판정(botIsAlone, userCount, 등장·퇴장 카드)에는 절대 실제 사람으로 잡히면 안
+    // 되므로(봇 자신도 이 값으로 혼자인지 판단 — 자기 자신이 접속자로 잡히면 다른 사람이
+    // 들어와도 안 멈추는 버그가 됨) newIds 계산에서만 BOT_ID를 제외함. 타이핑 틱 소리/커서
+    // 렌더링(livePeers)은 아래에서 val 원본을 그대로 쓰므로 봇도 정상적으로 보이고 들림.
+    const newIds = new Set(Object.keys(val).filter(id => id !== BOT_ID));
     if (clientId) newIds.add(clientId); // 프레즌스 기록이 아직 안 됐어도 나 자신은 항상 포함
 
     // 새로 접속한 사람이 있으면 알림음 재생 + "{아이콘} {이름}님 등장!" 카드 표시. 단, 내가
