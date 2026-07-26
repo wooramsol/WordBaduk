@@ -841,7 +841,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.142</div>
+<div id="verTagBottom">v1.9.143</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -927,7 +927,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.142'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.143'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -3276,13 +3276,27 @@ async function botAttemptMove() {
       }
       if (!botIsAlone()) { botClearPresence(); botMoveInFlight = false; return; } // 타이핑 다 끝난 시점에도 한 번 더 확인
     }
+    let placedInfo = null;
     const result = await boardRef.transaction(b => {
       const res = applyWordPlacement(b, BOT_ID, move.word, move.x, move.y, move.dir, false);
-      return res.board; // 실패(undefined)면 그대로 abort — 사람과 달리 에러 표시 없이 조용히 넘어감
+      if (!res.board) return; // 실패면 그대로 abort — 사람과 달리 에러 표시 없이 조용히 넘어감
+      placedInfo = res.placedInfo;
+      return res.board;
     });
     if (botPresenceRef) {
-      // 사람이 제출 직후 그 낱말 끝 칸에 커서가 남아있는 것처럼, 방금 놓은 자리에 "쉬는" 커서만 남김
-      botPresenceRef.update({ typed: '', ts: Date.now() }).catch(() => {});
+      // v1.9.143: 사람이 submit() 직후 방금 완성한 낱말의 "마지막 글자" 칸으로 선택을
+      // 옮기는 것과 완전히 동일하게(위 submit()의 openPopup(lastX,lastY,...) 참고) —
+      // placedInfo는 서버 트랜잭션이 실제로 확정한 낱말/시작점이라(로컬 예측이 아니라),
+      // 접두/접미가 로컬 예상보다 더 길게 이어붙었어도 항상 정확한 "진짜 마지막 칸"이 나옴
+      if (result.committed && placedInfo) {
+        const dxp = move.dir === 'h' ? 1 : 0, dyp = move.dir === 'v' ? 1 : 0;
+        const lastX = placedInfo.startX + dxp * (placedInfo.word.length - 1);
+        const lastY = placedInfo.startY + dyp * (placedInfo.word.length - 1);
+        botPresenceRef.set({ x: lastX, y: lastY, dir: move.dir, typed: '', ts: Date.now() }).catch(() => {});
+      } else {
+        // 실패했으면 방금 고른 자리에 그냥 "쉬는" 커서만 남김
+        botPresenceRef.update({ typed: '', ts: Date.now() }).catch(() => {});
+      }
     }
     if (result.committed && !botIntroduced) {
       botIntroduced = true;
