@@ -841,7 +841,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.141</div>
+<div id="verTagBottom">v1.9.142</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -927,7 +927,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.141'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.142'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1512,6 +1512,22 @@ function groupCoordsByPreRegion(preCells, K, coords, owner) {
     groups.push(groupCoords);
   }
   return groups;
+}
+
+// v1.9.142: 상대의 captured 칸을 덮어쓰는 게 "진짜로 뺏은 것"으로 인정되려면, 그 사람의
+// 영역을 실제로 여러 조각으로 쪼개고(stolenRegionPieces) 그중 최소 하나는 다시 완전히
+// 둘러싸여야(enclosureOk) 함 — 아무 의미 없이(끊어내지도 못하면서) 상대 땅 한 칸을 그냥
+// 밟고 지나가듯 글자만 얹는 건 안 됨. applyWordPlacement(실제 배치 검증)와 연습봇의 후보
+// 채점/필터링(botFindMove/simulateCaptureScore)이 전부 이 기준을 공유해야 서로 어긋나지
+// 않으므로 공용 헬퍼로 뺌. coords는 같은 owner의 좌표들(원래 서로 무관한 여러 영역이
+// 섞여 있을 수 있음)이며, groupCoordsByPreRegion으로 먼저 원래 영역별로 나눠서 그룹마다
+// 독립적으로 검사함 — 모든 그룹이 다 쪼개져야 유효함(하나라도 그냥 밟기만 한 그룹이면 무효).
+function stolenTouchIsValid(preCells, coords, owner) {
+  const groups = groupCoordsByPreRegion(preCells, K, coords, owner);
+  return groups.every(groupCoords => {
+    const pieces = stolenRegionPieces(preCells, K, groupCoords, owner);
+    return pieces.length > 1 && pieces.some(enclosureOk);
+  });
 }
 
 // ---------- 캔버스 ----------
@@ -2802,15 +2818,30 @@ function applyWordPlacement(b, ownerId, typed, x, y, dir, isChat) {
 
   const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
   const placedCoords = [];
-  const stolenCoordsByOwner = new Map(); // 이번에 덮어쓴 상대 소유 captured 칸: owner -> [[x,y],...]
+  const stolenCoordsByOwner = new Map(); // 이번에 덮어쓰려는 상대 소유 captured 칸: owner -> [[x,y],...]
   for (let i = 0; i < r.word.length; i++) {
     const cx = r.startX + dx * i, cy = r.startY + dy * i;
-    const k = K(cx, cy);
-    const existing = board.cells[k];
+    const existing = board.cells[K(cx, cy)];
     if (existing && existing.captured && existing.owner && existing.owner !== ownerId) {
       if (!stolenCoordsByOwner.has(existing.owner)) stolenCoordsByOwner.set(existing.owner, []);
       stolenCoordsByOwner.get(existing.owner).push([cx, cy]);
     }
+  }
+  // v1.9.142: 상대가 이미 포획한 땅은 "가로질러 끊어서 새로 닫힌 영역을 만들어낼 때"만
+  // 뺏을 수 있음 — 아무 의미 없이(끊어내지도 못하면서) 상대 땅 한 칸을 그냥 밟고 지나가듯
+  // 글자만 얹는 건 안 됨. board.cells를 실제로 고치기 전에, 이번에 덮어쓰려는 상대 칸들이
+  // 정말로 그 사람의 영역을 "쪼개서 새로 닫힌 조각"을 만들어내는지 먼저 전부 검증하고(아래
+  // 실제 스틸 적용 로직과 완전히 같은 기준 재사용), 하나라도 못 만들면 배치 자체를 통째로
+  // 취소함(사전/연결 조건 위반과 동급의 실패로 취급 — 부분 배치는 없음)
+  for (const [owner, coords] of stolenCoordsByOwner) {
+    if (!stolenTouchIsValid(preMoveCells, coords, owner)) {
+      return { err: '상대 땅은 완전히 끊어서 새 영역을 가둬야만 뺏을 수 있어요.' };
+    }
+  }
+  for (let i = 0; i < r.word.length; i++) {
+    const cx = r.startX + dx * i, cy = r.startY + dy * i;
+    const k = K(cx, cy);
+    const existing = board.cells[k];
     // 포획된 칸 위에 새로 글자를 쓰면(=상대 땅을 뺏으면) 예전 captured/owner 기록을
     // 그대로 재사용하지 않고 완전히 새 글자 칸으로 새로 만듦 — 재사용하면 captured:true가
     // 안 지워져서 글자가 있는데도 여전히 "포획된 칸"으로 남는 상태가 됨(렌더링/판정 둘 다 깨짐)
@@ -3094,6 +3125,29 @@ function simulateCaptureScore(word, x, y, dir) {
   }
   return score;
 }
+// v1.9.142: applyWordPlacement가 이제 "상대 땅은 끊어야만 뺏을 수 있다" 규칙을 강제하므로
+// (위 stolenTouchIsValid 참고), 봇도 그 기준에 안 맞는(끊어내지 못하면서 상대 captured
+// 칸을 그냥 밟기만 하는) 후보는 애초에 만들지 않아야 함 — 안 그러면 실제 트랜잭션에서
+// 조용히 거절당해(applyWordPlacement가 err 반환) 그 턴을 그냥 날리게 됨.
+function botWouldOverwriteInvalidLand(word, startX, startY, dir) {
+  const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
+  const stolenCoordsByOwner = new Map();
+  for (let i = 0; i < word.length; i++) {
+    const cx = startX + dx * i, cy = startY + dy * i;
+    const existing = cells.get(K(cx, cy));
+    if (existing && existing.captured && existing.owner && existing.owner !== BOT_ID) {
+      if (!stolenCoordsByOwner.has(existing.owner)) stolenCoordsByOwner.set(existing.owner, []);
+      stolenCoordsByOwner.get(existing.owner).push([cx, cy]);
+    }
+  }
+  if (!stolenCoordsByOwner.size) return false; // 남의 땅을 하나도 안 건드리면 항상 유효
+  const preCellsObj = {};
+  for (const [k2, c2] of cells.entries()) preCellsObj[k2] = c2;
+  for (const [owner, coords] of stolenCoordsByOwner) {
+    if (!stolenTouchIsValid(preCellsObj, coords, owner)) return true;
+  }
+  return false;
+}
 // 후보들 중 포획/스틸 점수가 가장 높은 것을 고름(동점이면 무작위) — 포획 가능한 자리가
 // 전혀 없으면(아직 감쌀 만한 빈 영역이 안 만들어진 초반 등) 어쩔 수 없이 무작위로 이어붙임
 // (게임 규칙상 항상 기존 글자와 연결해야만 놓을 수 있어 "붙여쓰기" 자체는 피할 수 없음 —
@@ -3182,7 +3236,7 @@ function botFindMove() {
           const typed = w.slice(1);
           if (!typed) continue;
           const r = resolvePlace(typed, nx, ny, dir, getLocalCell, false, usedWords);
-          if (r.ok) { found.push({ word: typed, x: nx, y: ny, dir }); if (found.length >= 25) break outer; }
+          if (r.ok && !botWouldOverwriteInvalidLand(typed, nx, ny, dir)) { found.push({ word: typed, x: nx, y: ny, dir }); if (found.length >= 25) break outer; }
         }
       }
       // (B) 이 글자 바로 앞 칸이 열려있으면 -> 이 글자로 "끝나는" 낱말을 찾아 앞에 이어붙임
@@ -3194,7 +3248,7 @@ function botFindMove() {
           if (!typed) continue;
           const sx = ex - dx * typed.length, sy = ey - dy * typed.length;
           const r = resolvePlace(typed, sx, sy, dir, getLocalCell, false, usedWords);
-          if (r.ok) { found.push({ word: typed, x: sx, y: sy, dir }); if (found.length >= 25) break outer; }
+          if (r.ok && !botWouldOverwriteInvalidLand(typed, sx, sy, dir)) { found.push({ word: typed, x: sx, y: sy, dir }); if (found.length >= 25) break outer; }
         }
       }
     }
