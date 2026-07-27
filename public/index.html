@@ -639,6 +639,49 @@
   #onlineList .onlineBtn.reportBtn { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
   #onlineList .onlineBtn.reportBtn:hover { background: #f4caca; }
   #onlineList .onlineEmptyRow { justify-content: center; font-size: 13px; color: #999; padding: 12px 0; border-bottom: none; }
+  /* v1.9.157: 관리자(닉네임 '람솔')에게만 보이는 버튼 — 평소엔 hidden, isOwnerAdmin()일
+     때만 JS에서 노출함. 다른 버튼들과 구분되게 눈에 덜 띄는 톤으로 둠 */
+  #recentVisitorsBtn {
+    display: block; width: 100%; margin-top: 10px; padding: 8px;
+    border-radius: 10px; border: 1px dashed #d8d2c4; background: none;
+    color: #999; font-size: 12px; cursor: pointer;
+  }
+  #recentVisitorsBtn:hover { background: #f5f1e8; }
+  #recentVisitorsBtn.hidden { display: none; }
+  #recentBackdrop { position: fixed; inset: 0; z-index: 69; background: rgba(40,36,26,.45); }
+  #recentBackdrop.hidden { display: none; }
+  #recentOverlay {
+    position: fixed; inset: 0; z-index: 70;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; pointer-events: none;
+  }
+  #recentOverlay.hidden { display: none; }
+  #recentCard {
+    pointer-events: auto;
+    background: #fff; border-radius: 18px; padding: 22px 20px;
+    width: 100%; max-width: 320px; box-shadow: 0 8px 28px rgba(0,0,0,.2);
+    max-height: calc(100vh - 32px); overflow-y: auto;
+  }
+  #recentTitle { font-size: 18px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; text-align: center; }
+  #recentSub { font-size: 12px; color: #999; margin-bottom: 14px; text-align: center; }
+  #recentList {
+    list-style: none; margin: 0; padding: 0;
+    max-height: 320px; overflow-y: auto; overflow-x: hidden;
+  }
+  #recentList li {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 2px; font-size: 14px; border-bottom: 1px solid #f0ece0;
+  }
+  #recentList li:last-child { border-bottom: none; }
+  #recentList .recentEmoji { flex: none; font-size: 1.2em; }
+  #recentList .recentName {
+    flex: 1; font-weight: 700; color: #444;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #recentList .recentTime { flex: none; font-size: 12px; color: #999; }
+  #recentList .recentTime.isOnline { color: #2c8f4a; font-weight: 700; }
+  #recentEmpty { text-align: center; font-size: 13px; color: #999; padding: 12px 0; }
+  #recentEmpty.hidden { display: none; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   /* 접속 확인/사전·보드 첫 동기화를 기다리는 동안 화면 전체를 덮는 로딩 스피너 —
@@ -867,10 +910,26 @@
   <div id="onlineCard">
     <div id="onlineTitle">현재 접속 중</div>
     <ul id="onlineList"></ul>
+    <!-- v1.9.157: 관리자(닉네임 '람솔')에게만 보이는 버튼 — isOwnerAdmin() 참고. 새로운
+         데이터를 따로 수집하지 않고, 이미 있는 playerLastSeen(마지막 접속 시각)을 목록으로
+         보여주기만 함 -->
+    <button id="recentVisitorsBtn" type="button" class="hidden">최근 다녀간 사람 (나만 보임)</button>
+  </div>
+</div>
+
+<!-- v1.9.157: "최근 다녀간 사람" — 관리자(람솔)에게만 보이는 목록. 새 데이터 수집 없이
+     기존 playerLastSeen(마지막 접속 시각)을 정렬해서 보여주기만 함 -->
+<div id="recentBackdrop" class="hidden"></div>
+<div id="recentOverlay" class="hidden">
+  <div id="recentCard">
+    <div id="recentTitle">최근 다녀간 사람</div>
+    <div id="recentSub">나에게만 보여요 · 최근 접속 시각 기준</div>
+    <ul id="recentList"></ul>
+    <div id="recentEmpty" class="hidden">아직 기록이 없어요.</div>
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.156</div>
+<div id="verTagBottom">v1.9.157</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -956,7 +1015,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.156'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.157'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4200,6 +4259,72 @@ userCountTagEl.addEventListener('click', () => {
   onlineBackdrop.classList.remove('hidden');
 });
 
+// v1.9.157: "누가 언제 들어왔는지 나만 볼 수 있을까" 요청 검증 — 새 데이터를 따로 수집하지
+// 않고(App Store 개인정보 신고 항목이 늘어나지 않도록), 이미 있는 playerLastSeen(각
+// 플레이어의 "마지막으로 접속해 있던 시각" — claimFruitIndex가 자리 회수 판단에 쓰는 그
+// 값 그대로)을 관리자(닉네임이 '람솔'인 회원)에게만 정렬해서 보여줌. 전체 접속 히스토리가
+// 아니라 "이 사람이 최근에 왔었다"는 스냅샷 한 장뿐임(그 이상은 새 데이터 수집이라 안 함).
+function isOwnerAdmin() {
+  if (!isMemberMode || !clientId) return false;
+  const mp = ownerMemberProfile.get(clientId);
+  return !!mp && mp.nickname === '람솔';
+}
+function formatRelativeTime(ts) {
+  if (!ts) return '';
+  const diffMs = Date.now() - ts;
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return min + '분 전';
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return hour + '시간 전';
+  const day = Math.floor(hour / 24);
+  if (day < 30) return day + '일 전';
+  return new Date(ts).toLocaleDateString('ko-KR');
+}
+const recentBackdrop = document.getElementById('recentBackdrop');
+const recentOverlay = document.getElementById('recentOverlay');
+const recentListEl = document.getElementById('recentList');
+const recentEmptyEl = document.getElementById('recentEmpty');
+const recentVisitorsBtn = document.getElementById('recentVisitorsBtn');
+function closeRecentOverlay() {
+  recentOverlay.classList.add('hidden');
+  recentBackdrop.classList.add('hidden');
+}
+recentBackdrop.addEventListener('click', closeRecentOverlay);
+async function renderRecentVisitors() {
+  recentListEl.textContent = '';
+  let val = {};
+  try {
+    const snap = await firebase.database().ref('playerLastSeen').once('value');
+    val = snap.val() || {};
+  } catch { val = {}; }
+  const rows = Object.entries(val)
+    .filter(([id]) => id !== BOT_ID)
+    .sort((a, b) => (b[1] || 0) - (a[1] || 0))
+    .slice(0, 50); // 카드 하나에 다 보여줄 순 없어 최근 50명까지만
+  recentEmptyEl.classList.toggle('hidden', rows.length > 0);
+  rows.forEach(([id, ts]) => {
+    const li = document.createElement('li');
+    const emoji = document.createElement('span');
+    emoji.className = 'recentEmoji';
+    emoji.textContent = ownerEmoji(id);
+    const name = document.createElement('span');
+    name.className = 'recentName';
+    name.textContent = ownerName(id);
+    const time = document.createElement('span');
+    const online = onlineIds.has(id);
+    time.className = 'recentTime' + (online ? ' isOnline' : '');
+    time.textContent = online ? '접속 중' : formatRelativeTime(ts);
+    li.append(emoji, name, time);
+    recentListEl.appendChild(li);
+  });
+}
+recentVisitorsBtn.addEventListener('click', async () => {
+  await renderRecentVisitors();
+  recentOverlay.classList.remove('hidden');
+  recentBackdrop.classList.remove('hidden');
+});
+
 // ---------- 게임 종료 판정 + 승리 축하 연출 ----------
 // 보드(10x10, 총 100칸)에 빈칸이 하나도 없으면(전부 낱말이거나 이미 포획된 칸) 더 이상
 // 새로 포획할 영역이 생길 수 없으므로 게임 종료로 봄. 포획한 칸이 가장 많은 사람이 승자.
@@ -4938,6 +5063,9 @@ async function boot() {
     ownerMemberProfile = new Map(Object.entries(snap.val() || {}));
     updateLeaderboard();
     draw();
+    // v1.9.157: 내 닉네임이 이번에 확정/갱신됐을 수 있으니, 관리자 전용 버튼 노출 여부를
+    // 그때마다 다시 확인함
+    recentVisitorsBtn.classList.toggle('hidden', !isOwnerAdmin());
   });
 
   let presenceFirstSync = true;
