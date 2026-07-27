@@ -678,6 +678,7 @@
     flex: 1; font-weight: 700; color: #444;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  #recentList .recentScore { flex: none; font-size: 12px; color: #6b5e3f; font-weight: 700; font-variant-numeric: tabular-nums; }
   #recentList .recentTime { flex: none; font-size: 12px; color: #999; }
   #recentList .recentTime.isOnline { color: #2c8f4a; font-weight: 700; }
   #recentEmpty { text-align: center; font-size: 13px; color: #999; padding: 12px 0; }
@@ -929,7 +930,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.157</div>
+<div id="verTagBottom">v1.9.158</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1015,7 +1016,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.157'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.158'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4298,6 +4299,15 @@ async function renderRecentVisitors() {
     const snap = await firebase.database().ref('playerLastSeen').once('value');
     val = snap.val() || {};
   } catch { val = {}; }
+  // v1.9.158: 몇 점 획득했는지도 같이 보여달라는 요청 — 새 데이터를 수집하지 않고, 화면
+  // 리더보드(updateLeaderboard)가 쓰는 것과 똑같은 방식(현재 보드에서 owner별 포획 칸
+  // 수를 세는 것)으로 계산함. 주의: 이건 "지금 이 순간" 그 사람이 보드에 갖고 있는 칸
+  // 수라서, 이후 다른 사람이 그 자리를 덮어쓰거나 한 판이 끝나 보드가 초기화되면
+  // 0으로 바뀜 — 방문 당시 점수를 별도로 저장해뒀다가 보여주는 게 아님.
+  const scoreTally = new Map();
+  for (const c of cells.values()) {
+    if (c.captured && c.owner) scoreTally.set(c.owner, (scoreTally.get(c.owner) || 0) + 1);
+  }
   const rows = Object.entries(val)
     .filter(([id]) => id !== BOT_ID)
     .sort((a, b) => (b[1] || 0) - (a[1] || 0))
@@ -4311,11 +4321,14 @@ async function renderRecentVisitors() {
     const name = document.createElement('span');
     name.className = 'recentName';
     name.textContent = ownerName(id);
+    const score = document.createElement('span');
+    score.className = 'recentScore';
+    score.textContent = (scoreTally.get(id) || 0) + '점';
     const time = document.createElement('span');
     const online = onlineIds.has(id);
     time.className = 'recentTime' + (online ? ' isOnline' : '');
     time.textContent = online ? '접속 중' : formatRelativeTime(ts);
-    li.append(emoji, name, time);
+    li.append(emoji, name, score, time);
     recentListEl.appendChild(li);
   });
 }
