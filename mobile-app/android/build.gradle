@@ -8,7 +8,10 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
-        classpath 'com.google.gms:google-services:4.4.4'
+        // v1.9.157: google-services 플러그인(구 @capacitor-firebase/messaging용)은 iOS 쪽
+        // 푸시 알림 기능 제거 때 같이 걷어냈어야 했는데 Android는 그때 빠짐 — google-services.json도
+        // 없고 실제로 안 쓰이는 잔재라 제거함(Firebase 자체는 네이티브 SDK가 아니라 웹뷰 안의
+        // JS SDK로 계속 씀, index.html의 firebase-app-compat.js 참고)
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
