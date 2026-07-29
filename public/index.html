@@ -311,6 +311,17 @@
   #leaderboard .offlineTag {
     color: #b4a98f; font-size: 0.75em; font-weight: 400; flex: none;
   }
+  /* v1.9.163: 닉네임 옆에 작게 붙는 "종합n위" — 지금 보드의 즉석 순위(.rank)와는 별개로
+     memberTotalScore 기준 전체 누적 순위. 회원이고 랭킹에 잡히는 사람만 보임(게스트/관리자
+     '람솔'은 overallRankOf가 null이라 애초에 안 붙음). 종합 1·2·3위는 랭킹 모달(.hofRank)과
+     같은 금/은/동 색으로 강조 */
+  #leaderboard .overallRank {
+    color: #a89a78; font-size: 0.72em; font-weight: 700; flex: none; white-space: nowrap;
+  }
+  #leaderboard .overallRank.top1 { color: #c9971f; font-weight: 900; }
+  #leaderboard .overallRank.top2 { color: #9a9a9a; font-weight: 800; }
+  #leaderboard .overallRank.top3 { color: #b87333; font-weight: 800; }
+  #leaderboard li.offline .overallRank { color: #a8a196; }
 
   /* 칸에 직접 입력: 보이는 입력창/버튼 없음. wordInput은 IME(한글 조합) 지원을 위해
      실제로 존재하지만 화면엔 보이지 않고, 타이핑한 글자는 캔버스 칸에 바로 그려짐. */
@@ -942,7 +953,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.162</div>
+<div id="verTagBottom">v1.9.163</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1028,7 +1039,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.162'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.163'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1848,6 +1859,9 @@ const ICONS = [
 // owner(clientId=uid) -> 회원 프로필({nickname, iconIdx}). memberProfiles 전체를 실시간
 // 구독해서 채워짐(boot() 참고). 이 맵에 있으면 회원, 없으면(기존처럼) 과일 배정 대상.
 let ownerMemberProfile = new Map();
+// v1.9.163: uid -> 누적 점수(memberTotalScore). 리더보드에 "종합n위"를 실시간으로 보여주기
+// 위해 랭킹 모달과 별개로 항상 구독해둠(boot() 참고).
+let memberTotalScoreMap = new Map();
 // v1.9.140: 연습봇(아래 "연습봇" 섹션 참고)의 고정 아이덴티티 — memberProfiles에 서버 기록을
 // 남기지 않아도(=랭킹에 안 잡히게) fruitOf()에서 바로 가로채서 항상 같은 이름/아이콘을 씀
 const BOT_ID = 'BOT-practice';
@@ -3889,6 +3903,22 @@ let pendingIcons = new Map();
 // affectedOwners: 이번 동기화에서 flyScoreIcons가 곧 아이콘을 날릴(=점수가 오르거나
 // 내리는 게 그 연출로 표현될) owner들의 Set. 없으면(최초 접속 등) 모든 점수를 그냥
 // 바로 최종값으로 표시함.
+// v1.9.163: 랭킹 모달(hallOfFameBtn)과 완전히 같은 규칙(회원만, '람솔' 제외, memberTotalScore
+// 내림차순)으로 uid의 "종합 순위"를 계산함 — 게스트/비회원이거나 관리자(람솔) 본인이면 null.
+function overallRankOf(uid) {
+  const profile = ownerMemberProfile.get(uid);
+  if (!profile || profile.nickname === '람솔') return null;
+  const ranked = Array.from(ownerMemberProfile.keys())
+    .map(id => ({ id, score: memberTotalScoreMap.get(id) || 0 }))
+    .filter(entry => {
+      const p = ownerMemberProfile.get(entry.id);
+      return !p || p.nickname !== '람솔';
+    })
+    .sort((a, b) => b.score - a.score);
+  const idx = ranked.findIndex(entry => entry.id === uid);
+  return idx === -1 ? null : idx + 1;
+}
+
 function updateLeaderboard(affectedOwners) {
   // 인앱 브라우저 탈출 안내 화면이 떠 있는 중이면 리더보드도 표시하지 않음
   if (window.__wvExitScreen) { leaderboardEl.classList.add('hidden'); return; }
@@ -3947,6 +3977,16 @@ function updateLeaderboard(affectedOwners) {
     name.className = 'name';
     name.textContent = ownerName(owner) + (owner === clientId ? ' (나)' : '');
     if (owner === clientId) name.style.color = `hsl(${hue}, 60%, 40%)`;
+    // v1.9.163: 닉네임 오른쪽에 작게 "종합n위" — 회원이고 종합 랭킹에 잡히는 사람만(게스트/
+    // 관리자는 overallRankOf가 null을 줘서 자동으로 안 보임). 종합 1·2·3위는 금/은/동 색.
+    const overallRank = overallRankOf(owner);
+    let overallEl = null;
+    if (overallRank != null) {
+      overallEl = document.createElement('span');
+      overallEl.className = 'overallRank';
+      if (overallRank <= 3) overallEl.classList.add('top' + overallRank);
+      overallEl.textContent = '종합' + overallRank + '위';
+    }
     const cnt = document.createElement('span');
     cnt.className = 'cnt';
     // 이번 동기화에서 이 owner가 실제로 영역을 새로 확보했거나(점수 상승) 반대로 뺏겨서
@@ -3970,7 +4010,9 @@ function updateLeaderboard(affectedOwners) {
       cnt.textContent = count + '점';
       prevScores.set(owner, count);
     }
-    li.append(rank, icon, name, cnt);
+    li.append(rank, icon, name);
+    if (overallEl) li.appendChild(overallEl);
+    li.appendChild(cnt);
     if (offline) {
       const offlineTag = document.createElement('span');
       offlineTag.className = 'offlineTag';
@@ -5087,6 +5129,14 @@ async function boot() {
     // v1.9.157: 내 닉네임이 이번에 확정/갱신됐을 수 있으니, 관리자 전용 버튼 노출 여부를
     // 그때마다 다시 확인함
     recentVisitorsBtn.classList.toggle('hidden', !isOwnerAdmin());
+  });
+
+  // v1.9.163: memberTotalScore 전체를 실시간 구독 — 리더보드의 "종합n위" 표시(overallRankOf)가
+  // 항상 최신 누적 점수 기준으로 계산되도록 함(랭킹 모달을 열지 않아도 실시간 반영됨)
+  db.ref('memberTotalScore').on('value', snap => {
+    const val = snap.val() || {};
+    memberTotalScoreMap = new Map(Object.entries(val).map(([uid, v]) => [uid, Number(v) || 0]));
+    updateLeaderboard();
   });
 
   let presenceFirstSync = true;
