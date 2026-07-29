@@ -584,9 +584,9 @@
   .hofScore { flex: none; font-weight: 800; color: #6b5e3f; font-variant-numeric: tabular-nums; }
   #hofList li.me { background: #f9f5ea; border-radius: 8px; }
   #hofList li.me .hofName { color: #6b5e3f; }
-  /* v1.9.161: 1·2·3위(금/은/동) 전부 강조 — 1위가 가장 굵고 빛나게, 2위는 은은하게,
-     3위는 동메달색으로. 4위부터는 .hofRank 기본값(회색, 글로우 없음) 그대로.
-     닉네임(.hofName)도 같은 색을 입히고 깜빡이는 효과(hofBlink)를 추가로 줌 */
+  /* v1.9.161: 1·2·3위(금/은/동) 등수 텍스트(.hofRank) 전부 강조 — 1위가 가장 굵고
+     빛나게, 2위는 은은하게, 3위는 동메달색으로. 4위부터는 기본값(회색, 글로우 없음).
+     v1.9.162: 닉네임(.hofName) 금색+깜빡임(hofBlink)은 1위한테만 줌(2·3위는 기본 색 유지) */
   #hofList li[data-rank="1"] .hofRank {
     color: #c9971f; font-weight: 900;
     text-shadow: 0 0 6px rgba(233,180,54,.85), 0 0 10px rgba(233,180,54,.45);
@@ -599,14 +599,10 @@
     color: #b87333; font-weight: 800;
     text-shadow: 0 0 3px rgba(184,115,51,.5);
   }
-  #hofList li[data-rank="1"] .hofName,
-  #hofList li[data-rank="2"] .hofName,
-  #hofList li[data-rank="3"] .hofName {
+  #hofList li[data-rank="1"] .hofName {
+    color: #c9971f;
     animation: hofBlink 1.4s ease-in-out infinite;
   }
-  #hofList li[data-rank="1"] .hofName { color: #c9971f; }
-  #hofList li[data-rank="2"] .hofName { color: #9a9a9a; }
-  #hofList li[data-rank="3"] .hofName { color: #b87333; }
   @keyframes hofBlink {
     0%, 100% { opacity: 1; }
     50% { opacity: .4; }
@@ -946,7 +942,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.161</div>
+<div id="verTagBottom">v1.9.162</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1032,7 +1028,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.161'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.162'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
