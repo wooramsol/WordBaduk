@@ -362,15 +362,17 @@
      사라짐 — JS 참고). 배색은 #modeBadge/#brand/#userCountTag와 같은 앱 전체 테마
      팔레트(크림 배경 #eee7d8 + 갈색 글자 #6b5e3f)로 맞춤 — 처음엔 눈에 띄라고 초록색을
      썼었는데, 다른 어떤 UI에도 없는 색이라 테마와 겉돈다는 피드백을 받아 통일함 */
-  #onboardBubble {
+  /* v1.9.166: #onboardBubble 하나였던 규칙을 .onboardBubble 클래스로 바꿔서, 뒤이어 나오는
+     "Space로 방향 전환" 안내(#onboardBubbleDir)도 같은 모양/애니메이션을 그대로 재사용함 */
+  .onboardBubble {
     position: fixed; z-index: 22; display: none;
     padding: 8px 14px; border-radius: 14px; font-size: 13px; font-weight: 700;
     background: #eee7d8; color: #6b5e3f; border: 1.5px solid #cfc7b5; white-space: nowrap;
     box-shadow: 0 3px 10px rgba(0,0,0,.22);
     pointer-events: none;
   }
-  #onboardBubble.show { display: block; animation: onboardBubbleBounce 1.4s ease-in-out infinite; }
-  #onboardBubble::after {
+  .onboardBubble.show { display: block; animation: onboardBubbleBounce 1.4s ease-in-out infinite; }
+  .onboardBubble::after {
     content: ''; position: absolute; left: 50%; bottom: -7.5px;
     width: 12px; height: 12px; background: #eee7d8;
     border-right: 1.5px solid #cfc7b5; border-bottom: 1.5px solid #cfc7b5;
@@ -942,7 +944,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.164</div>
+<div id="verTagBottom">v1.9.165</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -966,7 +968,10 @@
 <input id="wordInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" lang="ko" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
 <!-- v1.9.116: 최초 방문자에게만 보이는 안내 말풍선 — 자동 선택된 칸 위에 떠서
      "단어를 입력해보세요"를 알려줌. pointer-events:none이라 그 아래 칸 탭을 가로채지 않음 -->
-<div id="onboardBubble">단어를 입력해보세요</div>
+<div id="onboardBubble" class="onboardBubble">단어를 입력해보세요</div>
+<!-- v1.9.166: 위 안내대로 첫 단어를 완성하면 곧바로 이어서 뜨는 두 번째 안내 —
+     "Space로 입력 방향을 바꿀 수 있어요". 같은 최초 방문자 세션에서 딱 한 번만 뜸(JS 참고) -->
+<div id="onboardBubbleDir" class="onboardBubble">Space로 입력 방향을 바꿀 수 있어요</div>
 
 <div id="toast"></div>
 <!-- 새 플레이어가 들어올 때 화면 위쪽에서 내려오듯 "{아이콘} {이름}님 등장!"을 보여주는
@@ -1028,7 +1033,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.164'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.165'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2207,6 +2212,7 @@ function draw() {
 
   positionSelUI(); // 팬/줌 중에도 모드 배지가 선택 칸을 계속 따라다니게 (wordInput은 여기서 안 건드림)
   positionOnboardBubble(); // v1.9.116: 안내 말풍선도 마찬가지로 팬/줌 중에 그 칸을 계속 따라다니게
+  positionOnboardBubbleDir(); // v1.9.166: "Space로 방향 전환" 안내도 마찬가지로 팬/줌 중에 계속 따라다니게
   positionBoardCredit(); // "Created by" 링크도 격자판 아래 경계를 계속 따라다니게
 }
 
@@ -2333,6 +2339,7 @@ if (window.visualViewport) {
         positionWordInput();
       }
       positionOnboardBubble();
+      positionOnboardBubbleDir();
     }, 150);
   });
 }
@@ -2445,6 +2452,25 @@ function positionOnboardBubble() {
   onboardBubbleEl.style.left = (sx + cellSize / 2) + 'px';
   onboardBubbleEl.style.top = sy + 'px';
   onboardBubbleEl.classList.add('show');
+}
+
+// v1.9.166: "단어를 입력해보세요" 안내대로 첫 단어를 완성하면 곧바로 이어서 "Space로 입력
+// 방향을 바꿀 수 있어요"를 알려줌 — 위 onboardBubble과 완전히 같은 방식(가리키는 칸을 따라
+// 다니다가, 다른 칸을 고르거나 실제로 방향을 바꾸면 스스로 숨김). submit() 성공 시점에서
+// 트리거함(아래 참고).
+const onboardBubbleDirEl = document.getElementById('onboardBubbleDir');
+let onboardBubbleDirCoord = null; // 이 말풍선이 가리키는 칸 좌표 — 안 쓰는 중이면 null
+let onboardBubbleDirShownOnce = false; // 이 세션의 첫 판에서 딱 한 번만 뜨게 하기 위한 플래그
+function hideOnboardBubbleDir() {
+  onboardBubbleDirCoord = null;
+  onboardBubbleDirEl.classList.remove('show');
+}
+function positionOnboardBubbleDir() {
+  if (!onboardBubbleDirCoord) { onboardBubbleDirEl.classList.remove('show'); return; }
+  const [sx, sy] = worldToScreen(onboardBubbleDirCoord.x, onboardBubbleDirCoord.y);
+  onboardBubbleDirEl.style.left = (sx + cellSize / 2) + 'px';
+  onboardBubbleDirEl.style.top = sy + 'px';
+  onboardBubbleDirEl.classList.add('show');
 }
 
 // "Created by" 링크(#boardCredit)를 격자판 바로 아래에 붙임 — 격자판은 줌 기능이 없어
@@ -2576,6 +2602,9 @@ function openPopup(cx, cy, px, py) {
   // 골라 이동했다는 뜻) 더 이상 가리킬 이유가 없으므로 말풍선을 치움. 말풍선이 가리키던
   // 바로 그 칸을 다시 선택한 경우(onboardCellCoord와 동일)엔 그대로 유지함.
   if (onboardCellCoord && (cx !== onboardCellCoord.x || cy !== onboardCellCoord.y)) hideOnboardBubble();
+  // v1.9.166: "Space로 방향 전환" 안내도 같은 기준으로, 가리키던 칸과 다른 칸을 직접
+  // 고르면 더 이상 가리킬 이유가 없으므로 치움
+  if (onboardBubbleDirCoord && (cx !== onboardBubbleDirCoord.x || cy !== onboardBubbleDirCoord.y)) hideOnboardBubbleDir();
   playCellSelect(); // 본인 화면에서만 나는 로컬 전용 클릭음
   const dir = autoDetectDir(cx, cy);
   sel = { x: cx, y: cy, dir };
@@ -2597,6 +2626,7 @@ function openPopup(cx, cy, px, py) {
   positionWordInput();
   positionSelUI();
   positionOnboardBubble(); // v1.9.116: 팬/줌 없이 그냥 선택만 바뀌어도 말풍선 위치/표시 상태를 즉시 반영
+  positionOnboardBubbleDir(); // v1.9.166: "Space로 방향 전환" 안내도 마찬가지
   // 모바일 키보드 자체의 "닫기"(내려가기) 버튼을 눌러 키보드를 숨기면, 일부 브라우저
   // (특히 안드로이드)는 키보드만 사라질 뿐 wordInput은 여전히 document.activeElement로
   // 남아있음. 그 상태에서 같은 칸(혹은 다른 칸)을 다시 탭해도 이미 "포커스돼 있다"고
@@ -2617,6 +2647,7 @@ function openPopup(cx, cy, px, py) {
 function closePopup() {
   sel = null; preview = null; placing = false; dupHighlight = null;
   hideOnboardBubble(); // v1.9.116: 선택을 완전히 접으면 안내 말풍선도 같이 치움
+  hideOnboardBubbleDir(); // v1.9.166: "Space로 방향 전환" 안내도 같이 치움
   // 선택을 풀 때 포커스도 같이 끊어서(모바일) 소프트 키보드가 실제로 닫히게 함.
   // 이미 포커스가 없는 상태(예: 데스크톱 Escape)에서 호출돼도 아무 부작용 없음.
   wordInput.blur();
@@ -2760,6 +2791,9 @@ function moveSel(dx, dy) {
 function toggleDir() {
   if (!sel) return;
   sel.dir = sel.dir === 'h' ? 'v' : 'h';
+  // v1.9.166: "Space로 방향 전환" 안내가 알려주려던 걸 실제로 막 해냈으므로(미션 완료),
+  // 더 보여줄 이유가 없어 스스로 치움
+  if (onboardBubbleDirCoord) hideOnboardBubbleDir();
   updateModeBadge();
   checkPreview();
   broadcastTyping();
@@ -3105,6 +3139,14 @@ async function submit() {
         const lastY = placedInfo.startY + dyp * (placedInfo.word.length - 1);
         const [sx, sy] = worldToScreen(lastX, lastY);
         openPopup(lastX, lastY, sx + cellSize / 2, sy + cellSize / 2);
+        // v1.9.166: "단어를 입력해보세요" 안내를 봤던 최초 방문자가 방금 첫 단어를
+        // 완성했으면, 곧바로 이어서 "Space로 입력 방향을 바꿀 수 있어요"를 새로 옮겨간
+        // 칸(lastX,lastY) 위에 보여줌 — 이 세션에서 딱 한 번만
+        if (!isReturningUser && onboardBubbleShownOnce && !onboardBubbleDirShownOnce) {
+          onboardBubbleDirCoord = { x: lastX, y: lastY };
+          positionOnboardBubbleDir();
+          onboardBubbleDirShownOnce = true;
+        }
       }
     } else if (sel) {
       const errMsg = lastErr || '다른 유저와 겹침'; // v1.9.82: 토스트 축약
