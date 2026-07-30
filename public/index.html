@@ -944,7 +944,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.166</div>
+<div id="verTagBottom">v1.9.167</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1033,7 +1033,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.166'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.167'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2431,10 +2431,14 @@ let submitEnabled = false; // Enter로 제출 가능한 상태인지
 // 찾을 필요가 없음)
 function positionSelUI() {}
 
-// v1.9.116: 최초 방문자 안내 말풍선("단어를 입력해보세요") — 자동 선택된 칸(onboardCellCoord)
-// 위에 떠서 그 칸을 가리킴. positionSelUI()와 같은 시점(팬/줌/뷰포트 변화)마다 같이 호출돼서
-// 계속 그 칸을 따라다님. 다른 사람이 먼저 그 칸에 글자를 놓아버리면(실시간 동기화) 더 이상
-// 가리킬 대상이 없으므로 스스로 숨김.
+// v1.9.116: 최초 방문자 안내 말풍선("단어를 입력해보세요") — onboardCellCoord가 가리키는
+// 칸 위에 뜸. positionSelUI()와 같은 시점(팬/줌/뷰포트 변화)마다 같이 호출돼서 그 칸을
+// 계속 따라다님. 다른 사람이 먼저 그 칸에 글자를 놓아버리면(실시간 동기화) 더 이상 가리킬
+// 대상이 없으므로 스스로 숨김.
+// v1.9.167: onboardCellCoord는 더 이상 "처음 자동 선택된 칸"에 고정되지 않고, 안내가 떠
+// 있는 동안(=첫 단어를 완성하기 전) 사용자가 새로 고르는 칸마다 같이 옮겨감(openPopup()
+// 참고) — 말 그대로 커서를 따라다니는 안내가 됨. 오직 첫 단어를 실제로 완성해야만
+// (submit() 성공 시점) 사라짐.
 const onboardBubbleEl = document.getElementById('onboardBubble');
 let onboardCellCoord = null; // 말풍선이 가리키는 칸 좌표({x,y}) — 안 쓰는 중이면 null
 // v1.9.119: 안내 말풍선은 이 세션(페이지를 새로 열고부터)의 첫 판에만 뜨고, "게임시작"으로
@@ -2598,9 +2602,10 @@ function openPopup(cx, cy, px, py) {
   // "게임시작" 버튼이 큼직하게 떠 있어서 이유가 충분히 명확하므로, 토스트 안내 없이 조용히
   // 막기만 함(v1.9.118: 안내 토스트가 불필요하다는 피드백으로 제거)
   if (inMultiStartPrompt) return;
-  // v1.9.167: "단어를 입력해보세요" 안내는 다른 칸을 눌러보는 정도로는 치우지 않음 — 첫
-  // 단어를 실제로 완성하기 전까지는 계속 그 칸을 가리키며 떠 있어야 함(submit() 성공
-  // 시점에서만 치움. 아래 참고). 다른 칸을 고르는 건 그냥 둘러보는 것뿐일 수 있어서다.
+  // v1.9.167: "단어를 입력해보세요" 안내는 다른 칸을 눌러보는 정도로는 치워지지 않고, 대신
+  // 사용자가 고른 칸을 그대로 따라감(커서를 따라다니는 안내) — 첫 단어를 실제로 완성해야만
+  // (submit() 성공 시점, 아래 참고) 사라짐
+  if (onboardCellCoord) onboardCellCoord = { x: cx, y: cy };
   // v1.9.166: "Space로 방향 전환" 안내는 (지금처럼) 가리키던 칸과 다른 칸을 직접 고르면
   // 더 이상 가리킬 이유가 없으므로 치움 — 첫 번째 안내와 달리 이건 그대로 유지함
   if (onboardBubbleDirCoord && (cx !== onboardBubbleDirCoord.x || cy !== onboardBubbleDirCoord.y)) hideOnboardBubbleDir();
