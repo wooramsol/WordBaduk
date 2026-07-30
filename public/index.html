@@ -944,7 +944,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.168</div>
+<div id="verTagBottom">v1.9.169</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1033,7 +1033,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.168'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.169'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2472,9 +2472,10 @@ function positionOnboardBubble() {
 }
 
 // v1.9.166: "단어를 입력해보세요" 안내대로 첫 단어를 완성하면 곧바로 이어서 "Space로 입력
-// 방향을 바꿀 수 있어요"를 알려줌 — 위 onboardBubble과 완전히 같은 방식(가리키는 칸을 따라
-// 다니다가, 다른 칸을 고르거나 실제로 방향을 바꾸면 스스로 숨김). submit() 성공 시점에서
-// 트리거함(아래 참고).
+// 방향을 바꿀 수 있어요"를 알려줌 — submit() 성공 시점에서 트리거함(아래 참고).
+// v1.9.169: 이것도 첫 번째 안내와 완전히 같은 방식으로 동작함 — 사용자가 어느 칸을 고르든
+// (openPopup() 참고) 그 칸을 계속 따라가며 떠 있고, 실제로 Space를 눌러 방향을 바꿔야만
+// (toggleDir() 참고) 사라짐. 다른 칸을 눌러보는 정도로는 절대 안 사라짐.
 const onboardBubbleDirEl = document.getElementById('onboardBubbleDir');
 let onboardBubbleDirCoord = null; // 이 말풍선이 가리키는 칸 좌표 — 안 쓰는 중이면 null
 let onboardBubbleDirShownOnce = false; // 이 세션의 첫 판에서 딱 한 번만 뜨게 하기 위한 플래그
@@ -2622,9 +2623,10 @@ function openPopup(cx, cy, px, py) {
   // 기준으로 삼아야, 글자 있는 칸을 짚어 잠깐 숨었다가도(positionOnboardBubble() 참고) 다시
   // 빈 칸을 고르면 확실히 돌아옴
   if (onboardBubbleActive) onboardCellCoord = { x: cx, y: cy };
-  // v1.9.166: "Space로 방향 전환" 안내는 (지금처럼) 가리키던 칸과 다른 칸을 직접 고르면
-  // 더 이상 가리킬 이유가 없으므로 치움 — 첫 번째 안내와 달리 이건 그대로 유지함
-  if (onboardBubbleDirCoord && (cx !== onboardBubbleDirCoord.x || cy !== onboardBubbleDirCoord.y)) hideOnboardBubbleDir();
+  // v1.9.169: "Space로 방향 전환" 안내도 이제 첫 번째 안내와 완전히 같은 방식 — 다른 칸을
+  // 눌러보는 정도로는 치워지지 않고, 사용자가 고른 칸을 그대로 따라감. 실제로 Space를
+  // 눌러 방향을 바꿔야만(toggleDir() 참고) 치워짐
+  if (onboardBubbleDirCoord) onboardBubbleDirCoord = { x: cx, y: cy };
   playCellSelect(); // 본인 화면에서만 나는 로컬 전용 클릭음
   const dir = autoDetectDir(cx, cy);
   sel = { x: cx, y: cy, dir };
@@ -2666,9 +2668,9 @@ function openPopup(cx, cy, px, py) {
 }
 function closePopup() {
   sel = null; preview = null; placing = false; dupHighlight = null;
-  // v1.9.167: "단어를 입력해보세요" 안내는 선택을 접는(다른 곳 클릭 등) 정도로는 치우지
-  // 않음 — 첫 단어를 실제로 완성해야만 치워짐(submit() 성공 지점 참고)
-  hideOnboardBubbleDir(); // v1.9.166: "Space로 방향 전환" 안내는 지금처럼 선택을 접으면 같이 치움
+  // v1.9.167/v1.9.169: 두 안내("단어를 입력해보세요" / "Space로 방향 전환") 모두 선택을
+  // 접는(다른 곳 클릭 등) 정도로는 치우지 않음 — 각각 첫 단어 완성 / 첫 Space 입력이라는
+  // 실제 목표를 달성해야만 치워짐(submit() 성공 지점 / toggleDir() 참고)
   // 선택을 풀 때 포커스도 같이 끊어서(모바일) 소프트 키보드가 실제로 닫히게 함.
   // 이미 포커스가 없는 상태(예: 데스크톱 Escape)에서 호출돼도 아무 부작용 없음.
   wordInput.blur();
