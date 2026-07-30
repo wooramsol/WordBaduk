@@ -944,7 +944,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.165</div>
+<div id="verTagBottom">v1.9.166</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1033,7 +1033,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.165'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.166'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2598,12 +2598,11 @@ function openPopup(cx, cy, px, py) {
   // "게임시작" 버튼이 큼직하게 떠 있어서 이유가 충분히 명확하므로, 토스트 안내 없이 조용히
   // 막기만 함(v1.9.118: 안내 토스트가 불필요하다는 피드백으로 제거)
   if (inMultiStartPrompt) return;
-  // v1.9.116: 안내 말풍선이 가리키던 칸과 다른 칸을 선택하면(=사용자가 그 칸을 직접
-  // 골라 이동했다는 뜻) 더 이상 가리킬 이유가 없으므로 말풍선을 치움. 말풍선이 가리키던
-  // 바로 그 칸을 다시 선택한 경우(onboardCellCoord와 동일)엔 그대로 유지함.
-  if (onboardCellCoord && (cx !== onboardCellCoord.x || cy !== onboardCellCoord.y)) hideOnboardBubble();
-  // v1.9.166: "Space로 방향 전환" 안내도 같은 기준으로, 가리키던 칸과 다른 칸을 직접
-  // 고르면 더 이상 가리킬 이유가 없으므로 치움
+  // v1.9.167: "단어를 입력해보세요" 안내는 다른 칸을 눌러보는 정도로는 치우지 않음 — 첫
+  // 단어를 실제로 완성하기 전까지는 계속 그 칸을 가리키며 떠 있어야 함(submit() 성공
+  // 시점에서만 치움. 아래 참고). 다른 칸을 고르는 건 그냥 둘러보는 것뿐일 수 있어서다.
+  // v1.9.166: "Space로 방향 전환" 안내는 (지금처럼) 가리키던 칸과 다른 칸을 직접 고르면
+  // 더 이상 가리킬 이유가 없으므로 치움 — 첫 번째 안내와 달리 이건 그대로 유지함
   if (onboardBubbleDirCoord && (cx !== onboardBubbleDirCoord.x || cy !== onboardBubbleDirCoord.y)) hideOnboardBubbleDir();
   playCellSelect(); // 본인 화면에서만 나는 로컬 전용 클릭음
   const dir = autoDetectDir(cx, cy);
@@ -2646,8 +2645,9 @@ function openPopup(cx, cy, px, py) {
 }
 function closePopup() {
   sel = null; preview = null; placing = false; dupHighlight = null;
-  hideOnboardBubble(); // v1.9.116: 선택을 완전히 접으면 안내 말풍선도 같이 치움
-  hideOnboardBubbleDir(); // v1.9.166: "Space로 방향 전환" 안내도 같이 치움
+  // v1.9.167: "단어를 입력해보세요" 안내는 선택을 접는(다른 곳 클릭 등) 정도로는 치우지
+  // 않음 — 첫 단어를 실제로 완성해야만 치워짐(submit() 성공 지점 참고)
+  hideOnboardBubbleDir(); // v1.9.166: "Space로 방향 전환" 안내는 지금처럼 선택을 접으면 같이 치움
   // 선택을 풀 때 포커스도 같이 끊어서(모바일) 소프트 키보드가 실제로 닫히게 함.
   // 이미 포커스가 없는 상태(예: 데스크톱 Escape)에서 호출돼도 아무 부작용 없음.
   wordInput.blur();
@@ -2726,9 +2726,9 @@ wordInput.addEventListener('input', e => {
     const cleaned = wordInput.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9?!]/g, '');
     if (cleaned !== wordInput.value) wordInput.value = cleaned;
   }
-  // v1.9.116: 안내 말풍선이 시키는 대로 뭐라도 타이핑을 시작했으면(조합 중간 글자도 포함),
-  // 이미 목적을 달성한 것이므로 바로 치움
-  if (onboardCellCoord && wordInput.value.length > 0) hideOnboardBubble();
+  // v1.9.167: "단어를 입력해보세요" 안내는 타이핑을 시작한 정도로는 치우지 않음 — 실제로
+  // 첫 단어를 완성해야만(submit() 성공) 치워짐(아래 참고). 오타를 지우거나 다른 칸에서
+  // 다시 시도해도 안내가 계속 보여야 하기 때문
   checkPreview();
   broadcastTyping();
   // 일부 브라우저는 한글 IME 조합 중엔 캔버스 리페인트를 미뤄뒀다가 조합이 끝나야 반영하는
@@ -3131,6 +3131,10 @@ async function submit() {
       }
       // 진동은 효과음과 달리 순전히 로컬(내 입력) 피드백이라 여기서 바로 재생함
       haptic('word');
+      // v1.9.167: "단어를 입력해보세요" 안내는 다른 칸을 눌러보거나 타이핑을 시작하는
+      // 정도로는 안 치워지고, 이렇게 실제로 첫 단어를 완성해야만(성공적인 submit()) 치움 —
+      // 어느 칸에 완성했는지와 무관하게(안내가 가리키던 그 칸이 아니어도) 치움
+      if (onboardCellCoord) hideOnboardBubble();
       // 완성되면 선택 칸을 방금 완성한 단어의 "마지막 글자" 칸으로 옮김 — 이어서 다음 글자를
       // 바로 입력하기 좋은 위치(예: 단어 끝에 새 글자를 붙여 다른 단어를 잇는 흐름)이기 때문
       if (sel) {
@@ -3408,6 +3412,17 @@ function pickBestMove(found) {
 // v1.9.141: 예전엔 후보를 몇 개만(4~5개) 모으는 즉시 멈추고 그중 무작위로 골랐는데, 그러면
 // "땅을 넓히는" 좋은 자리를 발견하기도 전에 멈춰버릴 수 있음 — 포획 기회를 더 잘 찾아내도록
 // 후보 풀을 넉넉히 모은 뒤(pickBestMove) 점수로 고름.
+// v1.9.167: 튜토리얼 안내 말풍선("단어를 입력해보세요")이 가리키는 칸(onboardCellCoord)은
+// 최초 방문자가 직접 타이핑해볼 자리로 남겨둬야 하므로, 봇이 그 칸을 가로채 먼저 글자를
+// 써버리지 않게 후보에서 제외함(그 칸을 "지나가는" 낱말도 포함해서 걸러냄).
+function botMoveTouchesOnboardCell(x, y, dir, len) {
+  if (!onboardCellCoord) return false;
+  const dx = dir === 'h' ? 1 : 0, dy = dir === 'v' ? 1 : 0;
+  for (let i = 0; i < len; i++) {
+    if (x + dx * i === onboardCellCoord.x && y + dy * i === onboardCellCoord.y) return true;
+  }
+  return false;
+}
 function botFindMove() {
   const boardEmpty = cells.size === 0;
   const found = [];
@@ -3470,7 +3485,7 @@ function botFindMove() {
           const typed = w.slice(1);
           if (!typed) continue;
           const r = resolvePlace(typed, nx, ny, dir, getLocalCell, false, usedWords);
-          if (r.ok && !botWouldOverwriteInvalidLand(typed, nx, ny, dir)) { found.push({ word: typed, x: nx, y: ny, dir }); if (found.length >= 25) break outer; }
+          if (r.ok && !botWouldOverwriteInvalidLand(typed, nx, ny, dir) && !botMoveTouchesOnboardCell(nx, ny, dir, typed.length)) { found.push({ word: typed, x: nx, y: ny, dir }); if (found.length >= 25) break outer; }
         }
       }
       // (B) 이 글자 바로 앞 칸이 열려있으면 -> 이 글자로 "끝나는" 낱말을 찾아 앞에 이어붙임
@@ -3482,7 +3497,7 @@ function botFindMove() {
           if (!typed) continue;
           const sx = ex - dx * typed.length, sy = ey - dy * typed.length;
           const r = resolvePlace(typed, sx, sy, dir, getLocalCell, false, usedWords);
-          if (r.ok && !botWouldOverwriteInvalidLand(typed, sx, sy, dir)) { found.push({ word: typed, x: sx, y: sy, dir }); if (found.length >= 25) break outer; }
+          if (r.ok && !botWouldOverwriteInvalidLand(typed, sx, sy, dir) && !botMoveTouchesOnboardCell(sx, sy, dir, typed.length)) { found.push({ word: typed, x: sx, y: sy, dir }); if (found.length >= 25) break outer; }
         }
       }
     }
