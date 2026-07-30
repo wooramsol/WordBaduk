@@ -944,7 +944,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.167</div>
+<div id="verTagBottom">v1.9.168</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1033,7 +1033,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.167'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.168'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2440,18 +2440,31 @@ function positionSelUI() {}
 // 참고) — 말 그대로 커서를 따라다니는 안내가 됨. 오직 첫 단어를 실제로 완성해야만
 // (submit() 성공 시점) 사라짐.
 const onboardBubbleEl = document.getElementById('onboardBubble');
-let onboardCellCoord = null; // 말풍선이 가리키는 칸 좌표({x,y}) — 안 쓰는 중이면 null
+let onboardCellCoord = null; // 말풍선이 지금 가리키는 칸 좌표({x,y}) — 비활성 상태면 null
+// v1.9.167: onboardCellCoord "값이 있는지"만으로는 "안내가 아직 살아있는지"(=첫 단어를
+// 완성하기 전인지)와 "지금 당장 화면에 보이는지"를 구분할 수 없었음 — 가리키던 칸에
+// 글자가 생겨 잠깐 숨어야 할 때도 값을 지워버리면, 이후 빈 칸을 다시 클릭해도 (이미
+// "안 쓰는 중"으로 취급돼서) 다시 안 떠버리는 버그가 있었음("빈 칸 클릭해도 말풍선이
+// 안 돌아옴"). 그래서 "살아있는지"는 이 별도 플래그로, "지금 가리키는 칸"은
+// onboardCellCoord로 완전히 분리함 — 살아있는 동안은(onboardBubbleActive) 어떤 칸을
+// 고르든 계속 따라가고, 그 칸이 마침 채워져 있을 때만 잠깐 숨었다가 빈 칸을 고르면 다시 뜸.
+let onboardBubbleActive = false;
 // v1.9.119: 안내 말풍선은 이 세션(페이지를 새로 열고부터)의 첫 판에만 뜨고, "게임시작"으로
 // 두 번째 판부터는 다시 안 떠야 함 — 이 플래그로 "이미 한 번 보여준 적 있는지" 기억해서,
 // runOnboardingAutoSelect()가 라운드 재시작 때마다 계속 다시 보여주지 않게 막음
 let onboardBubbleShownOnce = false;
 function hideOnboardBubble() {
+  // 첫 단어를 완성하는 등 완전히 끝났을 때만 부름 — 다시는 안 뜸
+  onboardBubbleActive = false;
   onboardCellCoord = null;
   onboardBubbleEl.classList.remove('show');
 }
 function positionOnboardBubble() {
-  if (!onboardCellCoord) { onboardBubbleEl.classList.remove('show'); return; }
-  if (cells.has(K(onboardCellCoord.x, onboardCellCoord.y))) { hideOnboardBubble(); return; }
+  if (!onboardBubbleActive || !onboardCellCoord) { onboardBubbleEl.classList.remove('show'); return; }
+  // 지금 가리키는 칸에 글자가 생겼으면(직접 놓았거나 다른 사람이 놓았거나) 안내는 아직
+  // 살아있는 채로(onboardBubbleActive는 그대로 true) 시각적으로만 잠깐 숨김 — 완전히
+  // 끝난 게 아니므로, 사용자가 다른 빈 칸을 고르면(openPopup) 거기로 다시 따라가 보임
+  if (cells.has(K(onboardCellCoord.x, onboardCellCoord.y))) { onboardBubbleEl.classList.remove('show'); return; }
   const [sx, sy] = worldToScreen(onboardCellCoord.x, onboardCellCoord.y);
   onboardBubbleEl.style.left = (sx + cellSize / 2) + 'px';
   onboardBubbleEl.style.top = sy + 'px';
@@ -2583,6 +2596,7 @@ function runOnboardingAutoSelect() {
   // 판부터는(roundJustRestarted 경로로 이 함수가 다시 불려도) 더 이상 안 보여줌 —
   // onboardBubbleShownOnce로 "이미 보여줬는지" 기억함
   if (!isReturningUser && !onboardBubbleShownOnce) {
+    onboardBubbleActive = true;
     onboardCellCoord = { x: onboardCell[0], y: onboardCell[1] };
     positionOnboardBubble();
     onboardBubbleShownOnce = true;
@@ -2604,8 +2618,10 @@ function openPopup(cx, cy, px, py) {
   if (inMultiStartPrompt) return;
   // v1.9.167: "단어를 입력해보세요" 안내는 다른 칸을 눌러보는 정도로는 치워지지 않고, 대신
   // 사용자가 고른 칸을 그대로 따라감(커서를 따라다니는 안내) — 첫 단어를 실제로 완성해야만
-  // (submit() 성공 시점, 아래 참고) 사라짐
-  if (onboardCellCoord) onboardCellCoord = { x: cx, y: cy };
+  // (submit() 성공 시점, 아래 참고) 사라짐. onboardCellCoord가 아니라 onboardBubbleActive를
+  // 기준으로 삼아야, 글자 있는 칸을 짚어 잠깐 숨었다가도(positionOnboardBubble() 참고) 다시
+  // 빈 칸을 고르면 확실히 돌아옴
+  if (onboardBubbleActive) onboardCellCoord = { x: cx, y: cy };
   // v1.9.166: "Space로 방향 전환" 안내는 (지금처럼) 가리키던 칸과 다른 칸을 직접 고르면
   // 더 이상 가리킬 이유가 없으므로 치움 — 첫 번째 안내와 달리 이건 그대로 유지함
   if (onboardBubbleDirCoord && (cx !== onboardBubbleDirCoord.x || cy !== onboardBubbleDirCoord.y)) hideOnboardBubbleDir();
@@ -3139,7 +3155,7 @@ async function submit() {
       // v1.9.167: "단어를 입력해보세요" 안내는 다른 칸을 눌러보거나 타이핑을 시작하는
       // 정도로는 안 치워지고, 이렇게 실제로 첫 단어를 완성해야만(성공적인 submit()) 치움 —
       // 어느 칸에 완성했는지와 무관하게(안내가 가리키던 그 칸이 아니어도) 치움
-      if (onboardCellCoord) hideOnboardBubble();
+      if (onboardBubbleActive) hideOnboardBubble();
       // 완성되면 선택 칸을 방금 완성한 단어의 "마지막 글자" 칸으로 옮김 — 이어서 다음 글자를
       // 바로 입력하기 좋은 위치(예: 단어 끝에 새 글자를 붙여 다른 단어를 잇는 흐름)이기 때문
       if (sel) {
