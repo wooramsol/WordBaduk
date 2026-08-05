@@ -84,13 +84,21 @@
   #footerCopyright { font-size: 10px; color: #b8ac8e; }
   /* 앱스토어 다운로드 배지 — 웹(브라우저)에서만 보이고, 우리가 만든 네이티브 앱 안에서는
      보일 필요가 없어서 숨김(위쪽 인라인 스크립트가 <html>에 붙이는 is-native-app 클래스로
-     제어함). "Created by" 저작권 문구 바로 아래, 격자판을 따라다니는 #boardCredit 안에
-     같이 둬서 별도 위치 계산 로직 없이 자동으로 격자판 아래에 붙게 함 */
+     제어함). 모바일 폭에서는 "Created by" 저작권 문구 바로 아래, 격자판을 따라다니는
+     #boardCredit 안에 둬서 자동으로 격자판 아래에 붙게 하고, 데스크톱 폭에서는 하단 중앙의
+     개인정보처리방침/이용약관 링크(#footerCredit)와 겹치지 않도록 화면 좌측 하단 고정
+     자리(#appDownloadBadgeDock)로 옮김 — placeAppDownloadBadge()가 draw()/리사이즈 때마다
+     현재 폭에 맞는 자리로 이 엘리먼트를 이동시킴(마크업 복제 없이 노드 하나만 옮기는 방식) */
   #appDownloadBadge {
     display: inline-block; margin-top: 6px; line-height: 0;
   }
   #appDownloadBadge img { display: block; height: 40px; width: auto; }
   .is-native-app #appDownloadBadge { display: none; }
+  #appDownloadBadgeDock {
+    position: fixed; left: 12px; z-index: 5;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  #appDownloadBadgeDock #appDownloadBadge { margin-top: 0; }
   /* 앱스토어 심사용 개인정보처리방침/이용약관 링크 — 눈에 띄지 않게 저작권 문구 밑에 작게 */
   #footerLegalLinks { font-size: 9px; color: #c2b79a; margin-top: 2px; }
   #footerLegalLinks a { color: #a89a78; }
@@ -849,6 +857,9 @@
      화면상 아래 경계에 맞춰 위치를 갱신함. 하단 푸터(#footerCredit)에는 개인정보처리방침/
      이용약관 링크만 그대로 남김 -->
 <div id="boardCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><a id="appDownloadBadge" href="https://apps.apple.com/kr/app/%EB%82%B1%EB%A7%90%EB%B0%94%EB%91%91/id6793393210" target="_blank" rel="noopener"><img src="/app-store-badge.svg" alt="Download on the App Store"></a></div>
+<!-- 데스크톱 폭에서 #appDownloadBadge가 옮겨와 자리잡는 화면 좌측 하단 고정 자리.
+     모바일 폭에서는 비어있음(배지가 #boardCredit 안에 그대로 있음) -->
+<div id="appDownloadBadgeDock"></div>
 
 <!-- 영역이 포획될 때 그 칸의 아이콘들이 리더보드 쪽으로 빨려들어가는 연출용 레이어.
      자식(.scoreFlyIcon)들은 전부 position:fixed라 이 컨테이너 자체의 크기/위치는
@@ -955,7 +966,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.172</div>
+<div id="verTagBottom">v1.9.173</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1044,7 +1055,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.172'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.173'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2512,6 +2523,22 @@ function positionBoardCredit() {
   const [, sy] = worldToScreen(0, BOARD_MAX + 1);
   boardCreditEl.style.top = (sy + 6) + 'px';
   boardCreditEl.style.visibility = 'visible';
+  placeAppDownloadBadge();
+}
+
+// 앱스토어 다운로드 배지(#appDownloadBadge)를 화면 폭에 따라 두 자리 중 하나로 옮김 —
+// 모바일 폭(<=640px)에서는 #boardCredit 안(격자판을 따라다니는 자리)에 그대로 두고,
+// 데스크톱 폭에서는 하단 중앙의 개인정보처리방침/이용약관 링크(#footerCredit)와 겹치지
+// 않도록 화면 좌측 하단 고정 자리(#appDownloadBadgeDock)로 옮김. 마크업을 두 벌 두지
+// 않고 노드 하나를 appendChild로 옮기는 방식이라 링크/이미지가 항상 하나만 존재함.
+// draw()가 호출될 때마다(리사이즈 포함) 같이 재평가함.
+const appDownloadBadgeEl = document.getElementById('appDownloadBadge');
+const appDownloadBadgeDockEl = document.getElementById('appDownloadBadgeDock');
+function placeAppDownloadBadge() {
+  if (!appDownloadBadgeEl) return;
+  const isMobileWidth = innerWidth <= 640;
+  const targetParent = isMobileWidth ? boardCreditEl : appDownloadBadgeDockEl;
+  if (appDownloadBadgeEl.parentElement !== targetParent) targetParent.appendChild(appDownloadBadgeEl);
 }
 
 // wordInput은 더 이상 선택된 칸 위치를 따라다니지 않음(CSS에서 화면 맨 위 구석에 고정) —
