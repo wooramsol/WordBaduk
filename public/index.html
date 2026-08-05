@@ -52,10 +52,9 @@
     user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
     display: inline-flex; align-items: center;
   }
-  /* 타이틀 옆 도움말 표시 — 눌러서(툴팁처럼) 안내 패널을 여는 트리거임을 "낱말바둑?"처럼
-     텍스트에 자연스럽게 이어붙여서 보여줌. 별도 아이콘 박스 없이 브랜드 글자와 완전히
-     같은 스타일(색/크기/굵기)로 흘러가게 함 */
-  #brandHelpIcon { flex-shrink: 0; }
+  /* 도움말 트리거는 별도 아이콘 요소 없이 "낱말바둑?"라는 순수 텍스트 하나로 표시함 —
+     #brand 전체가 클릭 핸들러를 가지고 있어(brand.onclick 참고) 이 물음표도 자연히
+     클릭 가능한 영역에 포함됨 */
   /* 배포할 때마다 이 버전 번호를 올림(예: v1.0.0 -> v1.0.1) — 화면 우측 하단에
      작게 표시해서 지금 보고 있는 화면이 최신 배포와 같은 버전인지 확인 가능 */
   #verTagBottom {
@@ -878,7 +877,7 @@
   </div>
 </div>
 
-<div id="brand">낱말바둑<span id="brandHelpIcon">?</span></div>
+<div id="brand">낱말바둑?</div>
 <div id="infoPanelBackdrop" class="hidden"></div>
 <div id="infoPanel" class="hidden">
   <div style="white-space: nowrap; overflow-x: auto;"><b>끝말잇기로 땅따먹기를 한다면?</b><br>
@@ -965,7 +964,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.176</div>
+<div id="verTagBottom">v1.9.177</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1054,7 +1053,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.176'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.177'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
