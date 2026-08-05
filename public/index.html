@@ -82,6 +82,22 @@
   #boardCredit a { color: #a08c5a; text-decoration: none; }
   #boardCredit a:hover { text-decoration: underline; }
   #footerCopyright { font-size: 10px; color: #b8ac8e; }
+  /* 앱스토어 다운로드 배지 — 웹(브라우저)에서만 보이고, 우리가 만든 네이티브 앱 안에서는
+     보일 필요가 없어서 숨김(위쪽 인라인 스크립트가 <html>에 붙이는 is-native-app 클래스로
+     제어함). "Created by" 저작권 문구 바로 아래, 격자판을 따라다니는 #boardCredit 안에
+     같이 둬서 별도 위치 계산 로직 없이 자동으로 격자판 아래에 붙게 함 */
+  #appDownloadBadge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #0a0a0a; color: #fff; border-radius: 8px;
+    padding: 5px 10px; margin-top: 6px;
+    text-decoration: none; line-height: 1.15; vertical-align: middle;
+  }
+  #appDownloadBadge:hover { opacity: .85; text-decoration: none; }
+  #appDownloadBadge svg { flex-shrink: 0; fill: #fff; }
+  #appDownloadBadgeText { display: inline-flex; flex-direction: column; text-align: left; }
+  #appDownloadBadgeText em { font-style: normal; font-size: 8px; color: #fff; opacity: .92; }
+  #appDownloadBadgeText b { font-size: 13px; font-weight: 600; letter-spacing: .2px; color: #fff; }
+  .is-native-app #appDownloadBadge { display: none; }
   /* 앱스토어 심사용 개인정보처리방침/이용약관 링크 — 눈에 띄지 않게 저작권 문구 밑에 작게 */
   #footerLegalLinks { font-size: 9px; color: #c2b79a; margin-top: 2px; }
   #footerLegalLinks a { color: #a89a78; }
@@ -758,7 +774,9 @@
 (function () {
   // 우리가 만든 네이티브 앱(App Store/Play Store) 안에서는 아무것도 안 함.
   var isOurApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  if (isOurApp) return;
+  // 네이티브 앱 안에서는 "앱스토어에서 다운로드" 배지(#appDownloadBadge)가 의미 없으므로
+  // <html>에 표시용 클래스만 남기고 숨김(CSS: .is-native-app #appDownloadBadge)
+  if (isOurApp) { document.documentElement.classList.add('is-native-app'); return; }
 
   var ua = navigator.userAgent || '';
   var url = location.href;
@@ -837,7 +855,7 @@
      기능 없음, clampCamera() 참고), positionBoardCredit()이 매 draw()마다 격자판의 실제
      화면상 아래 경계에 맞춰 위치를 갱신함. 하단 푸터(#footerCredit)에는 개인정보처리방침/
      이용약관 링크만 그대로 남김 -->
-<div id="boardCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div></div>
+<div id="boardCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><a id="appDownloadBadge" href="https://apps.apple.com/kr/app/%EB%82%B1%EB%A7%90%EB%B0%94%EB%91%91/id6793393210" target="_blank" rel="noopener" aria-label="Download on the App Store"><svg viewBox="0 0 384 512" width="15" height="15" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span id="appDownloadBadgeText"><em>Download on the</em><b>App Store</b></span></a></div>
 
 <!-- 영역이 포획될 때 그 칸의 아이콘들이 리더보드 쪽으로 빨려들어가는 연출용 레이어.
      자식(.scoreFlyIcon)들은 전부 position:fixed라 이 컨테이너 자체의 크기/위치는
@@ -944,7 +962,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.169</div>
+<div id="verTagBottom">v1.9.170</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1033,7 +1051,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.169'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.170'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
