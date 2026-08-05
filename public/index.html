@@ -55,7 +55,9 @@
   /* 타이틀 옆 도움말 아이콘 — 눌러서(툴팁처럼) 안내 패널을 여는 트리거임을 보여줌 */
   #brandHelpIcon {
     display: inline-flex; align-items: center; justify-content: center;
-    color: #8a7a4f; font-size: 12px; line-height: 1; flex-shrink: 0;
+    width: 14px; height: 14px; border-radius: 50%; border: 1.3px solid currentColor;
+    font-size: 9px; font-weight: 700; line-height: 1; flex-shrink: 0;
+    box-sizing: border-box;
   }
   /* 배포할 때마다 이 버전 번호를 올림(예: v1.0.0 -> v1.0.1) — 화면 우측 하단에
      작게 표시해서 지금 보고 있는 화면이 최신 배포와 같은 버전인지 확인 가능 */
@@ -966,7 +968,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.174</div>
+<div id="verTagBottom">v1.9.175</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1055,7 +1057,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.174'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.175'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
