@@ -715,6 +715,25 @@
   #recentEmpty { text-align: center; font-size: 13px; color: #999; padding: 12px 0; }
   #recentEmpty.hidden { display: none; }
 
+  /* "PC에서 플레이하기" 클릭 시 URL이 클립보드에 복사됐음을 알리는 팝업 — 토스트가
+     잘 안 보인다는 피드백에 따라, 화면 정중앙에 배경(딤)과 함께 뜨는 작은 카드로 교체.
+     다른 모달(#hofBackdrop 등)과 같은 딤 배경 톤을 쓰되, 버튼 없이 짧게 떴다가
+     자동으로 사라짐(또는 배경을 눌러서 바로 닫을 수도 있음) */
+  #copyPopupBackdrop {
+    position: fixed; inset: 0; z-index: 90;
+    background: rgba(40,36,26,.45);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  #copyPopupBackdrop.hidden { display: none; }
+  #copyPopupCard {
+    background: #fff; border-radius: 16px; padding: 20px 28px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.2);
+    font-size: 15px; font-weight: 800; color: #1a1a1a; text-align: center;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #copyPopupCard::before { content: '✓'; color: #2c8f4a; font-weight: 900; font-size: 17px; }
+
   @keyframes spin { to { transform: rotate(360deg); } }
   /* 접속 확인/사전·보드 첫 동기화를 기다리는 동안 화면 전체를 덮는 로딩 스피너 —
      로그인 화면이 뜨는 순간(showAuthChoiceFlow) 또는 보드 첫 데이터가
@@ -966,7 +985,12 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.182</div>
+<div id="verTagBottom">v1.9.183</div>
+
+<!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
+<div id="copyPopupBackdrop" class="hidden">
+  <div id="copyPopupCard">URL이 복사되었습니다</div>
+</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1055,7 +1079,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.182'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.183'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2542,9 +2566,25 @@ function placeAppDownloadBadge() {
 }
 
 // "PC에서 플레이하기: wordbaduk.web.app" — 링크로 이동시키지 않고, 클릭하면 주소를
-// 클립보드에 복사하고 "복사되었습니다" 토스트만 띄움 (showToast는 아래쪽에서 정의되지만
-// function 선언이라 호이스팅되어 여기서 참조 가능)
+// 클립보드에 복사하고 "URL이 복사되었습니다" 팝업(#copyPopupBackdrop)을 띄움.
+// v1.9.183: 처음엔 토스트(#toast)로 안내했는데 눈에 잘 안 띈다는 피드백이 있어서,
+// 화면 중앙에 딤 배경과 함께 뜨는 팝업으로 교체함 — 일정 시간 뒤 자동으로 닫히고,
+// 배경을 눌러도 바로 닫힘.
 const webPlayCopyBtnEl = document.getElementById('webPlayCopyBtn');
+const copyPopupBackdropEl = document.getElementById('copyPopupBackdrop');
+let copyPopupTimer;
+function showCopyPopup() {
+  if (!copyPopupBackdropEl) return;
+  copyPopupBackdropEl.classList.remove('hidden');
+  clearTimeout(copyPopupTimer);
+  copyPopupTimer = setTimeout(() => copyPopupBackdropEl.classList.add('hidden'), 1500);
+}
+if (copyPopupBackdropEl) {
+  copyPopupBackdropEl.addEventListener('click', () => {
+    clearTimeout(copyPopupTimer);
+    copyPopupBackdropEl.classList.add('hidden');
+  });
+}
 function fallbackCopyText(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -2559,7 +2599,7 @@ function fallbackCopyText(text) {
 if (webPlayCopyBtnEl) {
   webPlayCopyBtnEl.addEventListener('click', () => {
     const text = 'wordbaduk.web.app';
-    const onDone = () => showToast('복사되었습니다');
+    const onDone = () => showCopyPopup();
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(onDone).catch(() => { fallbackCopyText(text); onDone(); });
     } else {
