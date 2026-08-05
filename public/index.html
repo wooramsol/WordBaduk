@@ -848,7 +848,7 @@
      기능 없음, clampCamera() 참고), positionBoardCredit()이 매 draw()마다 격자판의 실제
      화면상 아래 경계에 맞춰 위치를 갱신함. 하단 푸터(#footerCredit)에는 개인정보처리방침/
      이용약관 링크만 그대로 남김 -->
-<div id="boardCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><a id="appDownloadBadge" href="https://apps.apple.com/kr/app/%EB%82%B1%EB%A7%90%EB%B0%94%EB%91%91/id6793393210" target="_blank" rel="noopener"><img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/ko-kr?size=250x83" alt="Download on the App Store"></a></div>
+<div id="boardCredit"><a href="https://instagram.com/wooramsol" target="_blank" rel="noopener">Created by @wooramsol</a><div id="footerCopyright">Copyright &copy; 2026 All rights reserved</div><a id="appDownloadBadge" href="https://apps.apple.com/kr/app/%EB%82%B1%EB%A7%90%EB%B0%94%EB%91%91/id6793393210" target="_blank" rel="noopener"><img src="/app-store-badge.svg" alt="Download on the App Store"></a></div>
 
 <!-- 영역이 포획될 때 그 칸의 아이콘들이 리더보드 쪽으로 빨려들어가는 연출용 레이어.
      자식(.scoreFlyIcon)들은 전부 position:fixed라 이 컨테이너 자체의 크기/위치는
@@ -955,7 +955,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.171</div>
+<div id="verTagBottom">v1.9.172</div>
 
 <canvas id="confettiCanvas"></canvas>
 <div id="gameOverOverlay" class="hidden">
@@ -1044,7 +1044,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.171'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.172'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
