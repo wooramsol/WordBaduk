@@ -600,6 +600,10 @@
   .hofRank { width: 2.4em; flex: none; text-align: center; font-weight: 800; color: #9a927d; font-size: 0.85em; white-space: nowrap; }
   .hofEmoji { flex: none; font-size: 1.1em; }
   .hofName { flex: 1; font-weight: 700; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* v1.9.185: "최근 다녀간 사람"(#recentList .recentTime)과 같은 방식으로, 랭킹에도
+     닉네임 옆에 마지막 접속 시각(방금 전/N분 전/N시간 전 등)을 같이 보여줌 */
+  .hofTime { flex: none; font-size: 11px; color: #999; white-space: nowrap; }
+  .hofTime.isOnline { color: #2c8f4a; font-weight: 700; }
   .hofScore { flex: none; font-weight: 800; color: #6b5e3f; font-variant-numeric: tabular-nums; }
   #hofList li.me { background: #f9f5ea; border-radius: 8px; }
   #hofList li.me .hofName { color: #6b5e3f; }
@@ -985,7 +989,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.184</div>
+<div id="verTagBottom">v1.9.185</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1079,7 +1083,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.184'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.185'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4339,8 +4343,15 @@ hallOfFameBtn.addEventListener('click', async () => {
   hofOverlay.classList.remove('hidden');
   hofBackdrop.classList.remove('hidden');
   try {
-    const snap = await firebase.database().ref('memberTotalScore').once('value');
-    const scores = snap.val() || {};
+    // v1.9.185: 닉네임 옆에 "최근 다녀간 사람"(#recentList)과 같은 방식으로 마지막
+    // 접속 시각을 같이 보여주기 위해 playerLastSeen도 같이 가져옴(새 데이터 수집 아님 —
+    // renderRecentVisitors()가 이미 쓰던 값 그대로 재사용)
+    const [scoreSnap, lastSeenSnap] = await Promise.all([
+      firebase.database().ref('memberTotalScore').once('value'),
+      firebase.database().ref('playerLastSeen').once('value'),
+    ]);
+    const scores = scoreSnap.val() || {};
+    const lastSeen = lastSeenSnap.val() || {};
     // 0점이라도 가입한 회원은 전부 보여줌 — memberTotalScore엔 한 번도 포획한 적 없는
     // 회원의 항목 자체가 아예 없으므로(첫 포획 때 submit()이 처음 써넣음), 점수가 아니라
     // ownerMemberProfile(=memberProfiles 전체, 가입한 회원 전원)을 기준으로 순회함
@@ -4369,10 +4380,14 @@ hallOfFameBtn.addEventListener('click', async () => {
       const nameEl = document.createElement('span');
       nameEl.className = 'hofName';
       nameEl.textContent = (profile ? profile.nickname : '(알 수 없음)') + (entry.uid === clientId ? ' (나)' : '');
+      const online = onlineIds.has(entry.uid);
+      const timeEl = document.createElement('span');
+      timeEl.className = 'hofTime' + (online ? ' isOnline' : '');
+      timeEl.textContent = online ? '접속 중' : formatRelativeTime(lastSeen[entry.uid]);
       const scoreEl = document.createElement('span');
       scoreEl.className = 'hofScore';
       scoreEl.textContent = entry.score + '점';
-      li.append(rank, emoji, nameEl, scoreEl);
+      li.append(rank, emoji, nameEl, timeEl, scoreEl);
       hofListEl.appendChild(li);
     });
   } catch (e) {
