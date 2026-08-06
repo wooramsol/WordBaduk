@@ -697,7 +697,6 @@
   .fontShopInfo { flex: 1; min-width: 0; }
   .fontShopName { font-weight: 700; color: #444; font-size: 14px; }
   .fontShopReq { font-size: 11px; color: #999; margin-top: 2px; }
-  .fontShopReq.unlocked { color: #2c8f4a; font-weight: 700; }
   .fontShopEquipBtn {
     flex: none; font: inherit; font-size: 12px; font-weight: 700;
     padding: 7px 12px; border-radius: 20px; border: none; cursor: pointer;
@@ -1089,7 +1088,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.189</div>
+<div id="verTagBottom">v1.9.190</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1183,7 +1182,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.189'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.190'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -5204,11 +5203,13 @@ function renderFontShop() {
     const nameEl = document.createElement('div');
     nameEl.className = 'fontShopName';
     nameEl.textContent = f.name;
+    // v1.9.190: 해금된 뒤에도 "해금됨"으로 뭉뚱그리지 않고 실제 점수/문턱값 숫자를 그대로
+    // 남겨둠(예: "354/300점") — 몇 점에서 해금됐었는지 계속 알아볼 수 있게. 기본체(항상
+    // 무료)만 "기본 제공"이라는 문구를 쓰되, 색깔은 다른 항목의 숫자와 완전히 같게 둠
+    // (예전엔 해금된 항목만 초록색으로 강조했는데, 그 톤 차이를 없앰)
     const reqEl = document.createElement('div');
-    reqEl.className = 'fontShopReq' + (unlocked ? ' unlocked' : '');
-    reqEl.textContent = f.requiredScore === 0
-      ? '기본 제공'
-      : (unlocked ? '해금됨' : `${Math.min(score, f.requiredScore)}/${f.requiredScore}점`);
+    reqEl.className = 'fontShopReq';
+    reqEl.textContent = f.requiredScore === 0 ? '기본 제공' : `${score}/${f.requiredScore}점`;
     info.append(nameEl, reqEl);
 
     const btn = document.createElement('button');
