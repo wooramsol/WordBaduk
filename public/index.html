@@ -1003,7 +1003,7 @@
   <button id="hallOfFameBtn" type="button">🏆 랭킹</button>
   <!-- v1.9.186: 폰트 상점 — 격자에 놓는 글자 폰트를 점수로 해금/장착하는 팝업 진입 버튼.
        v1.9.188: 랭킹 알약 바로 밑으로 위치 이동(전엔 좌우 나란히) -->
-  <button id="fontShopBtn" type="button">🎨 폰트샵</button>
+  <button id="fontShopBtn" type="button">🎨 상점</button>
 </div>
 <div id="leaderboard" class="hidden">
   <ol id="lbList"></ol>
@@ -1048,7 +1048,7 @@
 <div id="fontShopBackdrop" class="hidden"></div>
 <div id="fontShopOverlay" class="hidden">
   <div id="fontShopCard">
-    <div id="fontShopTitle">🎨 폰트샵</div>
+    <div id="fontShopTitle">🎨 상점</div>
     <div id="fontShopSub">점수를 모아 글씨체를 바꿀 수 있어요.</div>
     <ul id="fontShopList"></ul>
     <!-- 비회원은 점수가 애초에 기록되지 않아 해금이 불가능하므로 안내만 보여줌(랭킹의
@@ -1088,7 +1088,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.190</div>
+<div id="verTagBottom">v1.9.191</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1182,7 +1182,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.190'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.191'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
