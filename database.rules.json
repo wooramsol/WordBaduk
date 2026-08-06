@@ -24,6 +24,13 @@
       ".read": true,
       ".write": false
     },
+    "memberFonts": {
+      ".read": true,
+      "$uid": {
+        ".write": true,
+        ".validate": "newData.isString() && (newData.val() === 'default' || (newData.val() === 'dohyeon' && root.child('memberTotalScore').child($uid).val() >= 100) || (newData.val() === 'gaegu' && root.child('memberTotalScore').child($uid).val() >= 300) || (newData.val() === 'jua' && root.child('memberTotalScore').child($uid).val() >= 600) || (newData.val() === 'gugi' && root.child('memberTotalScore').child($uid).val() >= 1000) || (newData.val() === 'blackhansans' && root.child('memberTotalScore').child($uid).val() >= 1600))"
+      }
+    },
     "memberTotalScore": {
       ".read": true,
       ".write": true,

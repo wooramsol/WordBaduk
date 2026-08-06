@@ -17,6 +17,19 @@
 <meta name="twitter:description" content="실시간으로 여러 명이 함께하는 낱말바둑.">
 <meta name="twitter:image" content="https://wordbaduk.web.app/og-image.png">
 <style>
+  /* v1.9.186: "폰트 상점" — 격자에 글자를 놓을 때만 적용되는 장식용 웹폰트 5종.
+     UI(리더보드/랭킹/모달 등)에는 절대 쓰이지 않고, 오직 canvas에 보드 글자를 그릴 때만
+     ctx.font로 골라 씀(draw() 참고). 다른 사람 화면에도 보여야 하므로(과시용) 전원이
+     접속 시 이 5개를 전부 미리 로드해둠 — 본인이 안 산 폰트라도 다른 사람이 쓴 글자는
+     보여야 하기 때문. 전부 SIL Open Font License 1.1(상업적 이용/재배포 자유, 폰트
+     자체 재판매만 금지) — public/fonts/LICENSE.txt에 출처 명시. font-display: block으로
+     둬서, 로딩 전 잠깐이라도 기본 폰트로 깜빡였다 바뀌는 대신 로딩될 때까지 짧게 기다림
+     (보드 글자는 최대 100개뿐이라 깜빡임보다 이게 나음) */
+  @font-face { font-family: 'WB-DoHyeon'; src: url('/fonts/dohyeon.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'WB-Gaegu'; src: url('/fonts/gaegu.woff2') format('woff2'); font-weight: 700; font-display: block; }
+  @font-face { font-family: 'WB-Jua'; src: url('/fonts/jua.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'WB-Gugi'; src: url('/fonts/gugi.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'WB-BlackHanSans'; src: url('/fonts/blackhansans.woff2') format('woff2'); font-display: block; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
   /* v1.9.151: 웹에선 토스트가 2줄로 잘 나오는데 모바일에서는 같은 320px 폭에서도
@@ -235,7 +248,7 @@
      크게 해서 한눈에 순위 차이가 보이게 함 */
   /* 랭킹 버튼 — 접속자 수(#userCountTag) 바로 왼쪽에, 같은 상단 줄(#topRight)에
      나란히 붙임. 알약 높이를 #userCountTag와 똑같이 맞춤(font-size/padding 동일) */
-  #hallOfFameBtn {
+  #hallOfFameBtn, #fontShopBtn {
     /* v1.9.101: font: inherit이 빠져있어서 <button>의 브라우저 기본 폼 컨트롤 폰트(웹
        데스크톱에서는 이게 body에 지정한 한글 폰트와 달라서, 같은 font-size:12px라도
        실제 렌더링 크기/굵기가 미묘하게 다르게 보임 — 모바일 브라우저는 기본 버튼 폰트가
@@ -254,7 +267,7 @@
     cursor: pointer; white-space: nowrap;
     box-shadow: 0 2px 8px rgba(0,0,0,.08); /* #brand("낱말바둑")와 같은 그림자 — 눌러볼 수 있는 버튼임을 알려줌 */
   }
-  #hallOfFameBtn:hover { background: #e2d9c2; }
+  #hallOfFameBtn:hover, #fontShopBtn:hover { background: #e2d9c2; }
   #leaderboard {
     /* 브랜드 로고(좌상단)/접속자 태그(우상단)와 같은 top:12px 줄의 가운데 틈에 배치.
        예전엔 배경 없이 흰색 text-shadow로만 글자를 띄웠는데, 보드 색이 진할 때 테두리가
@@ -633,6 +646,60 @@
   #hofEmpty { text-align: center; font-size: 13px; color: #999; padding: 20px 0; }
   #hofEmpty.hidden { display: none; }
 
+  /* v1.9.186: 폰트 상점 — #hofBackdrop/#hofOverlay/#hofCard(랭킹 팝업)와 완전히 같은
+     가운데 모달 패턴을 그대로 재사용 */
+  #fontShopBackdrop { position: fixed; inset: 0; z-index: 80; background: rgba(40,36,26,.45); }
+  #fontShopBackdrop.hidden { display: none; }
+  #fontShopOverlay {
+    position: fixed; inset: 0; z-index: 81;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; pointer-events: none;
+  }
+  #fontShopOverlay.hidden { display: none; }
+  #fontShopCard {
+    pointer-events: auto;
+    background: #fff; border-radius: 18px; padding: 22px 20px;
+    width: 100%; max-width: 340px; box-shadow: 0 8px 28px rgba(0,0,0,.2);
+    max-height: calc(100vh - 32px); overflow-y: auto;
+  }
+  #fontShopTitle { font-size: 18px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; text-align: center; }
+  #fontShopSub { font-size: 12px; color: #888; margin-bottom: 14px; text-align: center; }
+  #fontShopTabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  #fontShopTabs button {
+    flex: 1; font: inherit; font-size: 13px; font-weight: 700; padding: 8px 0;
+    border-radius: 10px; border: 1px solid #e5ded0; background: #f7f3e8; color: #8a7a4f;
+    cursor: pointer;
+  }
+  #fontShopTabs button.active { background: #8a7a4f; color: #fff; border-color: #8a7a4f; }
+  #fontShopList { list-style: none; margin: 0; padding: 0; }
+  .fontShopItem {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 4px; border-bottom: 1px solid #f0ece0;
+  }
+  .fontShopItem:last-child { border-bottom: none; }
+  /* 미리보기 글자는 실제 격자와 같은 폰트로 보여주되, UI 나머지 부분과는 무관 — 폰트가
+     아직 로딩 중이면 잠깐 기본 폰트로 보이다가 로딩되는 대로 바뀜(FontFace API 특성) */
+  .fontShopPreview {
+    flex: none; width: 52px; height: 40px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #333; background: #f7f3e8; border-radius: 8px;
+  }
+  .fontShopInfo { flex: 1; min-width: 0; }
+  .fontShopName { font-weight: 700; color: #444; font-size: 14px; }
+  .fontShopReq { font-size: 11px; color: #999; margin-top: 2px; }
+  .fontShopReq.unlocked { color: #2c8f4a; font-weight: 700; }
+  .fontShopEquipBtn {
+    flex: none; font: inherit; font-size: 12px; font-weight: 700;
+    padding: 7px 12px; border-radius: 20px; border: none; cursor: pointer;
+  }
+  .fontShopEquipBtn.equip { background: #8a7a4f; color: #fff; }
+  .fontShopEquipBtn.equipped { background: #eee7d8; color: #7a6c45; cursor: default; }
+  .fontShopEquipBtn.locked { background: #f0ece0; color: #bbb; cursor: default; }
+  #fontShopGuestNotice { text-align: center; margin-top: 12px; }
+  #fontShopGuestNotice.hidden { display: none; }
+  #fontShopGuestNoticeLabel { font-size: 12px; color: #888; margin-bottom: 4px; }
+  #fontShopGuestNotice a { color: #8a7a4f; font-weight: 700; font-size: 13px; text-decoration: none; }
+  #fontShopGuestNotice a:hover { text-decoration: underline; }
+
   /* 접속 중인 플레이어 목록 — #hofBackdrop/#hofOverlay/#hofCard(랭킹 팝업)와 완전히 같은
      가운데 모달 패턴을 그대로 재사용. 상단 "n명" 알약을 누르면 뜸(랭킹과는 별도 팝업) */
   #onlineBackdrop { position: fixed; inset: 0; z-index: 67; background: rgba(40,36,26,.45); }
@@ -918,6 +985,8 @@
   </div>
 </div>
 <div id="topRight">
+  <!-- v1.9.186: 폰트 상점 — 격자에 놓는 글자 폰트를 점수로 해금/장착하는 팝업 진입 버튼 -->
+  <button id="fontShopBtn" type="button">🎨 폰트샵</button>
   <button id="hallOfFameBtn" type="button">🏆 랭킹</button>
   <!-- 예전엔 랭킹 팝업 안에 "현재 접속 중" 목록을 같이 넣었는데, 랭킹(누적 점수 기록)과
        접속 현황은 성격이 다른 정보라 분리함 — 이 알약을 누르면 접속 중인 플레이어 목록이
@@ -961,6 +1030,28 @@
   </div>
 </div>
 
+<!-- v1.9.186: 폰트 상점 — 격자에 놓는 글자에만 적용되는 장식용 폰트를 누적 점수 문턱값으로
+     해금/장착. hofCard와 같은 모달 패턴 재사용. "상점"/"보관함" 탭으로 한 모달 안에서
+     구매(해금 확인)와 장착 관리를 다 처리함(마이페이지 별도로 안 만듦) -->
+<div id="fontShopBackdrop" class="hidden"></div>
+<div id="fontShopOverlay" class="hidden">
+  <div id="fontShopCard">
+    <div id="fontShopTitle">🎨 폰트샵</div>
+    <div id="fontShopSub">점수를 모아 격자에 놓는 글자 폰트를 해금해보세요</div>
+    <div id="fontShopTabs">
+      <button id="fontShopTabShop" type="button" class="active">상점</button>
+      <button id="fontShopTabMy" type="button">보관함</button>
+    </div>
+    <ul id="fontShopList"></ul>
+    <!-- 비회원은 점수가 애초에 기록되지 않아 해금이 불가능하므로 안내만 보여줌(랭킹의
+         #hofGuestNotice와 같은 패턴) -->
+    <div class="hidden" id="fontShopGuestNotice">
+      <div id="fontShopGuestNoticeLabel">비회원은 폰트를 해금할 수 없어요</div>
+      <a href="#" id="fontShopGuestSignupLink">5초컷 회원가입</a>
+    </div>
+  </div>
+</div>
+
 <!-- 접속 중인 플레이어 목록 — 상단 "n명" 알약(#userCountTag)을 누르면 뜸. 랭킹(누적 점수
      기록)과는 별개 정보라 분리함. 차단하면 그 사람의 실시간 타이핑 미리보기/입장·퇴장
      알림이 내 화면에서만 숨겨짐(로컬 저장, 서버 전송 안 됨). 신고는 사유와 함께 운영자
@@ -989,7 +1080,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.185</div>
+<div id="verTagBottom">v1.9.186</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1083,7 +1174,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.185'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.186'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1903,6 +1994,46 @@ const ICONS = [
 // owner(clientId=uid) -> 회원 프로필({nickname, iconIdx}). memberProfiles 전체를 실시간
 // 구독해서 채워짐(boot() 참고). 이 맵에 있으면 회원, 없으면(기존처럼) 과일 배정 대상.
 let ownerMemberProfile = new Map();
+
+// ---------- 폰트 상점(v1.9.186) ----------
+// 격자에 놓는 글자에만 적용되는 장식용 웹폰트. 랭킹용 누적 점수(memberTotalScore)를
+// 깎지 않고, 그 점수가 requiredScore를 넘으면 영구 해금(문턱값 방식) — 한 번 넘으면
+// memberTotalScore가 줄어들 일이 없으니 계속 해금 상태 유지됨. 실제 "장착 중인 폰트"만
+// memberFonts/{uid}에 저장(서버가 아니라 클라이언트가 직접 씀 — database.rules.json에서
+// 문턱값 점수 이상일 때만 쓰기 허용되도록 서버 검증함).
+const FONT_CATALOG = [
+  { id: 'default', name: '기본체', family: null, requiredScore: 0 },
+  { id: 'dohyeon', name: '도현체', family: 'WB-DoHyeon', requiredScore: 100 },
+  { id: 'gaegu', name: '개구체', family: 'WB-Gaegu', requiredScore: 300 },
+  { id: 'jua', name: '주아체', family: 'WB-Jua', requiredScore: 600 },
+  { id: 'gugi', name: '구기체', family: 'WB-Gugi', requiredScore: 1000 },
+  { id: 'blackhansans', name: '블랙한산스', family: 'WB-BlackHanSans', requiredScore: 1600 },
+];
+const FONT_BY_ID = new Map(FONT_CATALOG.map(f => [f.id, f]));
+// owner(clientId=uid) -> 지금 장착 중인 fontId. memberFonts 전체를 실시간 구독해서 채워짐
+// (ownerMemberProfile과 같은 패턴) — 여기 없으면(또는 'default'면) 기본 시스템 폰트로 그림
+let ownerFontId = new Map();
+// 내(clientId) 누적 점수 실시간 캐시 — 상점 모달의 해금 진행도 표시용(boot()에서 구독)
+let myTotalScore = 0;
+// draw()의 ctx.font 문자열을 만들 때 씀 — 장착한 폰트가 없거나 아직 해금 전인 값이 남아있는
+// 등 예외 상황에도 항상 안전하게 기본 폰트로 떨어지게 함
+function boardFontFamily(owner) {
+  const fontId = ownerFontId.get(owner);
+  const entry = fontId && FONT_BY_ID.get(fontId);
+  return (entry && entry.family) ? `"${entry.family}", ` : '';
+}
+// v1.9.186: canvas는 DOM과 달리 웹폰트 로딩이 끝나도 자동으로 다시 그려지지 않으므로,
+// 부팅 시점에 상점 폰트 5종을 전부 미리 로드해두고(다른 사람이 산 폰트도 내 화면에서
+// 바로 보여야 하니 내가 안 산 것까지 전부) 로딩이 끝나는 대로 한 번 더 draw()를 불러줌
+function preloadShopFonts() {
+  if (!(window.FontFace || (document.fonts && document.fonts.load))) return;
+  FONT_CATALOG.forEach(f => {
+    if (!f.family || !document.fonts || !document.fonts.load) return;
+    document.fonts.load(`16px "${f.family}"`)
+      .then(() => { try { draw(); } catch (e) {} })
+      .catch(() => {});
+  });
+}
 // v1.9.140: 연습봇(아래 "연습봇" 섹션 참고)의 고정 아이덴티티 — memberProfiles에 서버 기록을
 // 남기지 않아도(=랭킹에 안 잡히게) fruitOf()에서 바로 가로채서 항상 같은 이름/아이콘을 씀
 const BOT_ID = 'BOT-practice';
@@ -2000,7 +2131,13 @@ function draw() {
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = Math.floor(cellSize * 0.55) + 'px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  // v1.9.186: 폰트 상점 — 격자에 놓인 글자만 "놓은 사람"이 장착한 폰트로 그림(이모지/UI는
+  // 항상 기본 폰트). owner가 null/미해금이면 boardFontFamily()가 빈 문자열을 돌려줘서
+  // 자동으로 기본 폰트로 떨어짐
+  function setBoardFont(owner) {
+    ctx.font = Math.floor(cellSize * 0.55) + 'px ' + boardFontFamily(owner) + '"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  }
+  setBoardFont(null);
   const now = Date.now();
 
   for (const [k, c] of cells) {
@@ -2060,7 +2197,9 @@ function draw() {
     const fill = flashing ? flashFill : (blocked ? '#eae5d8' : '#fffdf7');
     cellBox(sx, sy, fill, blocked ? '#c9c1af' : '#b8ae98', 1.5);
     ctx.fillStyle = blocked ? '#97907f' : '#222';
+    setBoardFont(c.by); // v1.9.186: 이 글자를 놓은 사람이 장착한 폰트로 그림
     ctx.fillText(c.ch, sx + cellSize / 2, sy + cellSize / 2 + 1);
+    setBoardFont(null);
     if (pop !== 1) ctx.restore();
   }
 
@@ -2082,7 +2221,9 @@ function draw() {
         const [sx, sy] = worldToScreen(cx, cy);
         cellBox(sx, sy, `hsla(${hue}, 70%, 55%, .22)`, `hsl(${hue}, 60%, 45%)`, 1.5);
         ctx.fillStyle = `hsl(${hue}, 60%, 38%)`;
+        setBoardFont(id); // v1.9.186: 다른 사람이 지금 타이핑 중인 글자도 그 사람 폰트로
         ctx.fillText(p.typed[i], sx + cellSize / 2, sy + cellSize / 2 + 1);
+        setBoardFont(null);
       }
     }
     ctx.restore();
@@ -2123,7 +2264,9 @@ function draw() {
         roundRect(asx + 1.5, asy + 1.5, cellSize - 3, cellSize - 3, 5);
         ctx.fill();
         ctx.fillStyle = 'rgba(34, 34, 34, 0.2)';
+        setBoardFont(activeCell.by); // v1.9.186
         ctx.fillText(activeCell.ch, asx + cellSize / 2, asy + cellSize / 2 + 1);
+        setBoardFont(null);
       } else if (activeCell.captured) {
         ctx.fillStyle = '#fffdf7';
         roundRect(asx + 1.5, asy + 1.5, cellSize - 3, cellSize - 3, 5);
@@ -2155,7 +2298,12 @@ function draw() {
       const [sx, sy] = worldToScreen(cx, cy);
       cellBox(sx, sy, `hsla(${myHueVal}, 70%, 55%, .25)`, `hsl(${myHueVal}, 65%, 45%)`, 2);
       const ch = preview.word[i];
-      if (ch) { ctx.fillStyle = `hsl(${myHueVal}, 65%, 40%)`; ctx.fillText(ch, sx + cellSize / 2, sy + cellSize / 2 + 1); }
+      if (ch) {
+        ctx.fillStyle = `hsl(${myHueVal}, 65%, 40%)`;
+        setBoardFont(clientId); // v1.9.186: 지금 내가 치고 있는 글자도 내가 장착한 폰트로(즉시 미리보기)
+        ctx.fillText(ch, sx + cellSize / 2, sy + cellSize / 2 + 1);
+        setBoardFont(null);
+      }
     }
     if (preview.conflictTyped >= 0) {
       const cx = sel.x + dx * preview.conflictTyped, cy = sel.y + dy * preview.conflictTyped;
@@ -4999,6 +5147,110 @@ document.getElementById('hofGuestSignupLink').addEventListener('click', e => {
   openAccountUpgradeFlow();
 });
 
+// ---------- 폰트 상점(v1.9.186) ----------
+// FONT_CATALOG/ownerFontId/boardFontFamily/myTotalScore는 이미 위쪽(ownerMemberProfile
+// 근처)에서 정의됨. 여기서는 상점 모달 UI(상점/보관함 탭)만 다룸.
+const fontShopBtn = document.getElementById('fontShopBtn');
+const fontShopBackdrop = document.getElementById('fontShopBackdrop');
+const fontShopOverlay = document.getElementById('fontShopOverlay');
+const fontShopListEl = document.getElementById('fontShopList');
+const fontShopTabShopBtn = document.getElementById('fontShopTabShop');
+const fontShopTabMyBtn = document.getElementById('fontShopTabMy');
+const fontShopGuestNoticeEl = document.getElementById('fontShopGuestNotice');
+let fontShopTab = 'shop'; // 'shop'(전체 카탈로그) | 'my'(해금된 것만, 보관함)
+let fontShopOpen = false;
+
+function closeFontShop() {
+  fontShopOverlay.classList.add('hidden');
+  fontShopBackdrop.classList.add('hidden');
+  fontShopOpen = false;
+}
+fontShopBackdrop.addEventListener('click', closeFontShop);
+
+function switchFontShopTab(tab) {
+  fontShopTab = tab;
+  fontShopTabShopBtn.classList.toggle('active', tab === 'shop');
+  fontShopTabMyBtn.classList.toggle('active', tab === 'my');
+  renderFontShop();
+}
+fontShopTabShopBtn.addEventListener('click', () => switchFontShopTab('shop'));
+fontShopTabMyBtn.addEventListener('click', () => switchFontShopTab('my'));
+
+// 장착 = memberFonts/{uid}에 fontId를 직접 씀(서버 왕복 없음). database.rules.json이
+// 점수 문턱값을 넘었을 때만 그 값 쓰기를 허용하도록 검증하므로, 버튼 자체를 미해금 상태에서
+// 아예 비활성화해두는 클라이언트 쪽 가드와 이중으로 막혀 있음
+function equipFont(fontId) {
+  if (!isMemberMode || !clientId) return;
+  firebase.database().ref('memberFonts/' + clientId).set(fontId).catch(() => {});
+}
+
+function renderFontShop() {
+  fontShopGuestNoticeEl.classList.toggle('hidden', isMemberMode);
+  fontShopListEl.textContent = '';
+  const myFontId = ownerFontId.get(clientId) || 'default';
+  const score = isMemberMode ? myTotalScore : 0;
+  const list = fontShopTab === 'my'
+    ? FONT_CATALOG.filter(f => f.id === 'default' || score >= f.requiredScore)
+    : FONT_CATALOG;
+  list.forEach(f => {
+    const unlocked = f.id === 'default' || score >= f.requiredScore;
+    const equipped = myFontId === f.id;
+    const li = document.createElement('li');
+    li.className = 'fontShopItem';
+
+    const preview = document.createElement('span');
+    preview.className = 'fontShopPreview';
+    preview.textContent = '낱';
+    if (f.family) preview.style.fontFamily = `"${f.family}"`;
+
+    const info = document.createElement('span');
+    info.className = 'fontShopInfo';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'fontShopName';
+    nameEl.textContent = f.name;
+    const reqEl = document.createElement('div');
+    reqEl.className = 'fontShopReq' + (unlocked ? ' unlocked' : '');
+    reqEl.textContent = f.requiredScore === 0
+      ? '기본 제공'
+      : (unlocked ? '해금됨' : `${Math.min(score, f.requiredScore)}/${f.requiredScore}점`);
+    info.append(nameEl, reqEl);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'fontShopEquipBtn';
+    if (!unlocked) {
+      btn.classList.add('locked');
+      btn.textContent = '🔒';
+      btn.disabled = true;
+    } else if (equipped) {
+      btn.classList.add('equipped');
+      btn.textContent = '장착 중';
+      btn.disabled = true;
+    } else {
+      btn.classList.add('equip');
+      btn.textContent = '장착';
+      btn.addEventListener('click', () => equipFont(f.id));
+    }
+
+    li.append(preview, info, btn);
+    fontShopListEl.appendChild(li);
+  });
+}
+// boot()의 memberTotalScore 실시간 구독에서 호출됨 — 상점이 열려 있을 때만 다시 그림
+function renderFontShopIfOpen() {
+  if (fontShopOpen) renderFontShop();
+}
+fontShopBtn.addEventListener('click', () => {
+  fontShopOpen = true;
+  switchFontShopTab('shop');
+  fontShopOverlay.classList.remove('hidden');
+  fontShopBackdrop.classList.remove('hidden');
+});
+document.getElementById('fontShopGuestSignupLink').addEventListener('click', e => {
+  e.preventDefault();
+  openAccountUpgradeFlow();
+});
+
 let authSelectedIconIdx = 0;
 // v1.9.156: "회원가입 아이콘 배치 순서를 매번 랜덤하게" 요청 — 화면에 보여주는 순서만
 // 매번 섞고, 서버로 보내는 iconIdx는 반드시 ICONS 배열의 "원래" 인덱스 그대로여야 함
@@ -5222,6 +5474,7 @@ async function boot() {
     return;
   }
   bootStage = 'boot:start';
+  preloadShopFonts(); // v1.9.186: 폰트 상점 — 인증/DB 연결과 무관하게 최대한 일찍 로드 시작
   firebase.initializeApp(window.FIREBASE_CONFIG);
   bootStage = 'boot:firebase-initialized';
   clientId = await resolveIdentity();
@@ -5289,6 +5542,24 @@ async function boot() {
     // 그때마다 다시 확인함
     recentVisitorsBtn.classList.toggle('hidden', !isOwnerAdmin());
   });
+
+  // v1.9.186: 폰트 상점 — memberFonts 전체를 실시간 구독. 장착(equip)은 클라이언트가
+  // memberFonts/{uid}에 바로 씀(서버 왕복 없음 — database.rules.json이 점수 문턱값을
+  // 검증해서 미해금 폰트는 애초에 쓰기가 거부됨). 이 구독 덕분에 "보관함"에서 폰트를
+  // 바꾸는 순간 나 자신을 포함해 전원의 화면에 바로 반영됨(별도 로컬 상태 갱신 불필요)
+  db.ref('memberFonts').on('value', snap => {
+    ownerFontId = new Map(Object.entries(snap.val() || {}));
+    draw();
+    renderFontShopIfOpen(); // 상점이 열려있으면 "장착 중" 배지도 같이 즉시 갱신
+  });
+  // 내 누적 점수(랭킹용 memberTotalScore)를 실시간으로 들고 있어야 상점 모달을 플레이
+  // 도중에 열어도(점수가 계속 오르는 중이어도) 해금 진행도가 그때그때 갱신됨
+  if (isMemberMode && clientId) {
+    db.ref('memberTotalScore/' + clientId).on('value', snap => {
+      myTotalScore = Number(snap.val()) || 0;
+      renderFontShopIfOpen();
+    });
+  }
 
   let presenceFirstSync = true;
   const peerTypedPrev = new Map(); // 다른 사람의 타이핑 효과음 브로드캐스트용 — peer id -> 마지막으로 본 typed 문자열
