@@ -50,6 +50,14 @@
   #board { display: block; cursor: grab; touch-action: none; }
   #board.dragging { cursor: grabbing; }
 
+  /* v1.9.194: #brand/#userCountTag(좌측 두 알약)를 #topRight와 똑같은 방식(fixed 컨테이너 +
+     flex column + gap)으로 감싸는 래퍼 — 예전엔 #brand는 top:12px, #userCountTag는
+     top:44px처럼 각자 다른 절대좌표를 손으로 맞춰뒀는데, #topRight 쪽은 flex의 gap:6px로
+     간격을 주다 보니 좌/우 두 줄의 세로 간격이 서로 달라 보였던 것(알약 자체 높이는
+     v1.9.102부터 이미 line-height 고정으로 잘 맞아있었음 — v1.9.189/192에서 시도했던
+     height:30px 강제 고정은 진짜 원인이 아니어서 되돌림). 이제 좌측도 #topRight와 동일한
+     flex column(gap:6px)으로 감싸서 두 줄 사이 간격이 항상 똑같게 만듦. */
+  #topLeft { position: fixed; top: 12px; left: 12px; z-index: 11; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
   #brand {
     /* 우측 상단 랭킹 알약(#hallOfFameBtn)과 같은 크기(font-size/padding)로 맞춤 —
        예전엔 더 크게(15px/8px 14px) 두드러졌는데, 다른 상단 알약들과 톤을 맞춤.
@@ -57,23 +65,14 @@
        "이 글자에 어울리는 줄 높이"를 글자 내용(이모지 vs 순수 한글 vs 기호)에 따라
        각자 다르게 잡아서 결국 알약 높이가 미묘하게 달라짐(🏆 이모지가 들어간
        #hallOfFameBtn 쪽이 특히 더 큼) — line-height를 세 알약 전부 똑같이 숫자로
-       고정해서 내용과 무관하게 항상 같은 높이가 되게 함 */
-    position: fixed; top: 12px; left: 12px; z-index: 11;
+       고정해서 내용과 무관하게 항상 같은 높이가 되게 함.
+       v1.9.194: #topLeft로 옮기면서 position/top/left는 래퍼가 담당하게 됨. 모바일에서
+       격자 상단과 살짝 겹친다는 피드백으로 font-size/padding도 한 단계 더 줄임. */
     background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
-    border-radius: 20px; padding: 6px 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
-    font-size: 12px; line-height: 16px; font-weight: 700; color: #1a1a1a; cursor: pointer;
+    border-radius: 18px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    font-size: 11px; line-height: 1.2; font-weight: 700; color: #1a1a1a; cursor: pointer;
     user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
     display: inline-flex; align-items: center;
-    /* v1.9.189: line-height/padding/border를 다른 알약들과 다 맞춰놔도 <button>은
-       브라우저 기본 폼 컨트롤 렌더링 때문에 미묘하게 더 높게 나올 수 있어서(랭킹/상점이
-       #brand보다 커 보인다는 피드백), 아예 height를 고정값으로 못박아 네 알약이 항상
-       똑같은 높이가 되게 함(세로 중앙 정렬은 flex의 align-items:center가 담당).
-       v1.9.192: 그래도 실기기(특히 앱 안 웹뷰)에서는 여전히 달라 보인다는 재현이 있었음
-       — line-height를 배수(1.2)가 아니라 실제 컨텐츠 높이와 정확히 같은 px값(16px =
-       30px height - 위아래 border 2px - 위아래 padding 12px)으로 못박고, min-height:0으로
-       웹뷰가 <button>에 자체로 걸어두는 최소 높이(native form control 최소 탭 영역 등)를
-       명시적으로 무효화해서, flex 중앙정렬에만 기대지 않고 이중으로 높이를 보장함 */
-    height: 30px; min-height: 0; box-sizing: border-box;
   }
   /* "낱말바둑이란?" — 앞부분(<b>낱말바둑</b>)만 굵게, 뒤에 이어지는 "이란?"은 얇게
      차등을 둬서 눌러서(툴팁처럼) 안내 패널을 여는 트리거라는 걸 시각적으로 드러냄 */
@@ -244,14 +243,13 @@
      차지하게 해서 높이를 정확히 맞춰줌. line-height도 숫자로 고정(#brand와 동일 이유) */
   /* v1.9.187: 예전엔 #topRight(우측 상단) 안에서 폰트샵/랭킹 알약과 나란히 있었는데,
      리더보드가 넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁(#brand) 바로 밑(좌측
-     상단)으로 옮김 — top 44px는 #infoPanel과 같은 값으로, #brand 알약 바로 아래 줄에
-     맞춰지도록 이미 검증된 오프셋을 그대로 재사용함 */
-  #userCountTag { position: fixed; top: 44px; left: 12px; z-index: 10;
-    font: inherit; font-size: 12px; line-height: 16px; padding: 6px 10px; border-radius: 20px;
+     상단)으로 옮김. v1.9.194: #topLeft 래퍼 안 flex 자식이 되면서 position/top/left는
+     래퍼가 담당 — #topRight와 똑같이 gap:6px로 간격을 주므로 우측 줄과 간격이 항상
+     동일함. 모바일 격자 겹침 방지로 font-size/padding도 함께 줄임. */
+  #userCountTag {
+    font: inherit; font-size: 11px; line-height: 1.2; padding: 5px 9px; border-radius: 18px;
     border: 1px solid transparent; background: #eee7d8; color: #7a6c45; white-space: nowrap; cursor: pointer;
     display: inline-flex; align-items: center; gap: 5px;
-    -webkit-appearance: none; appearance: none; -moz-appearance: none;
-    height: 30px; min-height: 0; box-sizing: border-box; /* v1.9.189/192: #brand와 완전히 같은 높이로 고정(웹뷰 네이티브 최소높이도 무효화) */
     box-shadow: 0 2px 8px rgba(0,0,0,.08); }
   #userCountTag:hover { background: #e2d9c2; }
   #userCountTag:not(.on) { opacity: .65; }
@@ -282,16 +280,13 @@
        텍스트보다 더 크게 잡음(글자 내용에 따라 "어울리는" 줄 높이가 달라짐), (2) #brand는
        실제 테두리(border:1px solid)가 있는데 여기는 border:none이라 그만큼(위+아래
        2px) 박스가 더 작았음. line-height 고정 + 투명 테두리로 둘 다 맞춤 */
-    font: inherit; font-size: 12px; line-height: 16px; padding: 6px 10px; border-radius: 20px;
+    font: inherit; font-size: 11px; line-height: 1.2; padding: 5px 9px; border-radius: 18px;
     border: 1px solid transparent; background: #eee7d8; color: #7a6c45; font-weight: 700;
     cursor: pointer; white-space: nowrap; text-align: center;
-    -webkit-appearance: none; appearance: none; -moz-appearance: none;
-    display: inline-flex; align-items: center; justify-content: center;
-    /* v1.9.192: line-height를 배수(1.2)가 아니라 px 고정값(16px = height 30px - 위아래
-       border 2px - 위아래 padding 12px)으로 못박고 min-height:0을 명시해서, 웹뷰가
-       <button>에 자체로 걸어두는 최소 높이를 무효화함(flex 중앙정렬만으로는 실기기에서
-       여전히 랭킹/상점이 더 커 보인다는 재현이 있었음) */
-    height: 30px; min-height: 0; box-sizing: border-box;
+    /* v1.9.194: v1.9.189/192에서 시도한 height:30px 강제 고정 + appearance 리셋은
+       되돌림 — 실제 원인은 높이 차이가 아니라 좌/우 줄 사이 세로 간격이 서로 달랐던
+       것이었음(#topLeft를 #topRight와 같은 flex gap:6px 구조로 맞춰서 해결). 모바일
+       격자 겹침 방지로 font-size/padding도 함께 줄임 */
     box-shadow: 0 2px 8px rgba(0,0,0,.08); /* #brand("낱말바둑")와 같은 그림자 — 눌러볼 수 있는 버튼임을 알려줌 */
   }
   #hallOfFameBtn:hover, #fontShopBtn:hover { background: #e2d9c2; }
@@ -988,12 +983,14 @@
   </div>
 </div>
 
-<div id="brand"><b>낱말바둑</b><span id="brandHelpIcon">이란?</span></div>
-<!-- v1.9.187: 리더보드(화면 중앙 위쪽)가 넓어지면 우측 상단 #topRight의 폰트샵 버튼을
-     가리는 문제가 있어서, 접속자 수 알약을 우측 상단에서 빼서 "낱말바둑이란?" 툴팁
-     바로 밑(좌측 상단)으로 옮김 — #topRight 쪽 알약 개수가 줄어든 만큼 나머지(폰트샵/랭킹)도
-     리더보드와 덜 겹치게 됨 -->
-<button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">현재 1명</span></button>
+<!-- v1.9.194: #topRight와 같은 flex column 래퍼(#topLeft)로 감싸서 두 알약 사이 세로 간격이
+     우측 줄(랭킹/상점, gap:6px)과 항상 똑같게 함 -->
+<div id="topLeft">
+  <div id="brand"><b>낱말바둑</b><span id="brandHelpIcon">이란?</span></div>
+  <!-- v1.9.187: 예전엔 우측 상단 #topRight의 폰트샵 버튼과 나란히 있었는데, 리더보드가
+       넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁 바로 밑(좌측 상단)으로 옮김 -->
+  <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명 접속중</span></button>
+</div>
 <div id="infoPanelBackdrop" class="hidden"></div>
 <div id="infoPanel" class="hidden">
   <div style="white-space: nowrap; overflow-x: auto;"><b>끝말잇기로 땅따먹기를 한다면?</b><br>
@@ -1097,7 +1094,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.193</div>
+<div id="verTagBottom">v1.9.194</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1191,7 +1188,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.193'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.194'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4220,7 +4217,7 @@ let connected = false; // 실시간 연결 상태 — 접속자 태그 색/점�
 function updateStats() {
   // 점(●)은 CSS 애니메이션(liveBlink)으로 계속 깜빡여서 실시간(라이브) 화면처럼 보이게 함 —
   // 접속 중일 때만(#userCountTag.on) 깜빡이고, 끊겼을 땐 그냥 정지된 회색 점으로 표시됨
-  userCountTextEl.textContent = `현재 ${userCount}명`;
+  userCountTextEl.textContent = `${userCount}명 접속중`;
 }
 
 // ---------- 땅따먹기 리더보드 ----------
