@@ -710,6 +710,10 @@
   .fontShopInfo { flex: 1; min-width: 0; }
   .fontShopName { font-weight: 700; color: #444; font-size: 14px; }
   .fontShopReq { font-size: 11px; color: #999; margin-top: 2px; }
+  /* v1.9.204: 문턱값 숫자("100점" 부분, 기본 제공 포함)만 따로 색을 줌 — 현재 점수(예: "45/")
+     부분은 계속 무채색으로 두고, 미달이면 빨강, 도달했으면 초록으로 그 문턱값만 강조 */
+  .fontShopReq .reqThreshold.locked { color: #b23c3c; font-weight: 700; }
+  .fontShopReq .reqThreshold.unlocked { color: #2c8f4a; font-weight: 700; }
   .fontShopEquipBtn {
     flex: none; font: inherit; font-size: 12px; font-weight: 700;
     padding: 7px 12px; border-radius: 20px; border: none; cursor: pointer;
@@ -1069,7 +1073,7 @@
     <!-- 비회원은 점수가 애초에 기록되지 않아 해금이 불가능하므로 안내만 보여줌(랭킹의
          #hofGuestNotice와 같은 패턴) -->
     <div class="hidden" id="fontShopGuestNotice">
-      <div id="fontShopGuestNoticeLabel">비회원은 폰트를 해금할 수 없어요</div>
+      <div id="fontShopGuestNoticeLabel">비회원은 글씨체를 바꿀 수 없어요.</div>
       <a href="#" id="fontShopGuestSignupLink">5초컷 회원가입</a>
     </div>
   </div>
@@ -1103,7 +1107,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.203</div>
+<div id="verTagBottom">v1.9.204</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1197,7 +1201,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.203'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.204'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2043,10 +2047,10 @@ let ownerMemberProfile = new Map();
 const FONT_CATALOG = [
   { id: 'default', name: '기본체', family: null, requiredScore: 0 },
   { id: 'yoonchorokusan', name: '윤초록우산어린이 만세', family: 'WB-YoonChorokusan', requiredScore: 100 },
-  { id: 'galmuri9', name: '갈무리9', family: 'WB-Galmuri9', requiredScore: 300 },
-  { id: 'kotra', name: '코트라 손글씨체', family: 'WB-Kotra', requiredScore: 600 },
-  { id: 'kkubulim', name: '꾸불림체', family: 'WB-Kkubulim', requiredScore: 1000 },
-  { id: 'chosunilbo', name: '조선일보명조체', family: 'WB-Chosunilbo', requiredScore: 1600 },
+  { id: 'galmuri9', name: '갈무리9', family: 'WB-Galmuri9', requiredScore: 500 },
+  { id: 'kotra', name: '코트라 손글씨체', family: 'WB-Kotra', requiredScore: 1000 },
+  { id: 'kkubulim', name: '꾸불림체', family: 'WB-Kkubulim', requiredScore: 2000 },
+  { id: 'chosunilbo', name: '조선일보명조체', family: 'WB-Chosunilbo', requiredScore: 3000 },
 ];
 const FONT_BY_ID = new Map(FONT_CATALOG.map(f => [f.id, f]));
 // owner(clientId=uid) -> 지금 장착 중인 fontId. memberFonts 전체를 실시간 구독해서 채워짐
@@ -5235,12 +5239,21 @@ function renderFontShop() {
     nameEl.className = 'fontShopName';
     nameEl.textContent = f.name;
     // v1.9.190: 해금된 뒤에도 "해금됨"으로 뭉뚱그리지 않고 실제 점수/문턱값 숫자를 그대로
-    // 남겨둠(예: "354/300점") — 몇 점에서 해금됐었는지 계속 알아볼 수 있게. 기본체(항상
-    // 무료)만 "기본 제공"이라는 문구를 쓰되, 색깔은 다른 항목의 숫자와 완전히 같게 둠
-    // (예전엔 해금된 항목만 초록색으로 강조했는데, 그 톤 차이를 없앰)
+    // 남겨둠(예: "354/300점") — 몇 점에서 해금됐었는지 계속 알아볼 수 있게.
+    // v1.9.204: 문턱값 숫자만 따로 빨강(미달)/초록(도달) — 기본 제공도 항상 도달 상태이므로
+    // 초록. 현재 점수("45/" 부분)는 계속 무채색으로 둬서 문턱값 쪽에만 시선이 가게 함.
     const reqEl = document.createElement('div');
     reqEl.className = 'fontShopReq';
-    reqEl.textContent = f.requiredScore === 0 ? '기본 제공' : `${score}/${f.requiredScore}점`;
+    const thresholdEl = document.createElement('span');
+    thresholdEl.className = 'reqThreshold ' + (unlocked ? 'unlocked' : 'locked');
+    if (f.requiredScore === 0) {
+      thresholdEl.textContent = '기본 제공';
+      reqEl.append(thresholdEl);
+    } else {
+      reqEl.append(`${score}/`);
+      thresholdEl.textContent = `${f.requiredScore}점`;
+      reqEl.append(thresholdEl);
+    }
     info.append(nameEl, reqEl);
 
     const btn = document.createElement('button');

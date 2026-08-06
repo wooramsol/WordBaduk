@@ -146,24 +146,33 @@ setTimeout(async () => {
     yoonchorokusanBtn.textContent === '장착' && !yoonchorokusanBtn.disabled]);
 
   const galmuri9Btn = itemOf('갈무리9').querySelector('.fontShopEquipBtn');
-  results.push(['[잠금] 150점이면 갈무리9(300점)는 아직 잠겨서 🔒로 비활성화됨(실제: "' + galmuri9Btn.textContent + '", disabled=' + galmuri9Btn.disabled + ')',
+  results.push(['[잠금] 150점이면 갈무리9(500점)는 아직 잠겨서 🔒로 비활성화됨(실제: "' + galmuri9Btn.textContent + '", disabled=' + galmuri9Btn.disabled + ')',
     galmuri9Btn.textContent === '🔒' && galmuri9Btn.disabled]);
 
   // v1.9.190: 해금돼도 "해금됨"으로 뭉개지 않고 실제 점수/문턱값 숫자를 그대로 보여줌(몇 점에서
-  // 해금됐는지 계속 알 수 있게) — 기본체는 "기본 제공" 문구를 쓰되 색 강조(초록)는 없어야 함
+  // 해금됐는지 계속 알 수 있게).
+  // v1.9.204: 문턱값 숫자(.reqThreshold)만 따로 색이 붙음 — 미달(locked)이면 빨강, 도달
+  // (unlocked)이면 초록. 기본체는 항상 도달 상태이므로 초록.
   const yoonchorokusanReq = itemOf('윤초록우산어린이 만세').querySelector('.fontShopReq');
+  const yoonchorokusanThreshold = yoonchorokusanReq.querySelector('.reqThreshold');
   results.push(['[숫자표시] 해금된 윤초록우산어린이 만세도 "해금됨" 대신 "150/100점"으로 보임(실제: "' + yoonchorokusanReq.textContent + '")',
     yoonchorokusanReq.textContent === '150/100점']);
+  results.push(['[색상] 해금된 윤초록우산어린이 만세의 문턱값(100점)은 unlocked(초록) 클래스',
+    yoonchorokusanThreshold.classList.contains('unlocked') && !yoonchorokusanThreshold.classList.contains('locked')]);
+
   const galmuri9Req = itemOf('갈무리9').querySelector('.fontShopReq');
-  results.push(['[숫자표시] 잠긴 갈무리9는 "150/300점"으로 보임(실제: "' + galmuri9Req.textContent + '")',
-    galmuri9Req.textContent === '150/300점']);
+  const galmuri9Threshold = galmuri9Req.querySelector('.reqThreshold');
+  results.push(['[숫자표시] 잠긴 갈무리9는 "150/500점"으로 보임(실제: "' + galmuri9Req.textContent + '")',
+    galmuri9Req.textContent === '150/500점']);
+  results.push(['[색상] 잠긴 갈무리9의 문턱값(500점)은 locked(빨강) 클래스',
+    galmuri9Threshold.classList.contains('locked') && !galmuri9Threshold.classList.contains('unlocked')]);
+
   const defaultItem = itemOf('기본체');
   const defaultReq = defaultItem.querySelector('.fontShopReq');
+  const defaultThreshold = defaultReq.querySelector('.reqThreshold');
   results.push(['[기본체] 문구는 "기본 제공"(실제: "' + defaultReq.textContent + '")', defaultReq.textContent === '기본 제공']);
-  results.push(['[색상 통일] 기본체 .fontShopReq에 더 이상 unlocked(초록) 클래스가 안 붙음',
-    !defaultReq.classList.contains('unlocked')]);
-  results.push(['[색상 통일] 윤초록우산어린이 만세 .fontShopReq에도 unlocked 클래스가 안 붙음(전부 같은 톤)',
-    !yoonchorokusanReq.classList.contains('unlocked')]);
+  results.push(['[색상] 기본체는 항상 도달 상태이므로 unlocked(초록) 클래스',
+    defaultThreshold.classList.contains('unlocked') && !defaultThreshold.classList.contains('locked')]);
 
   // --- 장착: 윤초록우산어린이 만세 "장착" 버튼 클릭 -> memberFonts/M0에 즉시 write (v1.9.187: 보관함 탭
   // 없이 상점 하나에서 바로 장착/해제하므로 탭 전환 없이 곧바로 클릭) ---
