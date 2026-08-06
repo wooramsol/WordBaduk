@@ -7,8 +7,8 @@ Copyright 2018 The Do Hyeon Project Authors
 === jua ===
 Copyright 2018 The BM JUA Project Authors
 
-=== gaegu ===
-Copyright 2018 The Gaegu Project Authors Gaegu-Regular.ttf: Copyright 2018 The Gaegu Project Authors Gaegu-Bold.ttf: Copyright 2018 The Gaegu Project Authors
+=== nanum-brush-script (gungseo.woff2) ===
+Copyright © 2010 NHN Corporation. All rights reserved. Font designed by Sandoll Communications Inc.
 
 === gugi ===
 Copyright (c) 2017 by TAE System & Typefaces Co.. All rights reserved.
