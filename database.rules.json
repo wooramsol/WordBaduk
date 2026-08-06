@@ -28,7 +28,7 @@
       ".read": true,
       "$uid": {
         ".write": true,
-        ".validate": "newData.isString() && (newData.val() === 'default' || (newData.val() === 'chosunilbo' && root.child('memberTotalScore').child($uid).val() >= 100) || (newData.val() === 'galmuri9' && root.child('memberTotalScore').child($uid).val() >= 300) || (newData.val() === 'cafe24classic' && root.child('memberTotalScore').child($uid).val() >= 600) || (newData.val() === 'gugi' && root.child('memberTotalScore').child($uid).val() >= 1000) || (newData.val() === 'shilla' && root.child('memberTotalScore').child($uid).val() >= 1600))"
+        ".validate": "newData.isString() && (newData.val() === 'default' || (newData.val() === 'yoonchorokusan' && root.child('memberTotalScore').child($uid).val() >= 100) || (newData.val() === 'galmuri9' && root.child('memberTotalScore').child($uid).val() >= 300) || (newData.val() === 'kotra' && root.child('memberTotalScore').child($uid).val() >= 600) || (newData.val() === 'kkubulim' && root.child('memberTotalScore').child($uid).val() >= 1000) || (newData.val() === 'ogrenaissance' && root.child('memberTotalScore').child($uid).val() >= 1600))"
       }
     },
     "memberTotalScore": {
