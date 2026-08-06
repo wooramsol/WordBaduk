@@ -9,6 +9,10 @@
 출처: https://noonnu.cc/font_page/1431
 (v1.9.198: 원본 파일이 실제 브라우저에서 로딩 실패하는 문제가 있어 fpgm/prep/cvt/GSUB/GPOS/
 GDEF/FFTM 테이블을 제거하고 fontTools로 재압축함 — 글리프 데이터는 원본과 동일)
+(v1.9.199: v1.9.198에서 힌팅 테이블만 지우고 글리프별 힌팅 바이트코드와 maxp 힌팅 수치를
+정리하지 않아 폰트가 내부적으로 불일치한 상태였음(브라우저의 폰트 검증기가 이를 손상된
+폰트로 간주해 전면 거부한 것으로 추정) — fontTools subset --no-hinting으로 힌팅 관련 전체를
+일관되게 제거하여 재압축함. 글리프 모양은 원본과 동일, 렌더링 재검증 완료)
 
 === galmuri9.woff2 (갈무리9, 기존 유지) ===
 Copyright © 2019–2025 Lee Minseo (quiple@quiple.dev). SIL Open Font License 1.1.
