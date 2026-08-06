@@ -64,6 +64,11 @@
     font-size: 12px; line-height: 1.2; font-weight: 700; color: #1a1a1a; cursor: pointer;
     user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
     display: inline-flex; align-items: center;
+    /* v1.9.189: line-height/padding/border를 다른 알약들과 다 맞춰놔도 <button>은
+       브라우저 기본 폼 컨트롤 렌더링 때문에 미묘하게 더 높게 나올 수 있어서(랭킹/폰트샵이
+       #brand보다 커 보인다는 피드백), 아예 height를 고정값으로 못박아 네 알약이 항상
+       똑같은 높이가 되게 함(세로 중앙 정렬은 flex의 align-items:center가 담당) */
+    height: 30px; box-sizing: border-box;
   }
   /* "낱말바둑이란?" — 앞부분(<b>낱말바둑</b>)만 굵게, 뒤에 이어지는 "이란?"은 얇게
      차등을 둬서 눌러서(툴팁처럼) 안내 패널을 여는 트리거라는 걸 시각적으로 드러냄 */
@@ -240,6 +245,8 @@
     font: inherit; font-size: 12px; line-height: 1.2; padding: 6px 10px; border-radius: 20px;
     border: 1px solid transparent; background: #eee7d8; color: #7a6c45; white-space: nowrap; cursor: pointer;
     display: inline-flex; align-items: center; gap: 5px;
+    -webkit-appearance: none; appearance: none;
+    height: 30px; box-sizing: border-box; /* v1.9.189: #brand와 완전히 같은 높이로 고정 */
     box-shadow: 0 2px 8px rgba(0,0,0,.08); }
   #userCountTag:hover { background: #e2d9c2; }
   #userCountTag:not(.on) { opacity: .65; }
@@ -273,6 +280,9 @@
     font: inherit; font-size: 12px; line-height: 1.2; padding: 6px 10px; border-radius: 20px;
     border: 1px solid transparent; background: #eee7d8; color: #7a6c45; font-weight: 700;
     cursor: pointer; white-space: nowrap; text-align: center;
+    -webkit-appearance: none; appearance: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 30px; box-sizing: border-box; /* v1.9.189: #brand와 완전히 같은 높이로 고정 */
     box-shadow: 0 2px 8px rgba(0,0,0,.08); /* #brand("낱말바둑")와 같은 그림자 — 눌러볼 수 있는 버튼임을 알려줌 */
   }
   #hallOfFameBtn:hover, #fontShopBtn:hover { background: #e2d9c2; }
@@ -1079,7 +1089,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.188</div>
+<div id="verTagBottom">v1.9.189</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1173,7 +1183,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.188'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.189'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
