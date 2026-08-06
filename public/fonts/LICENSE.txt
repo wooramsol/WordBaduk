@@ -1,18 +1,23 @@
-이 폴더(public/fonts/)의 웹폰트는 모두 SIL Open Font License 1.1로 배포됩니다.
-각 폰트의 원 저작자 저작권 고지는 아래와 같습니다 (npm @fontsource 패키지에서 가져옴).
+이 폴더(public/fonts/)의 웹폰트는 모두 상업적 사용이 무료로 허용된 한글 폰트입니다
+(눈누 noonnu.cc에서 확인한 라이선스 요약 기준 — 수정/재배포/유료판매만 금지, 그 외
+인쇄/웹/영상/임베딩/BI·CI 등 사용 범위는 제한 없음). 각 폰트의 원 저작자 저작권 고지는
+아래와 같습니다.
 
-=== do-hyeon ===
-Copyright 2018 The Do Hyeon Project Authors
+=== chosunilbo.woff (조선일보명조체) ===
+저작권 (주)조선일보사. 개인/기업 무료 사용 가능, 수정 후 판매 금지, 배포된 형태 그대로 사용.
+출처: https://noonnu.cc/font_page/63
 
-=== jua ===
-Copyright 2018 The BM JUA Project Authors
+=== galmuri9.woff2 (갈무리9) ===
+Copyright © 2019–2025 Lee Minseo (quiple@quiple.dev). SIL Open Font License 1.1.
+출처: https://github.com/quiple/galmuri
 
-=== nanum-brush-script (gungseo.woff2) ===
-Copyright © 2010 NHN Corporation. All rights reserved. Font designed by Sandoll Communications Inc.
+=== cafe24classic.woff2 (카페24 클래식타입) ===
+저작권 카페24(주). 무료 사용 가능, 수정/재배포 가능(단 유료 판매 금지, OFL 준수).
+출처: https://noonnu.cc/font_page/1035
 
-=== gugi ===
+=== gugi (구기체, 기존 유지) ===
 Copyright (c) 2017 by TAE System & Typefaces Co.. All rights reserved.
 
-=== black-han-sans ===
-Copyright 2015 The Black Han Sans Project Authors (https://github.com/zesstype/Black-Han-Sans)
-
+=== shilla.woff2 (신라문화체, Shilla_CultureB-Bold) ===
+저작권 경주시. 무료 사용 가능(출처 표시 권장), 변형/재배포/판매 금지.
+출처: https://noonnu.cc/font_page/952
