@@ -229,7 +229,12 @@
      있어서, 여기서 아예 border를 안 주면 박스 높이가 #brand보다 2px(위+아래 각 1px)
      작아져서 알약 높이가 미묘하게 안 맞음. 투명 테두리는 안 보이면서도 같은 박스 공간을
      차지하게 해서 높이를 정확히 맞춰줌. line-height도 숫자로 고정(#brand와 동일 이유) */
-  #userCountTag { font: inherit; font-size: 12px; line-height: 1.2; padding: 6px 10px; border-radius: 20px;
+  /* v1.9.187: 예전엔 #topRight(우측 상단) 안에서 폰트샵/랭킹 알약과 나란히 있었는데,
+     리더보드가 넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁(#brand) 바로 밑(좌측
+     상단)으로 옮김 — top 44px는 #infoPanel과 같은 값으로, #brand 알약 바로 아래 줄에
+     맞춰지도록 이미 검증된 오프셋을 그대로 재사용함 */
+  #userCountTag { position: fixed; top: 44px; left: 12px; z-index: 10;
+    font: inherit; font-size: 12px; line-height: 1.2; padding: 6px 10px; border-radius: 20px;
     border: 1px solid transparent; background: #eee7d8; color: #7a6c45; white-space: nowrap; cursor: pointer;
     display: inline-flex; align-items: center; gap: 5px;
     box-shadow: 0 2px 8px rgba(0,0,0,.08); }
@@ -664,13 +669,6 @@
   }
   #fontShopTitle { font-size: 18px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; text-align: center; }
   #fontShopSub { font-size: 12px; color: #888; margin-bottom: 14px; text-align: center; }
-  #fontShopTabs { display: flex; gap: 6px; margin-bottom: 12px; }
-  #fontShopTabs button {
-    flex: 1; font: inherit; font-size: 13px; font-weight: 700; padding: 8px 0;
-    border-radius: 10px; border: 1px solid #e5ded0; background: #f7f3e8; color: #8a7a4f;
-    cursor: pointer;
-  }
-  #fontShopTabs button.active { background: #8a7a4f; color: #fff; border-color: #8a7a4f; }
   #fontShopList { list-style: none; margin: 0; padding: 0; }
   .fontShopItem {
     display: flex; align-items: center; gap: 10px;
@@ -970,6 +968,11 @@
 </div>
 
 <div id="brand"><b>낱말바둑</b><span id="brandHelpIcon">이란?</span></div>
+<!-- v1.9.187: 리더보드(화면 중앙 위쪽)가 넓어지면 우측 상단 #topRight의 폰트샵 버튼을
+     가리는 문제가 있어서, 접속자 수 알약을 우측 상단에서 빼서 "낱말바둑이란?" 툴팁
+     바로 밑(좌측 상단)으로 옮김 — #topRight 쪽 알약 개수가 줄어든 만큼 나머지(폰트샵/랭킹)도
+     리더보드와 덜 겹치게 됨 -->
+<button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명</span></button>
 <div id="infoPanelBackdrop" class="hidden"></div>
 <div id="infoPanel" class="hidden">
   <div style="white-space: nowrap; overflow-x: auto;"><b>끝말잇기로 땅따먹기를 한다면?</b><br>
@@ -988,10 +991,6 @@
   <!-- v1.9.186: 폰트 상점 — 격자에 놓는 글자 폰트를 점수로 해금/장착하는 팝업 진입 버튼 -->
   <button id="fontShopBtn" type="button">🎨 폰트샵</button>
   <button id="hallOfFameBtn" type="button">🏆 랭킹</button>
-  <!-- 예전엔 랭킹 팝업 안에 "현재 접속 중" 목록을 같이 넣었는데, 랭킹(누적 점수 기록)과
-       접속 현황은 성격이 다른 정보라 분리함 — 이 알약을 누르면 접속 중인 플레이어 목록이
-       따로 뜸(아래 #onlineOverlay) -->
-  <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명</span></button>
 </div>
 <div id="leaderboard" class="hidden">
   <ol id="lbList"></ol>
@@ -1037,11 +1036,7 @@
 <div id="fontShopOverlay" class="hidden">
   <div id="fontShopCard">
     <div id="fontShopTitle">🎨 폰트샵</div>
-    <div id="fontShopSub">점수를 모아 격자에 놓는 글자 폰트를 해금해보세요</div>
-    <div id="fontShopTabs">
-      <button id="fontShopTabShop" type="button" class="active">상점</button>
-      <button id="fontShopTabMy" type="button">보관함</button>
-    </div>
+    <div id="fontShopSub">점수를 모아 격자에 놓는 글자 폰트를 해금하고, 바로 장착/해제해보세요</div>
     <ul id="fontShopList"></ul>
     <!-- 비회원은 점수가 애초에 기록되지 않아 해금이 불가능하므로 안내만 보여줌(랭킹의
          #hofGuestNotice와 같은 패턴) -->
@@ -1080,7 +1075,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.186</div>
+<div id="verTagBottom">v1.9.187</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1174,7 +1169,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.186'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.187'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -5147,17 +5142,15 @@ document.getElementById('hofGuestSignupLink').addEventListener('click', e => {
   openAccountUpgradeFlow();
 });
 
-// ---------- 폰트 상점(v1.9.186) ----------
+// ---------- 폰트 상점(v1.9.186, v1.9.187에서 상점/보관함 탭 통합) ----------
 // FONT_CATALOG/ownerFontId/boardFontFamily/myTotalScore는 이미 위쪽(ownerMemberProfile
-// 근처)에서 정의됨. 여기서는 상점 모달 UI(상점/보관함 탭)만 다룸.
+// 근처)에서 정의됨. 보관함(장착 관리)을 상점과 따로 둘 필요가 없어서(상점에서 바로
+// 장착/해제 가능) 탭 없이 카탈로그 하나만 보여주는 단일 리스트로 단순화함.
 const fontShopBtn = document.getElementById('fontShopBtn');
 const fontShopBackdrop = document.getElementById('fontShopBackdrop');
 const fontShopOverlay = document.getElementById('fontShopOverlay');
 const fontShopListEl = document.getElementById('fontShopList');
-const fontShopTabShopBtn = document.getElementById('fontShopTabShop');
-const fontShopTabMyBtn = document.getElementById('fontShopTabMy');
 const fontShopGuestNoticeEl = document.getElementById('fontShopGuestNotice');
-let fontShopTab = 'shop'; // 'shop'(전체 카탈로그) | 'my'(해금된 것만, 보관함)
 let fontShopOpen = false;
 
 function closeFontShop() {
@@ -5167,18 +5160,10 @@ function closeFontShop() {
 }
 fontShopBackdrop.addEventListener('click', closeFontShop);
 
-function switchFontShopTab(tab) {
-  fontShopTab = tab;
-  fontShopTabShopBtn.classList.toggle('active', tab === 'shop');
-  fontShopTabMyBtn.classList.toggle('active', tab === 'my');
-  renderFontShop();
-}
-fontShopTabShopBtn.addEventListener('click', () => switchFontShopTab('shop'));
-fontShopTabMyBtn.addEventListener('click', () => switchFontShopTab('my'));
-
-// 장착 = memberFonts/{uid}에 fontId를 직접 씀(서버 왕복 없음). database.rules.json이
+// 장착/해제 = memberFonts/{uid}에 fontId를 직접 씀(서버 왕복 없음). database.rules.json이
 // 점수 문턱값을 넘었을 때만 그 값 쓰기를 허용하도록 검증하므로, 버튼 자체를 미해금 상태에서
-// 아예 비활성화해두는 클라이언트 쪽 가드와 이중으로 막혀 있음
+// 아예 비활성화해두는 클라이언트 쪽 가드와 이중으로 막혀 있음. "해제"는 별도 버튼 없이
+// 기본체를 다시 장착하는 것으로 처리(항상 해금 상태라 언제든 되돌릴 수 있음)
 function equipFont(fontId) {
   if (!isMemberMode || !clientId) return;
   firebase.database().ref('memberFonts/' + clientId).set(fontId).catch(() => {});
@@ -5189,10 +5174,7 @@ function renderFontShop() {
   fontShopListEl.textContent = '';
   const myFontId = ownerFontId.get(clientId) || 'default';
   const score = isMemberMode ? myTotalScore : 0;
-  const list = fontShopTab === 'my'
-    ? FONT_CATALOG.filter(f => f.id === 'default' || score >= f.requiredScore)
-    : FONT_CATALOG;
-  list.forEach(f => {
+  FONT_CATALOG.forEach(f => {
     const unlocked = f.id === 'default' || score >= f.requiredScore;
     const equipped = myFontId === f.id;
     const li = document.createElement('li');
@@ -5242,7 +5224,7 @@ function renderFontShopIfOpen() {
 }
 fontShopBtn.addEventListener('click', () => {
   fontShopOpen = true;
-  switchFontShopTab('shop');
+  renderFontShop();
   fontShopOverlay.classList.remove('hidden');
   fontShopBackdrop.classList.remove('hidden');
 });
