@@ -13,6 +13,10 @@ GDEF/FFTM 테이블을 제거하고 fontTools로 재압축함 — 글리프 데�
 정리하지 않아 폰트가 내부적으로 불일치한 상태였음(브라우저의 폰트 검증기가 이를 손상된
 폰트로 간주해 전면 거부한 것으로 추정) — fontTools subset --no-hinting으로 힌팅 관련 전체를
 일관되게 제거하여 재압축함. 글리프 모양은 원본과 동일, 렌더링 재검증 완료)
+(v1.9.200: v1.9.199 배포 후에도 동일 증상이 계속돼, 눈누 페이지의 공식 다운로드 경로
+(초록우산 어린이재단 childfund.or.kr)에서 파일을 새로 받아 처음부터 다시 확인 —
+새로 받은 원본도 기존과 동일하게 fpgm/prep/cvt/힌팅 바이트코드를 포함하고 있어, 같은
+fontTools subset --no-hinting 처리를 새 원본에 적용해 교체함)
 
 === galmuri9.woff2 (갈무리9, 기존 유지) ===
 Copyright © 2019–2025 Lee Minseo (quiple@quiple.dev). SIL Open Font License 1.1.
