@@ -50,7 +50,7 @@
   #board { display: block; cursor: grab; touch-action: none; }
   #board.dragging { cursor: grabbing; }
 
-  /* v1.9.194: #brand/#userCountTag(좌측 두 알약)를 #topRight와 똑같은 방식(fixed 컨테이너 +
+  /* v1.9.195: #brand/#userCountTag(좌측 두 알약)를 #topRight와 똑같은 방식(fixed 컨테이너 +
      flex column + gap)으로 감싸는 래퍼 — 예전엔 #brand는 top:12px, #userCountTag는
      top:44px처럼 각자 다른 절대좌표를 손으로 맞춰뒀는데, #topRight 쪽은 flex의 gap:6px로
      간격을 주다 보니 좌/우 두 줄의 세로 간격이 서로 달라 보였던 것(알약 자체 높이는
@@ -66,7 +66,7 @@
        각자 다르게 잡아서 결국 알약 높이가 미묘하게 달라짐(🏆 이모지가 들어간
        #hallOfFameBtn 쪽이 특히 더 큼) — line-height를 세 알약 전부 똑같이 숫자로
        고정해서 내용과 무관하게 항상 같은 높이가 되게 함.
-       v1.9.194: #topLeft로 옮기면서 position/top/left는 래퍼가 담당하게 됨. 모바일에서
+       v1.9.195: #topLeft로 옮기면서 position/top/left는 래퍼가 담당하게 됨. 모바일에서
        격자 상단과 살짝 겹친다는 피드백으로 font-size/padding도 한 단계 더 줄임. */
     background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
     border-radius: 18px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
@@ -243,7 +243,7 @@
      차지하게 해서 높이를 정확히 맞춰줌. line-height도 숫자로 고정(#brand와 동일 이유) */
   /* v1.9.187: 예전엔 #topRight(우측 상단) 안에서 폰트샵/랭킹 알약과 나란히 있었는데,
      리더보드가 넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁(#brand) 바로 밑(좌측
-     상단)으로 옮김. v1.9.194: #topLeft 래퍼 안 flex 자식이 되면서 position/top/left는
+     상단)으로 옮김. v1.9.195: #topLeft 래퍼 안 flex 자식이 되면서 position/top/left는
      래퍼가 담당 — #topRight와 똑같이 gap:6px로 간격을 주므로 우측 줄과 간격이 항상
      동일함. 모바일 격자 겹침 방지로 font-size/padding도 함께 줄임. */
   #userCountTag {
@@ -283,7 +283,7 @@
     font: inherit; font-size: 11px; line-height: 1.2; padding: 5px 9px; border-radius: 18px;
     border: 1px solid transparent; background: #eee7d8; color: #7a6c45; font-weight: 700;
     cursor: pointer; white-space: nowrap; text-align: center;
-    /* v1.9.194: v1.9.189/192에서 시도한 height:30px 강제 고정 + appearance 리셋은
+    /* v1.9.195: v1.9.189/192에서 시도한 height:30px 강제 고정 + appearance 리셋은
        되돌림 — 실제 원인은 높이 차이가 아니라 좌/우 줄 사이 세로 간격이 서로 달랐던
        것이었음(#topLeft를 #topRight와 같은 flex gap:6px 구조로 맞춰서 해결). 모바일
        격자 겹침 방지로 font-size/padding도 함께 줄임 */
@@ -983,13 +983,13 @@
   </div>
 </div>
 
-<!-- v1.9.194: #topRight와 같은 flex column 래퍼(#topLeft)로 감싸서 두 알약 사이 세로 간격이
+<!-- v1.9.195: #topRight와 같은 flex column 래퍼(#topLeft)로 감싸서 두 알약 사이 세로 간격이
      우측 줄(랭킹/상점, gap:6px)과 항상 똑같게 함 -->
 <div id="topLeft">
   <div id="brand"><b>낱말바둑</b><span id="brandHelpIcon">이란?</span></div>
   <!-- v1.9.187: 예전엔 우측 상단 #topRight의 폰트샵 버튼과 나란히 있었는데, 리더보드가
        넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁 바로 밑(좌측 상단)으로 옮김 -->
-  <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명 접속중</span></button>
+  <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명 접속 중</span></button>
 </div>
 <div id="infoPanelBackdrop" class="hidden"></div>
 <div id="infoPanel" class="hidden">
@@ -1094,7 +1094,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.194</div>
+<div id="verTagBottom">v1.9.195</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1188,7 +1188,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.194'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.195'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4217,7 +4217,7 @@ let connected = false; // 실시간 연결 상태 — 접속자 태그 색/점�
 function updateStats() {
   // 점(●)은 CSS 애니메이션(liveBlink)으로 계속 깜빡여서 실시간(라이브) 화면처럼 보이게 함 —
   // 접속 중일 때만(#userCountTag.on) 깜빡이고, 끊겼을 땐 그냥 정지된 회색 점으로 표시됨
-  userCountTextEl.textContent = `${userCount}명 접속중`;
+  userCountTextEl.textContent = `${userCount}명 접속 중`;
 }
 
 // ---------- 땅따먹기 리더보드 ----------
