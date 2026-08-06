@@ -7,6 +7,8 @@
 저작권 초록우산 어린이재단 X (주)윤디자인그룹 공동 소유. 무료 사용 가능, 수정/편집/개작 금지,
 배포된 형태 그대로 사용.
 출처: https://noonnu.cc/font_page/1431
+(v1.9.198: 원본 파일이 실제 브라우저에서 로딩 실패하는 문제가 있어 fpgm/prep/cvt/GSUB/GPOS/
+GDEF/FFTM 테이블을 제거하고 fontTools로 재압축함 — 글리프 데이터는 원본과 동일)
 
 === galmuri9.woff2 (갈무리9, 기존 유지) ===
 Copyright © 2019–2025 Lee Minseo (quiple@quiple.dev). SIL Open Font License 1.1.
@@ -22,7 +24,6 @@ Copyright © 2019–2025 Lee Minseo (quiple@quiple.dev). SIL Open Font License 1
 (단 폰트 파일 유료 판매 금지).
 출처: https://noonnu.cc/font_page/1500
 
-=== ogrenaissance.woff2 (OG 르네상스 비밀) ===
-저작권 (주)보이저엑스(온글잎) 및 해당 손글씨 제공자. 무료 사용 가능, 폰트 파일 수정 불가,
-유료 판매 불가.
-출처: https://noonnu.cc/font_page/1287
+=== chosunilbo.woff (조선일보명조체) ===
+저작권 (주)조선일보사. 개인/기업 무료 사용 가능, 수정 후 판매 금지, 배포된 형태 그대로 사용.
+출처: https://noonnu.cc/font_page/63
