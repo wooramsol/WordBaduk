@@ -106,6 +106,7 @@ setTimeout(async () => {
   await new Promise(r => setTimeout(r, 60));
   results.push(['[꺼진 상태] 정상적으로 presence/M0가 올라감', !!window.__STORE.presence.M0]);
   results.push(['[꺼진 상태] "n명 접속 중" 문구에 고스트 표시 없음', !userCountTextEl.textContent.includes('고스트')]);
+  results.push(['[꺼진 상태+혼자] botIsAlone() true(평소와 동일, 연습봇 작동)', botIsAlone() === true]);
 
   // --- 고스트 모드 켜기 ---
   ghostModeCheckboxEl.checked = true;
@@ -116,6 +117,9 @@ setTimeout(async () => {
   results.push(['[켠 직후] localStorage에 저장됨', window.localStorage.getItem('wb-ghostMode') === '1']);
   results.push(['[켠 직후] "n명 접속 중" 문구에 고스트 표시가 붙음(나에게만 보이는 로컬 표시)',
     userCountTextEl.textContent.includes('고스트')]);
+  // v1.9.209: 고스트 모드 중 진짜로 혼자면(다른 실제 접속자 없음) 연습봇도 꺼짐 — 아무도
+  // 안 보는데 봇 혼자 작동할 이유가 없으므로.
+  results.push(['[고스트+진짜 혼자] botIsAlone() false(연습봇 꺼짐)', botIsAlone() === false]);
 
   // --- 고스트 모드 끄기(다시 정상 접속자로) ---
   ghostModeCheckboxEl.checked = false;
@@ -125,6 +129,7 @@ setTimeout(async () => {
   results.push(['[다시 끈 뒤] localStorage도 갱신됨', window.localStorage.getItem('wb-ghostMode') === '0']);
   results.push(['[다시 끈 뒤] "n명 접속 중" 문구에서 고스트 표시가 없어짐',
     !userCountTextEl.textContent.includes('고스트')]);
+  results.push(['[다시 끈 뒤+혼자] botIsAlone() true로 복귀(연습봇 다시 작동)', botIsAlone() === true]);
 
   // v1.9.208: 고스트 모드 중 실제로 1명만 들어와도 "게임시작"(멀티스타트) 확인 팝업이
   // 잘못 뜨던 버그 — self-inclusion 때문에 관리자 화면에서만 userCount가 2로 잡히는 게

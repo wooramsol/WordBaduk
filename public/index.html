@@ -1137,7 +1137,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.208</div>
+<div id="verTagBottom">v1.9.209</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1231,7 +1231,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.208'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.209'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1342,6 +1342,11 @@ let presenceHeartbeatTimer = null;  // 아래 PRESENCE_HEARTBEAT_MS 주기로 �
 // 그래서 다른 사람 게임플레이에 영향을 주지 않으면서 나만 안 보이게 할 수 있음. 브로드캐스트
 // 타이핑(broadcastTyping())도 myPresenceRef가 없으면 이미 안 나가게 가드돼 있어서 커서도
 // 같이 숨겨짐. 새로고침해도 유지되게 로컬에 저장(다른 사람에게 전송되지 않음).
+// v1.9.208/209: "내 화면에서는 평소와 똑같이 보임"엔 몇 가지 예외가 생김 — 관리자 자신을
+// 셀 때 항상 포함하는 이 규칙 때문에, 실제로 1명만 있어도 내 화면에선 "2명"으로 잡히는
+// 부작용이 있었음. checkMultiStartTrigger()(게임시작 팝업 오탐)/botIsAlone()(연습봇이 나
+// 혼자일 때도 돌던 것)/updateLeaderboard()(내 화면에 내 점수가 계속 보이던 것) 세 곳은
+// onlineIds 자체는 안 건드리고 각 판정 지점에서만 고스트일 때를 따로 보정함.
 let ghostMode = localStorage.getItem('wb-ghostMode') === '1';
 const PRESENCE_HEARTBEAT_MS = 20000; // functions/index.js의 PRESENCE_STALE_MS(90초)와 함께 튜닝할 것
 const livePeers = new Map();        // clientId -> { x, y, dir, typed, ts } — 다른 유저의 실시간 입력 상황
@@ -3573,6 +3578,12 @@ function botClearPresence() {
 }
 
 function botIsAlone() {
+  // v1.9.209: 고스트 모드로 관전 중인 관리자가 진짜로 혼자(다른 실제 접속자 없음)일 땐
+  // 연습봇도 꺼둠 — 아무도 안 보는데 봇 혼자 낱말을 놓을 이유가 없음. 실제 플레이어가
+  // 1명이라도 있으면(onlineIds.size가 2 이상 — 관리자 자신은 항상 포함되므로) 이 조건에
+  // 안 걸려서 그 사람과는 평소처럼 정상 작동함(위 checkMultiStartTrigger()의 -1 보정과
+  // 같은 이유로 onlineIds 자체는 안 건드림 — 그대로 뒀다가 아래에서 ghostMode만 별도 체크)
+  if (ghostMode && onlineIds.size <= 1) return false;
   return onlineIds.size <= 1; // presence엔 나 자신만 포함되므로, 이게 1 이하면 진짜 혼자
 }
 function botGameReady() {
