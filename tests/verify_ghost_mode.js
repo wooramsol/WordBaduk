@@ -126,6 +126,43 @@ setTimeout(async () => {
   results.push(['[다시 끈 뒤] "n명 접속 중" 문구에서 고스트 표시가 없어짐',
     !userCountTextEl.textContent.includes('고스트')]);
 
+  // v1.9.208: 고스트 모드 중 실제로 1명만 들어와도 "게임시작"(멀티스타트) 확인 팝업이
+  // 잘못 뜨던 버그 — self-inclusion 때문에 관리자 화면에서만 userCount가 2로 잡히는 게
+  // 원인이었음. onlineIds/botIsAlone() 판정 자체는 안 건드리고 checkMultiStartTrigger()
+  // 안에서만 고스트일 때 -1 보정했는지 확인.
+  ghostModeCheckboxEl.checked = true;
+  ghostModeCheckboxEl.dispatchEvent(new window.Event('change'));
+  await new Promise(r => setTimeout(r, 60));
+  await window.firebase.database().ref('presence/P1').set({ ts: Date.now() });
+  await new Promise(r => setTimeout(r, 60));
+  checkMultiStartTrigger();
+  results.push(['[고스트+실제 1명] onlineIds엔 여전히 나 자신도 포함(봇 이중구동 방지, 안 건드림)',
+    onlineIds.has('M0') && onlineIds.has('P1') && onlineIds.size === 2]);
+  results.push(['[고스트+실제 1명] "게임시작" 확인 팝업이 뜨지 않음(진짜 참가자는 1명뿐)',
+    gameOverOverlay.classList.contains('hidden')]);
+
+  await window.firebase.database().ref('presence/P2').set({ ts: Date.now() });
+  await new Promise(r => setTimeout(r, 60));
+  checkMultiStartTrigger();
+  results.push(['[고스트+실제 2명] 이땐 진짜로 "게임시작" 확인 팝업이 뜸(정상 동작 유지)',
+    !gameOverOverlay.classList.contains('hidden') && inMultiStartPrompt === true]);
+
+  // v1.9.208: 고스트 모드 중엔 관리자 자신이 이 판에서 따놓은 칸이 있어도, 관리자 자신의
+  // 화면 리더보드에서는 본인 줄이 빠져야 함(다른 사람/봇의 진짜 순위를 그대로 보기 위함).
+  await window.firebase.database().ref('board').set({ version: 1, words: [], cells: { '0,0': { ch: '가', captured: true, owner: 'M0' } } });
+  await new Promise(r => setTimeout(r, 60));
+  updateLeaderboard();
+  results.push(['[고스트+본인 소유 칸 있음] 리더보드에 내 줄(M0)이 안 보임',
+    !lbListEl.querySelector('li[data-owner="M0"]')]);
+
+  // 고스트를 끄면 다시 원래대로(본인 점수도 리더보드에 정상 표시)
+  ghostModeCheckboxEl.checked = false;
+  ghostModeCheckboxEl.dispatchEvent(new window.Event('change'));
+  await new Promise(r => setTimeout(r, 60));
+  updateLeaderboard();
+  results.push(['[고스트 끈 뒤] 리더보드에 내 줄(M0)이 다시 보임',
+    !!lbListEl.querySelector('li[data-owner="M0"]')]);
+
   window.__resultsFromEval = results;
   window.__done = true;
 }, 1000);

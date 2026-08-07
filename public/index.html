@@ -1137,7 +1137,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.207</div>
+<div id="verTagBottom">v1.9.208</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1231,7 +1231,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.207'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.208'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4341,6 +4341,12 @@ function updateLeaderboard(affectedOwners) {
   // 있어서 봇이 활동 중일 때만 추가하고(다른 사람이 들어와 봇이 멈추면 더는 새로
   // 추가하지 않음 — 이미 딴 땅이 있으면 위 cells 루프에서 그대로 계속 잡힘)
   if (botIsAlone() && !tally.has(BOT_ID)) tally.set(BOT_ID, 0);
+  // v1.9.208: 고스트 모드로 관전 중인 관리자는 자기 화면의 리더보드에서 본인 줄(과거에 이
+  // 판에서 따놓은 점수든, onlineIds 자기 포함으로 잡힌 0점 항목이든)을 지워서 다른 사람/
+  // 봇의 진짜 순위를 그대로 볼 수 있게 함. ghostMode는 각자 로컬 값이라 이 필터는 관리자
+  // 자신의 화면 렌더링에만 적용되고, 다른 사람 화면이나 실제 점수 데이터(cells)에는
+  // 전혀 영향을 주지 않음.
+  if (ghostMode && clientId) tally.delete(clientId);
   if (tally.size === 0) { leaderboardEl.classList.add('hidden'); return; }
   // 점수표는 지금 접속 중인 사람(0점 포함) + 과거에 땅을 딴 적 있는 사람을 전원
   // (인원 제한 없이) 점수 순으로 보여줌. 대신 과일/색이 8종뿐이라 접속자가 많아지면
@@ -5032,8 +5038,18 @@ function showMultiplayerStartPrompt() {
 // 이상"이면 팝업을 띄우고, 그 조건이 풀리면(다시 혼자가 됐거나 등) 자동으로 닫음 —
 // 단, 진짜 게임 종료 축하/재시작 화면(showGameOver/showRestartPrompt 경로)은 절대
 // 건드리지 않음(inMultiStartPrompt로 명확히 구분됨)
+// v1.9.208: 고스트 모드 중인 관리자는 presence self-포함 규칙(위 ghostMode 선언부 주석
+// 참고 — onlineIds는 각 클라이언트가 항상 자기 자신을 포함해서 계산함) 때문에, 실제로는
+// 딱 1명만 새로 들어왔을 뿐인데도 자기 화면에서는 "나 + 그 사람 = 2명"으로 잡혀서 이
+// "게임시작" 확인 팝업이 엉뚱하게 뜨고, 뜨는 동안엔 입력도 막혀버리는 문제가 있었음.
+// onlineIds/userCount 자체(=botIsAlone() 판정)는 절대 건드리면 안 됨 — 그러면 실제로
+// 1명만 있는 그 사람의 클라이언트도 "혼자"라 봇을 돌리는데, 관리자의 고스트 클라이언트도
+// (자기 자신을 안 세면) 똑같이 "혼자"라고 착각해서 봇을 이중으로 돌려버리는(같은 판에
+// 봇 이동이 겹치는) 더 심각한 버그가 생김. 그래서 이 판정 하나에서만 고스트 관리자
+// 자신을 -1 해서 "나를 뺀 진짜 참가자 수"를 따로 계산함.
 function checkMultiStartTrigger() {
-  const conditionMet = currentRoundIsSolo && userCount >= 2;
+  const effectiveUserCount = ghostMode ? Math.max(0, userCount - 1) : userCount;
+  const conditionMet = currentRoundIsSolo && effectiveUserCount >= 2;
   if (inMultiStartPrompt) {
     if (!conditionMet) hideGameOver();
     return;
