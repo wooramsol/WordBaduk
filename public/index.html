@@ -1107,7 +1107,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.205</div>
+<div id="verTagBottom">v1.9.206</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1201,7 +1201,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.205'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.206'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4978,6 +4978,25 @@ window.addEventListener('keydown', (e) => {
 });
 
 addEventListener('resize', () => { if (!gameOverOverlay.classList.contains('hidden')) resizeConfettiCanvas(); });
+
+// v1.9.206: 탭을 백그라운드로 보내면(창 최소화/다른 탭 전환 등) 컨페티가 "쌓였다가 복귀 시
+// 한 번에 터지는" 버그가 있었음 — spawnConfettiBurst()를 도는 setInterval은 브라우저가
+// 백그라운드에서도 (느리게라도) 계속 호출해서 파티클을 계속 만들어내는데, p.life 증가와
+// 만료 판정은 오직 stepConfetti() 안에서만 일어나고 그건 requestAnimationFrame 기반이라
+// 백그라운드에서 브라우저가 아예 멈춰버림 — 그래서 안 보이는 동안 파티클만 무한정 쌓이고
+// 하나도 사라지지 않다가, 탭이 다시 보이자마자 그 많은 걸 한 프레임에 다 그리려니 "펑" 하고
+// 한꺼번에 터지는 것처럼 보였음. Page Visibility API로 숨겨진 동안은 스폰/렌더 루프를 둘 다
+// 완전히 멈추고(이미 있던 파티클은 그 자리에 얼어붙듯 유지됨 — life가 안 늘어나므로), 다시
+// 보일 때 아직 celebrate 단계(축하 화면이 떠 있는 상태)라면 그대로 이어서 재개함.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (confettiBurstTimer) { clearInterval(confettiBurstTimer); confettiBurstTimer = null; }
+    if (confettiRafId) { cancelAnimationFrame(confettiRafId); confettiRafId = null; }
+  } else if (gameOverPhase === 'celebrate' && !gameOverOverlay.classList.contains('hidden')) {
+    if (!confettiBurstTimer) confettiBurstTimer = setInterval(spawnConfettiBurst, 700);
+    if (!confettiRafId) confettiRafId = requestAnimationFrame(stepConfetti);
+  }
+});
 
 function checkGameOver() {
   const totalCells = (BOARD_MAX - BOARD_MIN + 1) * (BOARD_MAX - BOARD_MIN + 1); // 100
