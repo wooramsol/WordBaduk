@@ -152,6 +152,17 @@ setTimeout(async () => {
   results.push(['[고스트+실제 2명] 이땐 진짜로 "게임시작" 확인 팝업이 뜸(정상 동작 유지)',
     !gameOverOverlay.classList.contains('hidden') && inMultiStartPrompt === true]);
 
+  // v1.9.210: 위 상태(진짜로 "게임시작" 확인 화면이 떠 있는 상태)에서, 고스트 관리자가
+  // 실수로 버튼/Enter를 눌러도(triggerRestart() 직접 호출로 재현) 원래 참가자들이 스스로
+  // 눌러야 할 그 확인을 대신 확정지어 보드를 리셋시켜버리면 안 됨 — 조용히 막혀야 함.
+  const boardVersionBeforeGhostRestart = window.__STORE.board.version;
+  triggerRestart();
+  await new Promise(r => setTimeout(r, 30));
+  results.push(['[고스트+게임시작 확인중] triggerRestart()가 막혀서 보드가 안 바뀜',
+    window.__STORE.board.version === boardVersionBeforeGhostRestart]);
+  results.push(['[고스트+게임시작 확인중] 화면도 그대로(내가 대신 확정 못 지음)',
+    !gameOverOverlay.classList.contains('hidden') && inMultiStartPrompt === true]);
+
   // v1.9.208: 고스트 모드 중엔 관리자 자신이 이 판에서 따놓은 칸이 있어도, 관리자 자신의
   // 화면 리더보드에서는 본인 줄이 빠져야 함(다른 사람/봇의 진짜 순위를 그대로 보기 위함).
   await window.firebase.database().ref('board').set({ version: 1, words: [], cells: { '0,0': { ch: '가', captured: true, owner: 'M0' } } });
@@ -167,6 +178,13 @@ setTimeout(async () => {
   updateLeaderboard();
   results.push(['[고스트 끈 뒤] 리더보드에 내 줄(M0)이 다시 보임',
     !!lbListEl.querySelector('li[data-owner="M0"]')]);
+
+  // v1.9.210: 고스트가 꺼진 정상 상태에서는 triggerRestart()가 막히지 않고 평소처럼
+  // 보드를 리셋해야 함(위에서 고스트 중일 때만 막았던 것과 대비되는 회귀 확인).
+  triggerRestart();
+  await new Promise(r => setTimeout(r, 30));
+  results.push(['[고스트 꺼짐] triggerRestart()는 평소처럼 정상 동작(보드가 새로 리셋됨)',
+    window.__STORE.board.version === 0]);
 
   window.__resultsFromEval = results;
   window.__done = true;
