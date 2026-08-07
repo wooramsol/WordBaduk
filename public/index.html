@@ -778,6 +778,26 @@
   }
   #recentVisitorsBtn:hover { background: #f5f1e8; }
   #recentVisitorsBtn.hidden { display: none; }
+  /* v1.9.207: 고스트 모드 스위치 — #recentVisitorsBtn과 같은 "관리자 전용, 눈에 덜 띄는 톤" */
+  #ghostModeRow {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-top: 10px; padding: 8px 10px;
+    border-radius: 10px; border: 1px dashed #d8d2c4;
+  }
+  #ghostModeRow.hidden { display: none; }
+  #ghostModeLabel { font-size: 12px; color: #999; }
+  #ghostModeSwitch { position: relative; display: inline-block; flex: none; width: 36px; height: 20px; }
+  #ghostModeSwitch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  #ghostModeSlider {
+    position: absolute; inset: 0; background: #d8d2c4; border-radius: 20px;
+    cursor: pointer; transition: background .15s;
+  }
+  #ghostModeSlider::before {
+    content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px;
+    background: #fff; border-radius: 50%; transition: transform .15s;
+  }
+  #ghostModeCheckbox:checked + #ghostModeSlider { background: #8a7a4f; }
+  #ghostModeCheckbox:checked + #ghostModeSlider::before { transform: translateX(16px); }
   #recentBackdrop { position: fixed; inset: 0; z-index: 69; background: rgba(40,36,26,.45); }
   #recentBackdrop.hidden { display: none; }
   #recentOverlay {
@@ -1092,6 +1112,16 @@
          데이터를 따로 수집하지 않고, 이미 있는 playerLastSeen(마지막 접속 시각)을 목록으로
          보여주기만 함 -->
     <button id="recentVisitorsBtn" type="button" class="hidden">최근 다녀간 사람 (나만 보임)</button>
+    <!-- v1.9.207: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 — isOwnerAdmin() 참고.
+         켜면 다른 사람 화면의 접속자 수/목록/등장 카드에서 나만 안 잡히고 봇도 평소처럼
+         "혼자 있음"으로 판단해 활성화됨(다른 사람 게임플레이에는 영향 없음) -->
+    <div id="ghostModeRow" class="hidden">
+      <span id="ghostModeLabel">고스트 모드 (나만 안 보임)</span>
+      <label id="ghostModeSwitch">
+        <input type="checkbox" id="ghostModeCheckbox">
+        <span id="ghostModeSlider"></span>
+      </label>
+    </div>
   </div>
 </div>
 
@@ -1107,7 +1137,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.206</div>
+<div id="verTagBottom">v1.9.207</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1201,7 +1231,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.206'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.207'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -1304,6 +1334,15 @@ let clientId = null;                // /api/identify(IP 기반 익명 ID) 로 �
 let boardRef = null;                // Firebase 준비되면 boot()에서 할당
 let myPresenceRef = null;           // 내 프레즌스 노드(선택 칸/입력 중인 글자 브로드캐스트용)
 let presenceHeartbeatTimer = null;  // 아래 PRESENCE_HEARTBEAT_MS 주기로 내 presence.ts를 갱신하는 타이머
+// v1.9.207: 고스트 모드 — 관리자(람솔)가 "n명 접속 중" 모달의 스위치로 켜면, 내 presence를
+// 아예 안 씀(= myPresenceRef를 안 만듦). onlineIds는 각 클라이언트가 "presence 목록 + 항상
+// 나 자신"으로 계산하므로(아래 presence 구독의 newIds.add(clientId) 참고), 내 presence를
+// 안 쓰면 다른 사람들 화면의 접속자 수/목록/등장·퇴장 카드/봇의 "혼자 있음" 판정에서 나만
+// 자연스럽게 빠지고, 내 화면에서는(나는 항상 자기 자신을 포함하므로) 평소와 똑같이 보임 —
+// 그래서 다른 사람 게임플레이에 영향을 주지 않으면서 나만 안 보이게 할 수 있음. 브로드캐스트
+// 타이핑(broadcastTyping())도 myPresenceRef가 없으면 이미 안 나가게 가드돼 있어서 커서도
+// 같이 숨겨짐. 새로고침해도 유지되게 로컬에 저장(다른 사람에게 전송되지 않음).
+let ghostMode = localStorage.getItem('wb-ghostMode') === '1';
 const PRESENCE_HEARTBEAT_MS = 20000; // functions/index.js의 PRESENCE_STALE_MS(90초)와 함께 튜닝할 것
 const livePeers = new Map();        // clientId -> { x, y, dir, typed, ts } — 다른 유저의 실시간 입력 상황
 
@@ -4257,7 +4296,9 @@ let connected = false; // 실시간 연결 상태 — 접속자 태그 색/점�
 function updateStats() {
   // 점(●)은 CSS 애니메이션(liveBlink)으로 계속 깜빡여서 실시간(라이브) 화면처럼 보이게 함 —
   // 접속 중일 때만(#userCountTag.on) 깜빡이고, 끊겼을 땐 그냥 정지된 회색 점으로 표시됨
-  userCountTextEl.textContent = `${userCount}명 접속 중`;
+  // v1.9.207: 고스트 모드 중엔 내 화면에만(로컬 렌더링일 뿐, 서버로 전송되는 값이 아니므로
+  // 다른 사람에게는 전혀 안 보임) 작게 표시해서 깜빡 잊고 계속 켜두는 걸 방지함
+  userCountTextEl.textContent = `${userCount}명 접속 중` + (ghostMode ? ' (고스트)' : '');
 }
 
 // ---------- 땅따먹기 리더보드 ----------
@@ -4691,6 +4732,57 @@ function isOwnerAdmin() {
   const mp = ownerMemberProfile.get(clientId);
   return !!mp && mp.nickname === '람솔';
 }
+// v1.9.207: 고스트 모드 스위치("n명 접속 중" 모달 안, 관리자 전용) — 켜져 있으면 내
+// presence를 아예 안 써서, 다른 사람 화면의 접속자 수/목록/등장 카드/봇의 "혼자 있음"
+// 판정에서 나만 자연스럽게 빠짐(startPresence/stopPresence 참고). 내 화면 자신의 표시는
+// 그대로 유지됨(onlineIds가 항상 나 자신을 포함하도록 이미 짜여 있어서).
+//
+// startPresence()/stopPresence()는 boot()의 '.info/connected' 구독(처음 접속할 때)과
+// 아래 체크박스 change 리스너(이미 접속된 채로 고스트 모드를 껐다 켤 때) 둘 다에서
+// 재사용해야 해서 최상위(전역) 함수로 둠 — boot() 안의 지역변수 db 대신 다른 전역
+// 함수들(equipFont() 등)과 같은 방식으로 firebase.database()를 직접 부름.
+function startPresence() {
+  // v1.9.207: 재연결(reconnect) 때도 '.info/connected'가 다시 true로 발동하는데, 그때마다
+  // (myPresenceRef가 이전 연결에서 이미 있었더라도) 항상 다시 set()/onDisconnect() 해야
+  // 새 연결에 onDisconnect가 제대로 걸림 — 그래서 myPresenceRef 존재 여부로 건너뛰지 않고
+  // clientId 없을 때만 막음(원래 코드와 동일한 동작 유지)
+  if (!clientId) return;
+  myPresenceRef = firebase.database().ref('presence/' + clientId);
+  myPresenceRef.set({ ts: Date.now() });
+  myPresenceRef.onDisconnect().remove();
+  // v1.9.137: onDisconnect는 정상적인 종료(FIN)에서만 즉시 발동하고, 모바일 네트워크
+  // 전환/강제 종료처럼 연결이 조용히 끊기는 상황에선 서버가 감지할 때까지 늦게(또는
+  // 매우 드물게 못) 발동할 수 있음 — 이게 "상대방이 나갔는데 접속자 수가 안 줄어드는"
+  // 버그의 원인. 대신 살아있는 동안 presence.ts를 주기적으로 갱신해두면, 서버
+  // (functions/index.js의 notifyOnJoin)가 오래 안 갱신된 presence를 정리할 수 있음.
+  if (presenceHeartbeatTimer) clearInterval(presenceHeartbeatTimer);
+  presenceHeartbeatTimer = setInterval(() => {
+    if (myPresenceRef) myPresenceRef.update({ ts: Date.now() }).catch(() => {});
+  }, PRESENCE_HEARTBEAT_MS);
+}
+// v1.9.207: 고스트 모드를 켤 때 호출 — 이미 올라가 있는 내 presence를 지우고 하트비트를
+// 멈춤. onDisconnect()는 cancel()로 먼저 취소해야, 나중에 진짜 연결이 끊길 때 이미 지운
+// 걸 다시 지우려 드는 불필요한 시도를 안 함(해봤자 해는 없지만 깔끔하게 정리)
+function stopPresence() {
+  if (presenceHeartbeatTimer) { clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
+  if (myPresenceRef) {
+    myPresenceRef.onDisconnect().cancel().catch(() => {});
+    myPresenceRef.remove().catch(() => {});
+    myPresenceRef = null;
+  }
+}
+const ghostModeRowEl = document.getElementById('ghostModeRow');
+const ghostModeCheckboxEl = document.getElementById('ghostModeCheckbox');
+ghostModeCheckboxEl.checked = ghostMode;
+ghostModeCheckboxEl.addEventListener('change', () => {
+  ghostMode = ghostModeCheckboxEl.checked;
+  localStorage.setItem('wb-ghostMode', ghostMode ? '1' : '0');
+  if (connected) {
+    if (ghostMode) stopPresence();
+    else startPresence();
+  }
+  updateStats(); // "n명 접속 중" 문구에 고스트 표시를 즉시 갱신
+});
 function formatRelativeTime(ts) {
   if (!ts) return '';
   const diffMs = Date.now() - ts;
@@ -5560,29 +5652,23 @@ async function boot() {
   botPresenceRef = db.ref('presence/' + BOT_ID); // v1.9.141: 연습봇 커서/타이핑 브로드캐스트용(아래 "연습봇" 섹션)
 
   // 연결 상태 + 내 프레즌스(접속 표시 + 실시간 입력 상황 브로드캐스트) — 연결 상태는
-  // 별도 태그 없이 접속자 태그의 점(●)/색으로만 표시
+  // 별도 태그 없이 접속자 태그의 점(●)/색으로만 표시. startPresence()/stopPresence()는
+  // 최상위(전역) 함수로 따로 빼서(위쪽 ghostModeCheckboxEl 리스너 참고) 정의돼 있음 —
+  // boot() 밖(고스트 모드 스위치)에서도 그대로 재사용해야 하기 때문.
   db.ref('.info/connected').on('value', snap => {
     connected = !!snap.val();
     bootStage = 'boot:connected=' + connected;
     userCountTagEl.classList.toggle('on', connected);
     updateStats();
-    // 재연결 등으로 이 콜백이 여러 번 불릴 수 있으니, 새 하트비트를 걸기 전에 이전 걸 정리
-    if (presenceHeartbeatTimer) { clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
     if (connected) {
-      // 접속자 표시 + 선택 칸/입력 중인 글자 브로드캐스트 (연결이 끊기면 자동 제거)
-      myPresenceRef = db.ref('presence/' + clientId);
-      myPresenceRef.set({ ts: Date.now() });
-      myPresenceRef.onDisconnect().remove();
-      // v1.9.137: onDisconnect는 정상적인 종료(FIN)에서만 즉시 발동하고, 모바일 네트워크
-      // 전환/강제 종료처럼 연결이 조용히 끊기는 상황에선 서버가 감지할 때까지 늦게(또는
-      // 매우 드물게 못) 발동할 수 있음 — 이게 "상대방이 나갔는데 접속자 수가 안 줄어드는"
-      // 버그의 원인. 대신 살아있는 동안 presence.ts를 주기적으로 갱신해두면, 서버
-      // (functions/index.js의 notifyOnJoin)가 오래 안 갱신된 presence를 정리할 수 있음.
-      presenceHeartbeatTimer = setInterval(() => {
-        if (myPresenceRef) myPresenceRef.update({ ts: Date.now() }).catch(() => {});
-      }, PRESENCE_HEARTBEAT_MS);
+      // v1.9.207: 고스트 모드 중엔 내 presence 자체를 안 씀(startPresence() 스킵) —
+      // 다른 사람 화면의 접속자 수/목록/등장 카드/봇의 "혼자 있음" 판정에서 나만 빠지게
+      // 하기 위함. ghostMode가 꺼져 있으면 원래대로 평소처럼 켬.
+      if (!ghostMode) startPresence();
       // "마지막으로 접속해 있던 시각" 기록 — presence와 달리 연결이 끊겨도 남아있어야
-      // claimFruitIndex가 나중에 "이 사람이 30분 넘게 안 보였는지" 판단할 수 있음.
+      // claimFruitIndex가 나중에 "이 사람이 30분 넘게 안 보였는지" 판단할 수 있음. 이건
+      // 관리자 본인만 볼 수 있는 "최근 다녀간 사람" 목록용 데이터라 고스트 모드와 무관하게
+      // 항상 기록함(다른 사람에게 어떤 형태로도 노출되지 않음).
       // 지금 접속하는 순간엔 서버 시각으로 즉시 갱신하고, 끊길 때도(onDisconnect) 그
       // 순간의 서버 시각으로 다시 갱신되게 미리 걸어둠 — 그래야 오래 접속해 있다가
       // 나가도 "나간 바로 그 시점"이 정확히 남음
@@ -5592,6 +5678,8 @@ async function boot() {
       // 회원은 과일이 아니라 직접 고른 닉네임/아이콘(memberProfiles)으로 표시되므로
       // 과일 자리를 배정받을 필요가 없음 — 8자리뿐인 과일 슬롯을 아낌
       if (!isMemberMode) claimFruitIndex(clientId); // 접속 즉시 서버에 과일 확정 배정 요청(이미 있으면 아무 일도 안 함)
+    } else {
+      if (presenceHeartbeatTimer) { clearInterval(presenceHeartbeatTimer); presenceHeartbeatTimer = null; }
     }
   });
 
@@ -5611,6 +5699,7 @@ async function boot() {
     // v1.9.157: 내 닉네임이 이번에 확정/갱신됐을 수 있으니, 관리자 전용 버튼 노출 여부를
     // 그때마다 다시 확인함
     recentVisitorsBtn.classList.toggle('hidden', !isOwnerAdmin());
+    ghostModeRowEl.classList.toggle('hidden', !isOwnerAdmin()); // v1.9.207: 고스트 모드 스위치도 동일
   });
 
   // v1.9.186: 폰트 상점 — memberFonts 전체를 실시간 구독. 장착(equip)은 클라이언트가
