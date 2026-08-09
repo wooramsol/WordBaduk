@@ -38,8 +38,11 @@ const memberProfiles = { M0: { nickname: '람솔', iconIdx: 0 } };
 const STORE = {
   memberProfiles, memberTotalScore: { M0: 0 }, memberFonts: {},
   '.info': { connected: true }, // 실제 RTDB처럼 중첩 경로(.info/connected)로 둬야 getAtPath가 찾음
-  presence: {},
-  board: { cells: {}, words: [], version: 2 },
+  // v1.9.211: 방(room) 시스템 — 전역 presence/board 대신 roomPresence/{roomId},
+  // roomBoards/{roomId}. 이 테스트는 항상 enterRoom('testRoom')으로 이 방에 들어감.
+  roomMeta: { testRoom: { title: '테스트방', createdBy: 'M0', createdByName: '람솔', createdAt: 1, playerCount: 0 } },
+  roomPresence: { testRoom: {} },
+  roomBoards: { testRoom: { cells: {}, words: [], version: 2 } },
 };
 function getAtPath(p) {
   if (!p) return STORE;
@@ -71,6 +74,7 @@ function chainRef(p) {
   const ref = {
     path: p,
     on(evt, cb) { listeners.push({ path: p, cb }); setTimeout(() => cb({ val: () => getAtPath(p), key: (p.split('/').pop() || 'k') }), 5); return cb; },
+    off() { for (let i = listeners.length - 1; i >= 0; i--) if (listeners[i].path === p) listeners.splice(i, 1); },
     once() { return Promise.resolve({ val: () => getAtPath(p) }); },
     set(v) { setAtPath(p, v); notifyPath(p); return Promise.resolve(); },
     update(v) { setAtPath(p, Object.assign(getAtPath(p) || {}, v)); notifyPath(p); return Promise.resolve(); },
@@ -103,8 +107,10 @@ setTimeout(async () => {
   results.push(['관리자면 고스트 모드 스위치가 보임(hidden 아님)', !ghostModeRowEl.classList.contains('hidden')]);
   results.push(['기본값은 꺼짐(체크박스 unchecked)', ghostModeCheckboxEl.checked === false]);
 
+  // v1.9.211: 방 시스템 — 로비에서 testRoom으로 입장해야 프레즌스/보드 구독이 시작됨
+  enterRoom('testRoom');
   await new Promise(r => setTimeout(r, 60));
-  results.push(['[꺼진 상태] 정상적으로 presence/M0가 올라감', !!window.__STORE.presence.M0]);
+  results.push(['[꺼진 상태] 정상적으로 presence/M0가 올라감', !!window.__STORE.roomPresence.testRoom.M0]);
   results.push(['[꺼진 상태] "n명 접속 중" 문구에 고스트 표시 없음', !userCountTextEl.textContent.includes('고스트')]);
   results.push(['[꺼진 상태+혼자] botIsAlone() true(평소와 동일, 연습봇 작동)', botIsAlone() === true]);
 
@@ -113,7 +119,7 @@ setTimeout(async () => {
   ghostModeCheckboxEl.dispatchEvent(new window.Event('change'));
   await new Promise(r => setTimeout(r, 60));
   results.push(['[켠 직후] presence/M0가 사라짐(다른 사람 눈엔 접속자 수/목록/봇 판정에서 안 잡힘)',
-    !window.__STORE.presence.M0]);
+    !window.__STORE.roomPresence.testRoom.M0]);
   results.push(['[켠 직후] localStorage에 저장됨', window.localStorage.getItem('wb-ghostMode') === '1']);
   results.push(['[켠 직후] "n명 접속 중" 문구에 고스트 표시가 붙음(나에게만 보이는 로컬 표시)',
     userCountTextEl.textContent.includes('고스트')]);
@@ -125,7 +131,7 @@ setTimeout(async () => {
   ghostModeCheckboxEl.checked = false;
   ghostModeCheckboxEl.dispatchEvent(new window.Event('change'));
   await new Promise(r => setTimeout(r, 60));
-  results.push(['[다시 끈 뒤] presence/M0가 다시 올라감', !!window.__STORE.presence.M0]);
+  results.push(['[다시 끈 뒤] presence/M0가 다시 올라감', !!window.__STORE.roomPresence.testRoom.M0]);
   results.push(['[다시 끈 뒤] localStorage도 갱신됨', window.localStorage.getItem('wb-ghostMode') === '0']);
   results.push(['[다시 끈 뒤] "n명 접속 중" 문구에서 고스트 표시가 없어짐',
     !userCountTextEl.textContent.includes('고스트')]);
@@ -138,7 +144,7 @@ setTimeout(async () => {
   ghostModeCheckboxEl.checked = true;
   ghostModeCheckboxEl.dispatchEvent(new window.Event('change'));
   await new Promise(r => setTimeout(r, 60));
-  await window.firebase.database().ref('presence/P1').set({ ts: Date.now() });
+  await window.firebase.database().ref('roomPresence/testRoom/P1').set({ ts: Date.now() });
   await new Promise(r => setTimeout(r, 60));
   checkMultiStartTrigger();
   results.push(['[고스트+실제 1명] onlineIds엔 여전히 나 자신도 포함(봇 이중구동 방지, 안 건드림)',
@@ -146,7 +152,7 @@ setTimeout(async () => {
   results.push(['[고스트+실제 1명] "게임시작" 확인 팝업이 뜨지 않음(진짜 참가자는 1명뿐)',
     gameOverOverlay.classList.contains('hidden')]);
 
-  await window.firebase.database().ref('presence/P2').set({ ts: Date.now() });
+  await window.firebase.database().ref('roomPresence/testRoom/P2').set({ ts: Date.now() });
   await new Promise(r => setTimeout(r, 60));
   checkMultiStartTrigger();
   results.push(['[고스트+실제 2명] 이땐 진짜로 "게임시작" 확인 팝업이 뜸(정상 동작 유지)',
@@ -155,17 +161,17 @@ setTimeout(async () => {
   // v1.9.210: 위 상태(진짜로 "게임시작" 확인 화면이 떠 있는 상태)에서, 고스트 관리자가
   // 실수로 버튼/Enter를 눌러도(triggerRestart() 직접 호출로 재현) 원래 참가자들이 스스로
   // 눌러야 할 그 확인을 대신 확정지어 보드를 리셋시켜버리면 안 됨 — 조용히 막혀야 함.
-  const boardVersionBeforeGhostRestart = window.__STORE.board.version;
+  const boardVersionBeforeGhostRestart = window.__STORE.roomBoards.testRoom.version;
   triggerRestart();
   await new Promise(r => setTimeout(r, 30));
   results.push(['[고스트+게임시작 확인중] triggerRestart()가 막혀서 보드가 안 바뀜',
-    window.__STORE.board.version === boardVersionBeforeGhostRestart]);
+    window.__STORE.roomBoards.testRoom.version === boardVersionBeforeGhostRestart]);
   results.push(['[고스트+게임시작 확인중] 화면도 그대로(내가 대신 확정 못 지음)',
     !gameOverOverlay.classList.contains('hidden') && inMultiStartPrompt === true]);
 
   // v1.9.208: 고스트 모드 중엔 관리자 자신이 이 판에서 따놓은 칸이 있어도, 관리자 자신의
   // 화면 리더보드에서는 본인 줄이 빠져야 함(다른 사람/봇의 진짜 순위를 그대로 보기 위함).
-  await window.firebase.database().ref('board').set({ version: 1, words: [], cells: { '0,0': { ch: '가', captured: true, owner: 'M0' } } });
+  await window.firebase.database().ref('roomBoards/testRoom').set({ version: 1, words: [], cells: { '0,0': { ch: '가', captured: true, owner: 'M0' } } });
   await new Promise(r => setTimeout(r, 60));
   updateLeaderboard();
   results.push(['[고스트+본인 소유 칸 있음] 리더보드에 내 줄(M0)이 안 보임',
@@ -184,7 +190,7 @@ setTimeout(async () => {
   triggerRestart();
   await new Promise(r => setTimeout(r, 30));
   results.push(['[고스트 꺼짐] triggerRestart()는 평소처럼 정상 동작(보드가 새로 리셋됨)',
-    window.__STORE.board.version === 0]);
+    window.__STORE.roomBoards.testRoom.version === 0]);
 
   window.__resultsFromEval = results;
   window.__done = true;

@@ -190,44 +190,58 @@ exports.login = functions.https.onRequest(async (req, res) => {
  * "이제 그만할 때는 알림을 끄고 싶다"는 요구를 만족시킬 수 없다고 판단해 기능 자체를
  * 뺐다(public/index.html의 setupPushNotifications도 함께 제거됨). pushTokens/{uid}에
  * 남아있는 예전 등록은 이제 아무도 안 읽으므로 무해하게 방치.
- *
- * 다만 이 함수가 맡고 있던 presence 정리(온라인 인원 수가 안 줄어드는 버그 완화)는
- * 별개로 계속 필요해서 이름만 바꿔 그대로 유지함 — presence는 onDisconnect(연결이
- * 정상 종료될 때만)로 지워지는데, 모바일 네트워크 전환이나 앱 강제 종료처럼 연결이
- * 조용히 끊기는 상황에선 서버가 그 끊김을 늦게(또는 못) 감지해서 "나간 사람이 접속자
- * 수에 계속 남는" 문제가 있었음. 클라이언트가 살아있는 동안 presence.ts를 20초마다
- * 갱신하므로(public/index.html의 presenceHeartbeatTimer), 여기선 그 갱신이 한참
- * (PRESENCE_STALE_MS) 끊긴 항목을 발견하는 대로 정리한다. 별도 예약(cron) 함수를 새로
- * 만들지 않고, 누가 들어올 때마다 자연히 자주 호출되는 presence onCreate 트리거에
- * 얹어서 처리 — 온라인 인원이 실제로 중요해지는 바로 그 시점(누군가 새로 접속해서
- * 목록을 보는 시점)에 맞춰 정리되는 효과도 있음.
  */
 const PRESENCE_STALE_MS = 90 * 1000;
-async function sweepStalePresence(db, joinerId) {
-  const now = Date.now();
-  const presenceSnap = await db.ref('presence').once('value');
-  const presenceVal = presenceSnap.val() || {};
-  const removals = [];
-  for (const [id, p] of Object.entries(presenceVal)) {
-    if (id === joinerId) continue; // 방금 들어온 사람은 절대 정리 대상이 아님
-    const ts = p && typeof p.ts === 'number' ? p.ts : 0;
-    if (now - ts >= PRESENCE_STALE_MS) {
-      removals.push(db.ref('presence/' + id).remove());
-      // playerLastSeen도 마지막으로 확인된 시각(ts)으로 맞춰둬서, claimFruitIndex의
-      // 30분 회수 판단이 실제 마지막 활동 시각 기준으로 정확히 동작하게 함
-      removals.push(db.ref('playerLastSeen/' + id).set(ts || now));
-    }
-  }
-  if (removals.length) await Promise.all(removals);
-}
+// v1.9.211: 방(room) 시스템 도입 — public/index.html의 BOT_ID('BOT-practice')와 반드시
+// 같은 값을 유지할 것(연습봇을 "실제 인원"에서 빼기 위한 기준).
+const ROOM_BOT_ID = 'BOT-practice';
 
-exports.cleanupStalePresenceOnJoin = functions.database.ref('/presence/{clientId}').onCreate(async (snap, context) => {
-  const joinerId = context.params.clientId;
+/**
+ * 방 시스템 — roomPresence/{roomId}/{clientId}에 뭔가 쓰일 때마다(입장/20초마다 오는
+ * 하트비트/퇴장 전부) 실행돼서 두 가지 일을 한다.
+ * 1) 오래(PRESENCE_STALE_MS 이상) 하트비트가 안 갱신된 항목을 정리 — 예전
+ *    cleanupStalePresenceOnJoin이 전역 presence에 대해 하던 일과 동일한 이유(모바일 네트워크
+ *    전환, 앱 강제 종료처럼 onDisconnect가 못 잡는 조용한 끊김 대응)를 방 단위로 함.
+ * 2) 정리 후 그 방의 실제 접속 인원(연습봇 제외)을 다시 세어 roomMeta/{roomId}/playerCount에
+ *    반영하고, 0명이면(마지막 사람이 나감) "방은 자동으로 사라진다" 요구사항대로 그 방
+ *    전체(meta/board/presence)를 통째로 지운다.
+ * 이 함수 자신이 수행하는 remove()들이 같은 경로에 대해 스스로를 다시 트리거하지만(onWrite
+ * 특성상), 매번 지울 게 줄어들다가 결국 지울 게 없어지면 멈추므로 무한 루프는 아님 —
+ * Firebase가 문서에서도 이 패턴을 정상적인 것으로 안내함.
+ */
+exports.onRoomPresenceWrite = functions.database.ref('/roomPresence/{roomId}/{clientId}').onWrite(async (change, context) => {
+  const { roomId } = context.params;
   const db = admin.database();
   try {
-    await sweepStalePresence(db, joinerId);
+    const presenceSnap = await db.ref('roomPresence/' + roomId).once('value');
+    const presenceVal = presenceSnap.val() || {};
+    const now = Date.now();
+    const removals = [];
+    let realCount = 0;
+    for (const [id, p] of Object.entries(presenceVal)) {
+      if (id === ROOM_BOT_ID) continue; // 연습봇은 "실제 인원"이 아님
+      const ts = p && typeof p.ts === 'number' ? p.ts : 0;
+      if (now - ts >= PRESENCE_STALE_MS) {
+        removals.push(db.ref('roomPresence/' + roomId + '/' + id).remove());
+        // playerLastSeen도 마지막으로 확인된 시각(ts)으로 맞춰둬서, claimFruitIndex의
+        // 30분 회수 판단이 실제 마지막 활동 시각 기준으로 정확히 동작하게 함
+        removals.push(db.ref('playerLastSeen/' + id).set(ts || now));
+        continue;
+      }
+      realCount++;
+    }
+    if (removals.length) await Promise.all(removals);
+    if (realCount === 0) {
+      await Promise.all([
+        db.ref('roomMeta/' + roomId).remove(),
+        db.ref('roomBoards/' + roomId).remove(),
+        db.ref('roomPresence/' + roomId).remove(),
+      ]);
+      return null;
+    }
+    await db.ref('roomMeta/' + roomId + '/playerCount').set(realCount);
   } catch (e) {
-    console.error('cleanupStalePresenceOnJoin: presence 정리 실패:', e);
+    console.error('onRoomPresenceWrite: 처리 실패(roomId=' + roomId + '):', e);
   }
   return null;
 });

@@ -1,7 +1,7 @@
-# 폰트 상점 테스트
+# public/index.html 회귀 테스트
 
-`public/index.html`을 실제로 배포하기 전에, jsdom(가짜 브라우저)으로 폰트 상점 관련 동작을
-자동으로 검증하는 스크립트 3개. 처음 한 번만 의존성을 설치하면 그 뒤로는 계속 재사용 가능.
+`public/index.html`을 실제로 배포하기 전에, jsdom(가짜 브라우저)으로 주요 동작을 자동으로
+검증하는 스크립트들. 처음 한 번만 의존성을 설치하면 그 뒤로는 계속 재사용 가능.
 
 ## 처음 한 번
 
@@ -23,7 +23,18 @@ npm test
 node verify_font_shop_css.js    # @font-face 규칙이 CSS로 제대로 파싱되는지(가장 중요 — 아래 참고)
 node verify_font_shop_ui.js     # 상점 모달 UI(해금/잠금/장착/해제)
 node verify_font_shop_draw.js   # 보드에 실제로 그 폰트로 그려지는지
+node verify_ghost_mode.js       # 관리자 전용 고스트 모드(자기 자신 오탐지 방지 포함)
+node verify_room_system.js      # 방(room) 목록/입장/생성/나가기/인원 캡
 ```
+
+## v1.9.211 방(room) 시스템 관련 노트
+
+전역 `board`/`presence` 하나였던 구조가 `roomBoards/{roomId}`, `roomPresence/{roomId}`로
+바뀌었다. 로그인 직후엔 어느 방에도 안 들어간 상태(로비)이므로, board/presence 관련 동작을
+테스트하려면 테스트 스니펫 안에서 반드시 먼저 `enterRoom('테스트방ID')`를 호출해야 한다
+(위 네 테스트 파일 모두 이 패턴을 따름). 빈 방이 서버(Cloud Function,
+`functions/index.js`의 `onRoomPresenceWrite`)에서 자동으로 삭제되는지는 Firebase 에뮬레이터가
+필요해 이 jsdom 테스트로는 검증하지 못함 — 배포 후 수동으로 확인할 것.
 
 ## `verify_font_shop_css.js`가 왜 제일 중요한가
 
