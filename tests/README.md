@@ -62,6 +62,13 @@ validate 및 클라이언트의 "꽉 찬 방" 로직 모두 제거). "나가기"
 전부 `closeOnlineOverlay()`(방 선택/생성 후)와 `resetLobbySection()`(모달을 열 때마다 방
 만들기 폼/비회원 안내를 초기 상태로 되돌림)으로 처리한다.
 
+## v1.9.215 관리자 전용 UI를 "n명 접속 중" 모달 밖으로 이동
+
+고스트 모드 스위치 + 최근 다녀간 사람 버튼이 "n명 접속 중" 모달(#onlineCard) 안에서 빠져,
+`#topLeft`의 "1명 접속 중" 알약 바로 밑 `#adminBar`로 옮겨졌다(`isOwnerAdmin()`일 때만
+보임). 이제 그 모달은 관리자든 아니든 모든 사람에게 완전히 똑같다. `ghostModeRowEl` DOM
+참조는 없어지고 `adminBarEl`로 대체됐다 — 관련 테스트에서 참조 이름을 바꿀 때 주의할 것.
+
 ## `verify_font_shop_css.js`가 왜 제일 중요한가
 
 v1.9.198~201에서 `<style>` 블록 안 주석 문법 실수(HTML 주석, 혹은 CSS 주석 안에 CSS 주석

@@ -769,35 +769,36 @@
   #onlineList .onlineBtn.reportBtn { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
   #onlineList .onlineBtn.reportBtn:hover { background: #f4caca; }
   #onlineList .onlineEmptyRow { justify-content: center; font-size: 13px; color: #999; padding: 12px 0; border-bottom: none; }
-  /* v1.9.157: 관리자(닉네임 '람솔')에게만 보이는 버튼 — 평소엔 hidden, isOwnerAdmin()일
-     때만 JS에서 노출함. 다른 버튼들과 구분되게 눈에 덜 띄는 톤으로 둠 */
-  #recentVisitorsBtn {
-    display: block; width: 100%; margin-top: 10px; padding: 8px;
-    border-radius: 10px; border: 1px dashed #d8d2c4; background: none;
-    color: #999; font-size: 12px; cursor: pointer;
+  /* v1.9.215: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 + 최근 다녀간 사람 —
+     예전엔 "n명 접속 중" 모달 안에 있었는데, 그 모달을 모두에게 완전히 똑같이 보이게
+     하려고 #topLeft의 "1명 접속 중" 알약 바로 밑으로 옮김. #brand/#userCountTag/
+     #hallOfFameBtn과 같은 크림톤 알약 스타일로 맞춤 */
+  #adminBar { display: flex; align-items: center; gap: 6px; }
+  #adminBar.hidden { display: none; }
+  #ghostModePill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
+    border-radius: 18px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
   }
-  #recentVisitorsBtn:hover { background: #f5f1e8; }
-  #recentVisitorsBtn.hidden { display: none; }
-  /* v1.9.207: 고스트 모드 스위치 — #recentVisitorsBtn과 같은 "관리자 전용, 눈에 덜 띄는 톤" */
-  #ghostModeRow {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    margin-top: 10px; padding: 8px 10px;
-    border-radius: 10px; border: 1px dashed #d8d2c4;
-  }
-  #ghostModeRow.hidden { display: none; }
-  #ghostModeLabel { font-size: 12px; color: #999; }
-  #ghostModeSwitch { position: relative; display: inline-block; flex: none; width: 36px; height: 20px; }
+  #ghostModeLabel { font-size: 11px; font-weight: 700; color: #1a1a1a; }
+  #ghostModeSwitch { position: relative; display: inline-block; flex: none; width: 30px; height: 17px; }
   #ghostModeSwitch input { position: absolute; opacity: 0; width: 0; height: 0; }
   #ghostModeSlider {
     position: absolute; inset: 0; background: #d8d2c4; border-radius: 20px;
     cursor: pointer; transition: background .15s;
   }
   #ghostModeSlider::before {
-    content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px;
+    content: ''; position: absolute; width: 13px; height: 13px; left: 2px; top: 2px;
     background: #fff; border-radius: 50%; transition: transform .15s;
   }
   #ghostModeCheckbox:checked + #ghostModeSlider { background: #8a7a4f; }
-  #ghostModeCheckbox:checked + #ghostModeSlider::before { transform: translateX(16px); }
+  #ghostModeCheckbox:checked + #ghostModeSlider::before { transform: translateX(13px); }
+  #recentVisitorsBtn {
+    background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
+    border-radius: 18px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    font-size: 11px; font-weight: 700; color: #1a1a1a; cursor: pointer;
+  }
+  #recentVisitorsBtn:hover { background: #f5f1e8; }
   /* v1.9.214: #onlineCard 안 "나가기" 버튼 — #recentVisitorsBtn과 같은 "눈에 덜 띄는" 톤.
      모두의 방(DEFAULT_ROOM_ID)엔 더 나갈 곳이 없으므로 그 방에 있을 땐 숨김(JS에서 토글) */
   #leaveRoomBtn {
@@ -1083,6 +1084,21 @@
   <!-- v1.9.187: 예전엔 우측 상단 #topRight의 폰트샵 버튼과 나란히 있었는데, 리더보드가
        넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁 바로 밑(좌측 상단)으로 옮김 -->
   <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명 접속 중</span></button>
+  <!-- v1.9.215: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 + 최근 다녀간 사람
+       버튼 — 예전엔 "n명 접속 중" 모달 안에 있었는데, 그 모달을 모두에게 똑같이 보이게
+       하려고 "1명 접속 중" 알약 바로 밑으로 뺌(isOwnerAdmin() 참고, boot()에서 토글) -->
+  <div id="adminBar" class="hidden">
+    <div id="ghostModePill">
+      <span id="ghostModeLabel">고스트 모드</span>
+      <label id="ghostModeSwitch">
+        <input type="checkbox" id="ghostModeCheckbox">
+        <span id="ghostModeSlider"></span>
+      </label>
+    </div>
+    <!-- v1.9.157: 새로운 데이터를 따로 수집하지 않고, 이미 있는 playerLastSeen(마지막
+         접속 시각)을 목록으로 보여주기만 함 -->
+    <button id="recentVisitorsBtn" type="button">최근 다녀간 사람 (나만 보임)</button>
+  </div>
 </div>
 <div id="infoPanelBackdrop" class="hidden"></div>
 <div id="infoPanel" class="hidden">
@@ -1168,20 +1184,8 @@
   <div id="onlineCard">
     <div id="onlineTitle">현재 접속 중</div>
     <ul id="onlineList"></ul>
-    <!-- v1.9.157: 관리자(닉네임 '람솔')에게만 보이는 버튼 — isOwnerAdmin() 참고. 새로운
-         데이터를 따로 수집하지 않고, 이미 있는 playerLastSeen(마지막 접속 시각)을 목록으로
-         보여주기만 함 -->
-    <button id="recentVisitorsBtn" type="button" class="hidden">최근 다녀간 사람 (나만 보임)</button>
-    <!-- v1.9.207: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 — isOwnerAdmin() 참고.
-         켜면 다른 사람 화면의 접속자 수/목록/등장 카드에서 나만 안 잡히고 봇도 평소처럼
-         "혼자 있음"으로 판단해 활성화됨(다른 사람 게임플레이에는 영향 없음) -->
-    <div id="ghostModeRow" class="hidden">
-      <span id="ghostModeLabel">고스트 모드 (나만 안 보임)</span>
-      <label id="ghostModeSwitch">
-        <input type="checkbox" id="ghostModeCheckbox">
-        <span id="ghostModeSlider"></span>
-      </label>
-    </div>
+    <!-- v1.9.215: 관리자 전용 고스트 모드/최근 다녀간 사람은 여기서 빠짐(#topLeft의
+         #adminBar 참고) — 이 모달은 이제 관리자든 아니든 모두에게 완전히 똑같은 화면임 -->
     <!-- v1.9.214: 방(room) 목록 — 예전엔 "방 목록" 버튼을 따로 눌러야 열리는 모달이었는데,
          클릭 없이 이 모달을 열자마자 바로 보이도록 이 안에 곧장 이어지는 섹션으로 합침.
          지금 있는 방을 나가는 게 아니라 구경/이동용(다른 방을 실제로 고르면 그때
@@ -1224,7 +1228,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.214</div>
+<div id="verTagBottom">v1.9.215</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1318,7 +1322,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.214'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.215'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4899,7 +4903,9 @@ function stopPresence() {
     myPresenceRef = null;
   }
 }
-const ghostModeRowEl = document.getElementById('ghostModeRow');
+// v1.9.215: 고스트 모드 스위치 + 최근 다녀간 사람 버튼을 함께 담는 관리자 전용 줄 —
+// "n명 접속 중" 모달 안에 있다가 #topLeft의 "1명 접속 중" 알약 바로 밑으로 옮겨짐
+const adminBarEl = document.getElementById('adminBar');
 const ghostModeCheckboxEl = document.getElementById('ghostModeCheckbox');
 ghostModeCheckboxEl.checked = ghostMode;
 ghostModeCheckboxEl.addEventListener('change', () => {
@@ -5850,8 +5856,8 @@ async function boot() {
     draw();
     // v1.9.157: 내 닉네임이 이번에 확정/갱신됐을 수 있으니, 관리자 전용 버튼 노출 여부를
     // 그때마다 다시 확인함
-    recentVisitorsBtn.classList.toggle('hidden', !isOwnerAdmin());
-    ghostModeRowEl.classList.toggle('hidden', !isOwnerAdmin()); // v1.9.207: 고스트 모드 스위치도 동일
+    // v1.9.215: 고스트 모드 스위치 + 최근 다녀간 사람을 함께 묶어서 한 번에 토글
+    adminBarEl.classList.toggle('hidden', !isOwnerAdmin());
   });
 
   // v1.9.186: 폰트 상점 — memberFonts 전체를 실시간 구독. 장착(equip)은 클라이언트가

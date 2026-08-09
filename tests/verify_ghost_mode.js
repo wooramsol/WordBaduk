@@ -104,7 +104,7 @@ setTimeout(async () => {
   const results = [];
   results.push(['부팅 완료, clientId 확정(기대 M0)', clientId === 'M0']);
   results.push(['isOwnerAdmin() true(닉네임이 람솔)', isOwnerAdmin() === true]);
-  results.push(['관리자면 고스트 모드 스위치가 보임(hidden 아님)', !ghostModeRowEl.classList.contains('hidden')]);
+  results.push(['관리자면 고스트 모드 스위치가 보임(hidden 아님)', !adminBarEl.classList.contains('hidden')]);
   results.push(['기본값은 꺼짐(체크박스 unchecked)', ghostModeCheckboxEl.checked === false]);
 
   // v1.9.211: 방 시스템 — 로비에서 testRoom으로 입장해야 프레즌스/보드 구독이 시작됨
