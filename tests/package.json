@@ -3,7 +3,7 @@
   "private": true,
   "description": "public/index.html 회귀 테스트(jsdom으로 실제 브라우저 파싱/DOM을 흉내내서 검증). 배포되는 앱 코드와는 무관 — 이 폴더는 firebase.json의 hosting public 경로(public/) 밖에 있어서 그냥 두면 배포되지 않음.",
   "scripts": {
-    "test": "node verify_font_shop_css.js && node verify_font_shop_ui.js && node verify_font_shop_draw.js && node verify_ghost_mode.js && node verify_room_system.js"
+    "test": "node verify_font_shop_css.js && node verify_font_shop_ui.js && node verify_font_shop_draw.js && node verify_ghost_mode.js"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

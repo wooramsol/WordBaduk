@@ -769,45 +769,35 @@
   #onlineList .onlineBtn.reportBtn { background: #f7dcdc; color: #a23c3c; border-color: #e29a9a; }
   #onlineList .onlineBtn.reportBtn:hover { background: #f4caca; }
   #onlineList .onlineEmptyRow { justify-content: center; font-size: 13px; color: #999; padding: 12px 0; border-bottom: none; }
-  /* v1.9.215: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 + 최근 다녀간 사람 —
-     예전엔 "n명 접속 중" 모달 안에 있었는데, 그 모달을 모두에게 완전히 똑같이 보이게
-     하려고 #topLeft의 "1명 접속 중" 알약 바로 밑으로 옮김. #brand/#userCountTag/
-     #hallOfFameBtn과 같은 크림톤 알약 스타일로 맞춤 */
-  #adminBar { display: flex; align-items: center; gap: 6px; }
-  #adminBar.hidden { display: none; }
-  #ghostModePill {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
-    border-radius: 18px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  /* v1.9.157: 관리자(닉네임 '람솔')에게만 보이는 버튼 — 평소엔 hidden, isOwnerAdmin()일
+     때만 JS에서 노출함. 다른 버튼들과 구분되게 눈에 덜 띄는 톤으로 둠 */
+  #recentVisitorsBtn {
+    display: block; width: 100%; margin-top: 10px; padding: 8px;
+    border-radius: 10px; border: 1px dashed #d8d2c4; background: none;
+    color: #999; font-size: 12px; cursor: pointer;
   }
-  #ghostModeLabel { font-size: 11px; font-weight: 700; color: #1a1a1a; }
-  #ghostModeSwitch { position: relative; display: inline-block; flex: none; width: 30px; height: 17px; }
+  #recentVisitorsBtn:hover { background: #f5f1e8; }
+  #recentVisitorsBtn.hidden { display: none; }
+  /* v1.9.207: 고스트 모드 스위치 — #recentVisitorsBtn과 같은 "관리자 전용, 눈에 덜 띄는 톤" */
+  #ghostModeRow {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-top: 10px; padding: 8px 10px;
+    border-radius: 10px; border: 1px dashed #d8d2c4;
+  }
+  #ghostModeRow.hidden { display: none; }
+  #ghostModeLabel { font-size: 12px; color: #999; }
+  #ghostModeSwitch { position: relative; display: inline-block; flex: none; width: 36px; height: 20px; }
   #ghostModeSwitch input { position: absolute; opacity: 0; width: 0; height: 0; }
   #ghostModeSlider {
     position: absolute; inset: 0; background: #d8d2c4; border-radius: 20px;
     cursor: pointer; transition: background .15s;
   }
   #ghostModeSlider::before {
-    content: ''; position: absolute; width: 13px; height: 13px; left: 2px; top: 2px;
+    content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px;
     background: #fff; border-radius: 50%; transition: transform .15s;
   }
   #ghostModeCheckbox:checked + #ghostModeSlider { background: #8a7a4f; }
-  #ghostModeCheckbox:checked + #ghostModeSlider::before { transform: translateX(13px); }
-  #recentVisitorsBtn {
-    background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
-    border-radius: 18px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
-    font-size: 11px; font-weight: 700; color: #1a1a1a; cursor: pointer;
-  }
-  #recentVisitorsBtn:hover { background: #f5f1e8; }
-  /* v1.9.214: #onlineCard 안 "나가기" 버튼 — #recentVisitorsBtn과 같은 "눈에 덜 띄는" 톤.
-     모두의 방(DEFAULT_ROOM_ID)엔 더 나갈 곳이 없으므로 그 방에 있을 땐 숨김(JS에서 토글) */
-  #leaveRoomBtn {
-    display: block; width: 100%; margin-top: 10px; padding: 8px;
-    border-radius: 10px; border: 1px dashed #d8d2c4;
-    background: none; color: #999; font-size: 12px; cursor: pointer;
-  }
-  #leaveRoomBtn:hover { background: #f5f1e8; }
-  #leaveRoomBtn.hidden { display: none; }
+  #ghostModeCheckbox:checked + #ghostModeSlider::before { transform: translateX(16px); }
   #recentBackdrop { position: fixed; inset: 0; z-index: 69; background: rgba(40,36,26,.45); }
   #recentBackdrop.hidden { display: none; }
   #recentOverlay {
@@ -842,57 +832,6 @@
   #recentList .recentTime.isOnline { color: #2c8f4a; font-weight: 700; }
   #recentEmpty { text-align: center; font-size: 13px; color: #999; padding: 12px 0; }
   #recentEmpty.hidden { display: none; }
-
-  /* v1.9.214: 방(room) 목록 — 예전엔 "방 목록" 버튼을 눌러야 따로 열리는 모달이었는데,
-     클릭 한 번 더 하지 않아도 바로 보이도록 "n명 접속 중" 모달(#onlineCard) 안에 곧장
-     이어지는 섹션으로 합침. #hofAccountSection과 같은 구분선(border-top) 톤 재사용 */
-  #lobbySection { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0ece0; }
-  #lobbySectionTitle { font-size: 12px; color: #888; font-weight: 700; margin-bottom: 8px; }
-  #lobbyRoomList { list-style: none; margin: 0 0 12px; padding: 0; max-height: 240px; overflow-y: auto; }
-  #lobbyRoomList li {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 8px; margin-bottom: 6px; border-radius: 12px;
-    background: #f5f1e8; cursor: pointer;
-  }
-  #lobbyRoomList li:hover { filter: brightness(0.97); }
-  #lobbyRoomList .lobbyRoomInfo { flex: 1; min-width: 0; }
-  #lobbyRoomList .lobbyRoomTitle {
-    font-weight: 700; color: #333; font-size: 14px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  #lobbyRoomList .lobbyRoomMeta { font-size: 11px; color: #999; margin-top: 2px; }
-  #lobbyRoomList .lobbyRoomCount {
-    flex: none; font-size: 12px; font-weight: 800; color: #8a7a4f;
-    background: #fff; border-radius: 10px; padding: 4px 8px;
-  }
-  #lobbyEmpty { text-align: center; color: #999; font-size: 13px; padding: 24px 0; }
-  #lobbyEmpty.hidden { display: none; }
-  #lobbyCreateBtn {
-    display: block; width: 100%; padding: 12px; border-radius: 12px;
-    border: 1px solid #d8d2c4; background: #f5f1e8; color: #444;
-    font-size: 14px; font-weight: 700; cursor: pointer;
-  }
-  #lobbyCreateBtn:disabled { opacity: .5; cursor: not-allowed; }
-  #lobbyCreateRow.hidden { display: none; }
-  #lobbyCreateForm.hidden { display: none; }
-  #lobbyCreateForm input {
-    width: 100%; box-sizing: border-box; padding: 11px 12px; margin-bottom: 8px;
-    border-radius: 10px; border: 1px solid #d8d2c4; font-size: 14px;
-  }
-  #lobbyCreateForm .authErr { min-height: 16px; font-size: 12px; color: #c0392b; margin-bottom: 6px; }
-  #lobbyCreateForm button {
-    padding: 10px 14px; border-radius: 10px; border: 1px solid #d8d2c4;
-    font-size: 13px; font-weight: 700; cursor: pointer; margin-right: 6px;
-  }
-  #lobbyCreateSubmitBtn { background: #8a7a4f; color: #fff; border-color: #8a7a4f; }
-  #lobbyCreateCancelBtn { background: #fff; color: #888; }
-  /* 비회원이 방 목록에서 새 방을 만들려 할 때 보여주는 안내 — #hofGuestNotice와 같은
-     "안내 문구 + 5초컷 회원가입" 패턴 */
-  #lobbyGuestNotice { text-align: center; margin-top: 12px; }
-  #lobbyGuestNotice.hidden { display: none; }
-  #lobbyGuestNoticeLabel { font-size: 12px; color: #888; margin-bottom: 4px; }
-  #lobbyGuestNotice a { color: #8a7a4f; font-weight: 700; font-size: 13px; text-decoration: none; }
-  #lobbyGuestNotice a:hover { text-decoration: underline; }
 
   /* "PC에서 플레이하기" 클릭 시 URL이 클립보드에 복사됐음을 알리는 팝업 — 토스트가
      잘 안 보인다는 피드백에 따라, 화면 정중앙에 배경(딤)과 함께 뜨는 작은 카드로 교체.
@@ -1084,21 +1023,6 @@
   <!-- v1.9.187: 예전엔 우측 상단 #topRight의 폰트샵 버튼과 나란히 있었는데, 리더보드가
        넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁 바로 밑(좌측 상단)으로 옮김 -->
   <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명 접속 중</span></button>
-  <!-- v1.9.215: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 + 최근 다녀간 사람
-       버튼 — 예전엔 "n명 접속 중" 모달 안에 있었는데, 그 모달을 모두에게 똑같이 보이게
-       하려고 "1명 접속 중" 알약 바로 밑으로 뺌(isOwnerAdmin() 참고, boot()에서 토글) -->
-  <div id="adminBar" class="hidden">
-    <div id="ghostModePill">
-      <span id="ghostModeLabel">고스트 모드</span>
-      <label id="ghostModeSwitch">
-        <input type="checkbox" id="ghostModeCheckbox">
-        <span id="ghostModeSlider"></span>
-      </label>
-    </div>
-    <!-- v1.9.157: 새로운 데이터를 따로 수집하지 않고, 이미 있는 playerLastSeen(마지막
-         접속 시각)을 목록으로 보여주기만 함 -->
-    <button id="recentVisitorsBtn" type="button">최근 다녀간 사람 (나만 보임)</button>
-  </div>
 </div>
 <div id="infoPanelBackdrop" class="hidden"></div>
 <div id="infoPanel" class="hidden">
@@ -1184,35 +1108,20 @@
   <div id="onlineCard">
     <div id="onlineTitle">현재 접속 중</div>
     <ul id="onlineList"></ul>
-    <!-- v1.9.215: 관리자 전용 고스트 모드/최근 다녀간 사람은 여기서 빠짐(#topLeft의
-         #adminBar 참고) — 이 모달은 이제 관리자든 아니든 모두에게 완전히 똑같은 화면임 -->
-    <!-- v1.9.214: 방(room) 목록 — 예전엔 "방 목록" 버튼을 따로 눌러야 열리는 모달이었는데,
-         클릭 없이 이 모달을 열자마자 바로 보이도록 이 안에 곧장 이어지는 섹션으로 합침.
-         지금 있는 방을 나가는 게 아니라 구경/이동용(다른 방을 실제로 고르면 그때
-         leaveRoom()+enterRoom()이 호출됨) -->
-    <div id="lobbySection">
-      <div id="lobbySectionTitle">방 목록</div>
-      <ul id="lobbyRoomList"></ul>
-      <div id="lobbyEmpty" class="hidden">아직 열린 방이 없어요. 새 방을 만들어보세요!</div>
-      <div id="lobbyCreateRow">
-        <button id="lobbyCreateBtn" type="button">+ 새 방 만들기</button>
-      </div>
-      <div id="lobbyCreateForm" class="hidden">
-        <input type="text" id="lobbyRoomTitleInput" placeholder="방 제목 (예: 초보만 오세요)" maxlength="20">
-        <div class="authErr" id="lobbyCreateErr"></div>
-        <button id="lobbyCreateSubmitBtn" type="button">만들기</button>
-        <button id="lobbyCreateCancelBtn" type="button">취소</button>
-      </div>
-      <!-- 비회원이 방을 만들려 할 때만 노출 — #hofGuestNotice와 같은 패턴(모달이 열릴 때마다
-           isMemberMode에 따라 hidden 토글함) -->
-      <div class="hidden" id="lobbyGuestNotice">
-        <div id="lobbyGuestNoticeLabel">비회원은 방을 만들 수 없어요</div>
-        <a href="#" id="lobbyGuestSignupLink">5초컷 회원가입</a>
-      </div>
+    <!-- v1.9.157: 관리자(닉네임 '람솔')에게만 보이는 버튼 — isOwnerAdmin() 참고. 새로운
+         데이터를 따로 수집하지 않고, 이미 있는 playerLastSeen(마지막 접속 시각)을 목록으로
+         보여주기만 함 -->
+    <button id="recentVisitorsBtn" type="button" class="hidden">최근 다녀간 사람 (나만 보임)</button>
+    <!-- v1.9.207: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 — isOwnerAdmin() 참고.
+         켜면 다른 사람 화면의 접속자 수/목록/등장 카드에서 나만 안 잡히고 봇도 평소처럼
+         "혼자 있음"으로 판단해 활성화됨(다른 사람 게임플레이에는 영향 없음) -->
+    <div id="ghostModeRow" class="hidden">
+      <span id="ghostModeLabel">고스트 모드 (나만 안 보임)</span>
+      <label id="ghostModeSwitch">
+        <input type="checkbox" id="ghostModeCheckbox">
+        <span id="ghostModeSlider"></span>
+      </label>
     </div>
-    <!-- 지금 있는 방이 모두의 방(DEFAULT_ROOM_ID)이 아닐 때만 보임(JS에서 토글) —
-         모두의 방엔 더 나갈 곳이 없으므로 -->
-    <button id="leaveRoomBtn" type="button">나가기</button>
   </div>
 </div>
 
@@ -1228,7 +1137,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.216</div>
+<div id="verTagBottom">v1.9.217</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1322,7 +1231,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.216'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.217'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2050,17 +1959,14 @@ async function claimFruitIndex(id) {
     const mySnap = await playerRef.once('value');
     if (mySnap.val() !== null && mySnap.val() !== undefined) return; // 이미 배정됨 — 서버 왕복 아낌
 
-    const [fruitSnap, lastSeenSnap, roomPresenceSnap] = await Promise.all([
+    const [fruitSnap, lastSeenSnap, presenceSnap] = await Promise.all([
       db.ref('playerFruit').once('value'),
       db.ref('playerLastSeen').once('value'),
-      db.ref('roomPresence').once('value'), // v1.9.211: 방 시스템 — 전역 presence가 없어져서, 모든 방을 통틀어 지금 접속 중인 사람을 모음
+      db.ref('presence').once('value'),
     ]);
     const fruitVal = fruitSnap.val() || {};
     const lastSeenVal = lastSeenSnap.val() || {};
-    const onlineNow = new Set();
-    for (const roomPresenceVal of Object.values(roomPresenceSnap.val() || {})) {
-      for (const id of Object.keys(roomPresenceVal || {})) onlineNow.add(id);
-    }
+    const onlineNow = new Set(Object.keys(presenceSnap.val() || {}));
     const now = Date.now();
 
     // 1) 아직 아무도 안 쓴 인덱스가 있으면 그것부터
@@ -3661,7 +3567,7 @@ const BOT_TYPE_MS_MIN = 140, BOT_TYPE_MS_MAX = 320; // 한 글자 "타이핑"마
 let botNextMoveAt = 0;
 let botIntroduced = false; // 이번에 혼자가 된 뒤 첫 수를 둘 때 한 번만 안내 토스트
 let botMoveInFlight = false; // 트랜잭션 진행 중 다음 틱이 겹쳐 시도하지 않도록
-let botPresenceRef = null; // v1.9.211: connectToRoom()에서 db.ref('roomPresence/'+roomId+'/'+BOT_ID)로 채워짐
+let botPresenceRef = null; // boot()에서 db.ref('presence/'+BOT_ID)로 채워짐
 let botPresenceActive = false; // 지금 presence에 봇 항목이 올라가 있는지(불필요한 remove 호출 방지용)
 function botSleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 // 다른 사람이 들어와 봇이 멈출 때 커서를 즉시 치워서 "정지된 유령 커서"가 남지 않게 함
@@ -4757,19 +4663,6 @@ hallOfFameBtn.addEventListener('click', async () => {
 const onlineBackdrop = document.getElementById('onlineBackdrop');
 const onlineOverlay = document.getElementById('onlineOverlay');
 const onlineListEl = document.getElementById('onlineList');
-// v1.9.211: 방(room) 시스템 — 방 목록 관련 DOM(v1.9.214부터 #onlineCard 안에 곧장 보이는
-// 섹션). 실제 구독/입장 로직은 boot() 아래 "---------- 방(room) 시스템 ----------" 섹션 참고
-const leaveRoomBtnEl = document.getElementById('leaveRoomBtn');
-const lobbyRoomListEl = document.getElementById('lobbyRoomList');
-const lobbyEmptyEl = document.getElementById('lobbyEmpty');
-const lobbyCreateRowEl = document.getElementById('lobbyCreateRow');
-const lobbyCreateBtnEl = document.getElementById('lobbyCreateBtn');
-const lobbyCreateFormEl = document.getElementById('lobbyCreateForm');
-const lobbyRoomTitleInputEl = document.getElementById('lobbyRoomTitleInput');
-const lobbyCreateErrEl = document.getElementById('lobbyCreateErr');
-const lobbyCreateSubmitBtnEl = document.getElementById('lobbyCreateSubmitBtn');
-const lobbyCreateCancelBtnEl = document.getElementById('lobbyCreateCancelBtn');
-const lobbyGuestNoticeEl = document.getElementById('lobbyGuestNotice');
 
 function closeOnlineOverlay() {
   onlineOverlay.classList.add('hidden');
@@ -4842,12 +4735,6 @@ onlineListEl.addEventListener('click', e => {
 
 userCountTagEl.addEventListener('click', () => {
   renderOnlineList();
-  // 모두의 방(DEFAULT_ROOM_ID)엔 더 나갈 곳이 없으므로 "나가기" 버튼은 다른 방에 있을 때만 보임
-  leaveRoomBtnEl.classList.toggle('hidden', currentRoomId === DEFAULT_ROOM_ID);
-  // v1.9.214: 방 목록은 이제 클릭 없이 이 모달을 열자마자 바로 보임(lobbyRoomListEl 자체는
-  // subscribeRoomList()가 백그라운드에서 계속 최신 상태로 갱신해두므로 여기선 만들기
-  // 폼/비회원 안내만 초기 상태로 되돌리면 됨)
-  resetLobbySection();
   onlineOverlay.classList.remove('hidden');
   onlineBackdrop.classList.remove('hidden');
 });
@@ -4876,10 +4763,8 @@ function startPresence() {
   // (myPresenceRef가 이전 연결에서 이미 있었더라도) 항상 다시 set()/onDisconnect() 해야
   // 새 연결에 onDisconnect가 제대로 걸림 — 그래서 myPresenceRef 존재 여부로 건너뛰지 않고
   // clientId 없을 때만 막음(원래 코드와 동일한 동작 유지)
-  // v1.9.211: 방(room) 시스템 — 프레즌스는 이제 방 단위(roomPresence/{roomId}/{clientId})라
-  // 어느 방에도 안 들어가 있으면(로비) 켤 방 자체가 없음
-  if (!clientId || !currentRoomId) return;
-  myPresenceRef = firebase.database().ref('roomPresence/' + currentRoomId + '/' + clientId);
+  if (!clientId) return;
+  myPresenceRef = firebase.database().ref('presence/' + clientId);
   myPresenceRef.set({ ts: Date.now() });
   myPresenceRef.onDisconnect().remove();
   // v1.9.137: onDisconnect는 정상적인 종료(FIN)에서만 즉시 발동하고, 모바일 네트워크
@@ -4903,15 +4788,13 @@ function stopPresence() {
     myPresenceRef = null;
   }
 }
-// v1.9.215: 고스트 모드 스위치 + 최근 다녀간 사람 버튼을 함께 담는 관리자 전용 줄 —
-// "n명 접속 중" 모달 안에 있다가 #topLeft의 "1명 접속 중" 알약 바로 밑으로 옮겨짐
-const adminBarEl = document.getElementById('adminBar');
+const ghostModeRowEl = document.getElementById('ghostModeRow');
 const ghostModeCheckboxEl = document.getElementById('ghostModeCheckbox');
 ghostModeCheckboxEl.checked = ghostMode;
 ghostModeCheckboxEl.addEventListener('change', () => {
   ghostMode = ghostModeCheckboxEl.checked;
   localStorage.setItem('wb-ghostMode', ghostMode ? '1' : '0');
-  if (connected && currentRoomId) {
+  if (connected) {
     if (ghostMode) stopPresence();
     else startPresence();
   }
@@ -5802,14 +5685,13 @@ async function boot() {
   hofAccountSectionEl.classList.toggle('hidden', !isMemberMode);
 
   const db = firebase.database();
+  boardRef = db.ref('board');
+  botPresenceRef = db.ref('presence/' + BOT_ID); // v1.9.141: 연습봇 커서/타이핑 브로드캐스트용(아래 "연습봇" 섹션)
 
-  // v1.9.211: 방(room) 시스템 도입으로, boardRef/botPresenceRef는 더 이상 여기서 고정
-  // 배정하지 않음 — 어느 방에 들어갈지 아직 모르는 상태(로비)라서. 실제 배정은 방을
-  // 고른 뒤 enterRoom()이 부르는 connectToRoom(roomId)에서 일어남(맨 아래 참고).
-
-  // 연결 상태 — 별도 태그 없이 접속자 태그의 점(●)/색으로만 표시. startPresence()/
-  // stopPresence()는 최상위(전역) 함수로 따로 빼서(위쪽 ghostModeCheckboxEl 리스너 참고)
-  // 정의돼 있음 — boot() 밖(고스트 모드 스위치, enterRoom)에서도 그대로 재사용해야 하기 때문.
+  // 연결 상태 + 내 프레즌스(접속 표시 + 실시간 입력 상황 브로드캐스트) — 연결 상태는
+  // 별도 태그 없이 접속자 태그의 점(●)/색으로만 표시. startPresence()/stopPresence()는
+  // 최상위(전역) 함수로 따로 빼서(위쪽 ghostModeCheckboxEl 리스너 참고) 정의돼 있음 —
+  // boot() 밖(고스트 모드 스위치)에서도 그대로 재사용해야 하기 때문.
   db.ref('.info/connected').on('value', snap => {
     connected = !!snap.val();
     bootStage = 'boot:connected=' + connected;
@@ -5819,10 +5701,7 @@ async function boot() {
       // v1.9.207: 고스트 모드 중엔 내 presence 자체를 안 씀(startPresence() 스킵) —
       // 다른 사람 화면의 접속자 수/목록/등장 카드/봇의 "혼자 있음" 판정에서 나만 빠지게
       // 하기 위함. ghostMode가 꺼져 있으면 원래대로 평소처럼 켬.
-      // v1.9.211: 어느 방에도 안 들어가 있으면(로비) 애초에 프레즌스를 켤 방이 없으므로
-      // currentRoomId가 있을 때만(재연결 시 다시 켜야 하는 경우 포함) 켬 — 최초 입장은
-      // enterRoom()이 직접 startPresence()를 부름.
-      if (currentRoomId && !ghostMode) startPresence();
+      if (!ghostMode) startPresence();
       // "마지막으로 접속해 있던 시각" 기록 — presence와 달리 연결이 끊겨도 남아있어야
       // claimFruitIndex가 나중에 "이 사람이 30분 넘게 안 보였는지" 판단할 수 있음. 이건
       // 관리자 본인만 볼 수 있는 "최근 다녀간 사람" 목록용 데이터라 고스트 모드와 무관하게
@@ -5856,8 +5735,8 @@ async function boot() {
     draw();
     // v1.9.157: 내 닉네임이 이번에 확정/갱신됐을 수 있으니, 관리자 전용 버튼 노출 여부를
     // 그때마다 다시 확인함
-    // v1.9.215: 고스트 모드 스위치 + 최근 다녀간 사람을 함께 묶어서 한 번에 토글
-    adminBarEl.classList.toggle('hidden', !isOwnerAdmin());
+    recentVisitorsBtn.classList.toggle('hidden', !isOwnerAdmin());
+    ghostModeRowEl.classList.toggle('hidden', !isOwnerAdmin()); // v1.9.207: 고스트 모드 스위치도 동일
   });
 
   // v1.9.186: 폰트 상점 — memberFonts 전체를 실시간 구독. 장착(equip)은 클라이언트가
@@ -5878,212 +5757,9 @@ async function boot() {
     });
   }
 
-  // v1.9.213: 예전 방식처럼(방 시스템 도입 전과 동일하게) 로비 선택 화면 없이 곧장 항상
-  // 열려있는 "모두의 방"으로 입장함. 방 목록은 이제 로비가 아니라 게임 중 "n명 접속 중"
-  // 모달의 "방 목록" 버튼으로 여는 모달(다른 방으로 옮기고 싶을 때만 씀) — 아래 enterRoom()이
-  // pageLoadingOverlay를 다시 보여주고, connectToRoom()의 첫 board 동기화에서 사라짐(최초
-  // 부팅 때와 동일한 흐름이라 여기서 따로 hidePageLoadingOverlay()를 부를 필요 없음).
-  bootStage = 'boot:ready';
-  subscribeRoomList();
-  enterRoom(DEFAULT_ROOM_ID);
-}
-
-// ---------- 방(room) 시스템 ----------
-// v1.9.211: 예전엔 전역 board/presence가 딱 하나뿐이었지만, 이제 각 방이 roomBoards/{roomId},
-// roomPresence/{roomId}로 완전히 독립된 자기만의 board/presence를 가짐(database.rules.json
-// 참고 — roomMeta/{roomId}에 제목/만든사람/인원수, 방이 비면 서버 Cloud Function이 자동으로
-// 통째로 지움). 로그인 직후엔 어느 방에도 안 들어간 상태(로비)이고, 방을 고르면 enterRoom()이
-// connectToRoom()을 불러서 그 방의 board/presence 구독을 새로 건다. connectToRoom() 안의
-// 로직 자체는 예전 boot() 안에 있던 것과 동일하고(로직은 안 바꿈), roomId를 받는 함수로
-// 옮기고 db.ref('presence')만 db.ref('roomPresence/'+roomId)로 바꾼 것뿐임.
-let currentRoomId = null;         // 지금 입장해 있는 방 id — 로비에 있으면 null
-let activeBoardRefForOff = null;  // 방을 나갈 때 .off() 하기 위해 기억해두는 참조
-let activePresenceRefForOff = null;
-// v1.9.212: 비회원도 언제든 들어와 플레이할 수 있도록, 인원이 0명이 돼도 절대 사라지지 않는
-// 방이 최소 하나는 항상 있어야 함 — functions/index.js의 DEFAULT_ROOM_ID와 반드시 같은 값을
-// 유지할 것(그쪽에서 이 방만 빈방 자동삭제 대상에서 제외함).
-const DEFAULT_ROOM_ID = 'default';
-let defaultRoomEnsureTried = false; // 세션당 한 번만 자동 생성 시도(중복 방지용, 실패하면 다음 스냅샷에서 재시도)
-
-function subscribeRoomList() {
-  firebase.database().ref('roomMeta').on('value', snap => {
-    const val = snap.val() || {};
-    renderRoomList(val);
-    // 기본방이 아직 없으면(최초 배포 직후, 혹은 무슨 이유로든 사라진 경우) 아무나(비회원
-    // 포함) 만들어서 채워 넣음 — database.rules.json에서 createdBy === 'system'인 경우
-    // 회원 여부 검증을 건너뛰도록 예외를 둠.
-    if (!defaultRoomEnsureTried && !val[DEFAULT_ROOM_ID]) {
-      defaultRoomEnsureTried = true;
-      firebase.database().ref('roomMeta/' + DEFAULT_ROOM_ID).set({
-        title: '모두의 방',
-        createdBy: 'system',
-        createdByName: '',
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        playerCount: 0,
-      }).catch(() => { defaultRoomEnsureTried = false; });
-    }
-  });
-}
-
-function renderRoomList(roomsVal) {
-  const entries = Object.entries(roomsVal);
-  lobbyRoomListEl.textContent = '';
-  lobbyEmptyEl.classList.toggle('hidden', entries.length > 0);
-  entries.sort((a, b) => {
-    if (a[0] === DEFAULT_ROOM_ID) return -1;
-    if (b[0] === DEFAULT_ROOM_ID) return 1;
-    return (b[1].createdAt || 0) - (a[1].createdAt || 0);
-  });
-  for (const [roomId, meta] of entries) {
-    const count = Number(meta.playerCount) || 0;
-    const isDefault = roomId === DEFAULT_ROOM_ID;
-    const li = document.createElement('li');
-    const info = document.createElement('div');
-    info.className = 'lobbyRoomInfo';
-    const titleEl = document.createElement('div');
-    titleEl.className = 'lobbyRoomTitle';
-    titleEl.textContent = meta.title || '(제목 없음)';
-    const sub = document.createElement('div');
-    sub.className = 'lobbyRoomMeta';
-    sub.textContent = isDefault ? '상시 열린 방 · 누구나 입장 가능' : (meta.createdByName ? (meta.createdByName + '님이 만든 방') : '');
-    info.append(titleEl, sub);
-    const countEl = document.createElement('span');
-    countEl.className = 'lobbyRoomCount';
-    countEl.textContent = `${count}명`;
-    li.append(info, countEl);
-    li.addEventListener('click', () => goToRoom(roomId));
-    lobbyRoomListEl.appendChild(li);
-  }
-}
-
-// v1.9.214: 방 만들기 폼/비회원 안내를 초기 상태로 되돌림 — 예전 showLobby()의 역할이었는데,
-// 이제 별도 모달이 아니라 "n명 접속 중" 모달 안 섹션이라 그 모달이 열릴 때마다 같이 불림
-// (아래 userCountTagEl 클릭 핸들러 참고)
-function resetLobbySection() {
-  lobbyCreateFormEl.classList.add('hidden');
-  lobbyCreateRowEl.classList.remove('hidden');
-  lobbyCreateBtnEl.disabled = !isMemberMode;
-  lobbyGuestNoticeEl.classList.toggle('hidden', isMemberMode);
-}
-// 비회원이 방을 만들려다 막히면 뜨는 CTA — 랭킹/폰트상점 팝업의 "5초컷 회원가입"과 동일한
-// 흐름(openAccountUpgradeFlow)을 그대로 씀. "n명 접속 중" 모달은 먼저 닫아야 뒤에서 auth
-// 모달이 깔끔하게 겹치지 않고 보임
-document.getElementById('lobbyGuestSignupLink').addEventListener('click', e => {
-  e.preventDefault();
-  closeOnlineOverlay();
-  openAccountUpgradeFlow();
-});
-
-lobbyCreateBtnEl.addEventListener('click', () => {
-  if (!isMemberMode) return;
-  lobbyCreateRowEl.classList.add('hidden');
-  lobbyCreateFormEl.classList.remove('hidden');
-  lobbyRoomTitleInputEl.value = '';
-  lobbyCreateErrEl.textContent = '';
-  lobbyRoomTitleInputEl.focus();
-});
-lobbyCreateCancelBtnEl.addEventListener('click', () => {
-  lobbyCreateFormEl.classList.add('hidden');
-  lobbyCreateRowEl.classList.remove('hidden');
-});
-async function submitCreateRoom() {
-  const title = lobbyRoomTitleInputEl.value.trim();
-  if (!title) { lobbyCreateErrEl.textContent = '방 제목을 입력해주세요.'; return; }
-  if (title.length > 20) { lobbyCreateErrEl.textContent = '방 제목은 20자 이내로 적어주세요.'; return; }
-  if (!isMemberMode || !clientId) { lobbyCreateErrEl.textContent = '회원만 방을 만들 수 있어요.'; return; }
-  lobbyCreateErrEl.textContent = '';
-  try {
-    const db = firebase.database();
-    const roomRef = db.ref('roomMeta').push();
-    const roomId = roomRef.key;
-    const myName = (ownerMemberProfile.get(clientId) || {}).nickname || '누군가';
-    await roomRef.set({
-      title,
-      createdBy: clientId,
-      createdByName: myName,
-      createdAt: firebase.database.ServerValue.TIMESTAMP,
-      playerCount: 0,
-    });
-    goToRoom(roomId);
-  } catch (e) {
-    lobbyCreateErrEl.textContent = '방을 만들지 못했어요. 잠시 후 다시 시도해주세요.';
-  }
-}
-lobbyCreateSubmitBtnEl.addEventListener('click', submitCreateRoom);
-lobbyRoomTitleInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitCreateRoom(); } });
-
-// "n명 접속 중" 모달 안 "나가기" 버튼. v1.9.214부터 방 목록은 클릭 없이 이 모달 안에 곧장
-// 보임(아래 userCountTagEl 핸들러 참고) — 방 목록 자체는 그냥 구경용이라 지금 있는 방에서
-// 나가지지 않음(goToRoom()에서 실제로 다른 방을 고를 때만 leaveRoom()이 불림).
-// "나가기"는 지금 있는(모두의 방이 아닌) 방에서 곧장 모두의 방으로 옮겨줌. 이미 모두의
-// 방에 있으면 더 나갈 곳이 없으므로 버튼 자체를 숨김(아래 userCountTagEl 참고).
-leaveRoomBtnEl.addEventListener('click', () => {
-  closeOnlineOverlay();
-  if (currentRoomId !== DEFAULT_ROOM_ID) goToRoom(DEFAULT_ROOM_ID);
-});
-
-// 방을 고르거나 새로 만들면 여기로 옴 — 이미 다른 방에 있었으면 먼저 그 방에서 조용히
-// 나간 뒤 새 방으로 들어감
-function goToRoom(roomId) {
-  if (currentRoomId === roomId) { closeOnlineOverlay(); return; } // 지금 있는 방을 또 고르면 그냥 복귀
-  if (currentRoomId) leaveRoom();
-  enterRoom(roomId);
-}
-
-// 방을 옮길 때마다 이전 방의 판/입장 상태가 새 방에 새어 들어가지 않도록 초기화
-function resetPerRoomState() {
-  cells.clear();
-  onlineIds = new Set();
-  userCount = 1;
-  livePeers.clear();
-  prevScores.clear();
-  inMultiStartPrompt = false;
-  gameOverOverlay.classList.add('hidden');
-  currentRoundIsSolo = false;
-  lastBoardVersionForSolo = null;
-  soloCorrectionSent = false;
-  lastSeedRoundTsForSolo = null;
-  botIntroduced = false;
-  botMoveInFlight = false;
-  botNextMoveAt = 0;
-  botPresenceActive = false;
-  closePopup();
-}
-
-function enterRoom(roomId) {
-  closeOnlineOverlay();
-  resetPerRoomState();
-  currentRoomId = roomId;
-  // 이 방의 첫 board 동기화를 기다리는 동안 로딩 화면을 다시 보여줌(connectToRoom() 안의
-  // wasFirst 처리에서 hidePageLoadingOverlay()가 다시 불려 사라짐 — 최초 부팅 때와 동일한 흐름)
-  pageLoadingOverlayEl.classList.remove('hidden');
-  connectToRoom(roomId);
-  if (connected && !ghostMode) startPresence();
-}
-
-function leaveRoom() {
-  stopPresence();
-  botClearPresence();
-  if (activeBoardRefForOff) { activeBoardRefForOff.off(); activeBoardRefForOff = null; }
-  if (activePresenceRefForOff) { activePresenceRefForOff.off(); activePresenceRefForOff = null; }
-  currentRoomId = null;
-  boardRef = null;
-  botPresenceRef = null;
-}
-
-// v1.9.211: 예전 boot() 안에 있던 presence+board 구독 로직을 그대로 옮겨온 것(로직 자체는
-// 안 바꿈) — roomId를 받아 그 방의 roomBoards/roomPresence에 건다.
-async function connectToRoom(roomId) {
-  const db = firebase.database();
-  const myBoardRef = db.ref('roomBoards/' + roomId);
-  boardRef = myBoardRef;
-  botPresenceRef = db.ref('roomPresence/' + roomId + '/' + BOT_ID); // v1.9.141: 연습봇 커서/타이핑 브로드캐스트용(아래 "연습봇" 섹션)
-
   let presenceFirstSync = true;
   const peerTypedPrev = new Map(); // 다른 사람의 타이핑 효과음 브로드캐스트용 — peer id -> 마지막으로 본 typed 문자열
-  const presenceRef = db.ref('roomPresence/' + roomId);
-  activePresenceRefForOff = presenceRef;
-  presenceRef.on('value', snap => {
+  db.ref('presence').on('value', snap => {
     const val = snap.val() || {};
     // v1.9.141: 연습봇도 이제 presence/{BOT_ID}에 자기 커서 위치/타이핑 상태를 올려서(아래
     // "연습봇" 섹션 참고) 다른 사람처럼 커서 이동+타이핑이 보이게 함. 다만 접속자 수/"혼자
@@ -6151,33 +5827,10 @@ async function connectToRoom(roomId) {
     draw();
   });
 
-  // v1.9.216: 방에 들어갔는데 보드가 아예 없으면(완전히 새로 만든 방이거나, 모두의 방처럼
-  // 마지막 사람이 나가서 Cloud Function이 roomBoards를 지운 직후) 씨앗 단어 1~3개를 심어둠.
-  // 예전엔 게임 재시작(triggerRestart)/테스트용 초기화 버튼에서만 buildSeedBoard()를 불렀지
-  // "방에 처음 들어왔는데 보드 자체가 없는 경우"엔 아무도 이걸 부르지 않아서, 그 방에
-  // 제일 먼저 들어가는 사람 화면엔 단어가 하나도 안 뜨는 채로 계속 비어있는 버그가 있었음.
-  // 아래 board.on('value') 구독을 걸기 "전에" 끝내야, 그 구독의 첫 콜백(wasFirst)이 이미
-  // 씨앗이 심어진 상태를 보고 정상적으로 "최초 로드"로 처리됨(구독을 먼저 걸면 빈 상태로
-  // 한 번 불렸다가 씨앗이 막 도착하면서 또 불려 "누가 방금 단어를 놓은 것"처럼 오인해
-  // 완성 효과음이 나갈 수 있음). transaction으로 하는 이유: 같은 순간 여러 명이 동시에
-  // 첫 입장해도(다들 board가 없는 걸 보고) 딱 한 번만 안전하게 심어짐 — 이미 누가 심웠으면
-  // b가 더는 falsy가 아니므로 그대로 둠(undefined 리턴 시 트랜잭션이 조용히 중단됨).
-  try {
-    const snap = await myBoardRef.once('value');
-    if (!snap.exists()) await myBoardRef.transaction(b => b || buildSeedBoard());
-  } catch (e) {
-    // 실패해도 아래 board.on('value')이 빈 보드로 렌더링하는 기존 폴백으로 넘어가므로 무해함
-  }
-  // 씨앗을 심는 동안(await) 이미 다른 방으로 옮겨갔다면 여기서 멈춤 — 떠난 방의
-  // board.on('value') 구독을 걸어봤자 곧 leaveRoom()의 .off()로 끊길 것이고, 자칫
-  // activeBoardRefForOff가 새 방이 아닌 옛 방을 가리키게 돼 방을 나갈 때 꼬일 수 있음
-  if (currentRoomId !== roomId) return;
-
   // 보드 실시간 반영
   let firstSync = true;
   let prevWordCount = 0; // 단어 완성 효과음의 이전 스냅샷 기준값(포획 효과음은 captureEvents로 판단 — 아래 참고)
-  activeBoardRefForOff = myBoardRef;
-  myBoardRef.on('value', snap => {
+  boardRef.on('value', snap => {
     const board = snap.val() || { cells: {}, words: [] };
     lastBoardVersionForSolo = board.version || 0;
     if (lastBoardVersionForSolo === 0) {

@@ -63,9 +63,7 @@ const memberTotalScore = { M0: 150, M1: 0 };
 const memberFonts = { M0: 'yoonchorokusan' };
 const STORE = {
   memberProfiles, memberTotalScore, memberFonts,
-  // v1.9.211: 방(room) 시스템 — 전역 board 대신 roomBoards/{roomId}. 이 파일의 chainRef는
-  // path를 그대로 flat 키로 쓰므로(예: "roomBoards/testRoom"), 여기도 그 형태로 미리 채워둠.
-  'roomBoards/testRoom': {
+  board: {
     cells: {
       '3,3': { ch: '가', h: true, by: 'M0' }, // M0가 놓음 -> 윤초록우산어린이 만세로 그려져야 함
       '4,3': { ch: '나', h: true, by: 'M1' }, // M1이 놓음 -> 기본 폰트로 그려져야 함
@@ -80,8 +78,7 @@ function chainRef(path) {
     get _val() { return STORE[path]; },
     set _val(v) { STORE[path] = v; },
     on(evt, cb) { ref._cb = cb; setTimeout(() => cb({ val: () => ref._val, key: 'k' }), 5); return cb; },
-    off() { ref._cb = null; },
-    once(evt) { return Promise.resolve({ val: () => ref._val, exists: () => ref._val != null }); },
+    once(evt) { return Promise.resolve({ val: () => ref._val }); },
     set(v) { ref._val = v; if (ref._cb) setTimeout(() => ref._cb({ val: () => ref._val, key: 'k' }), 1); return Promise.resolve(); },
     update(v) { ref._val = Object.assign(ref._val || {}, v); if (ref._cb) setTimeout(() => ref._cb({ val: () => ref._val, key: 'k' }), 1); return Promise.resolve(); },
     remove() { ref._val = null; return Promise.resolve(); },
@@ -105,13 +102,9 @@ window.FIREBASE_CONFIG = {};
 window.localStorage.setItem('wb-memberUid', 'M0');
 
 const testSnippet = `
-setTimeout(async () => {
+setTimeout(() => {
   const results = [];
   results.push(['부팅 완료, clientId 확정(기대 M0)', clientId === 'M0']);
-
-  // v1.9.211: 방 시스템 — 로비에서 testRoom으로 입장해야 board 구독(및 그 안의 cells)이 시작됨
-  enterRoom('testRoom');
-  await new Promise(r => setTimeout(r, 60));
 
   // --- [카탈로그] FONT_CATALOG 구조 확인 ---
   results.push(['[카탈로그] 기본체를 포함한 전체 폰트 개수가 1개보다 많음', FONT_CATALOG.length > 1]);

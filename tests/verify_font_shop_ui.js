@@ -51,13 +51,9 @@ const memberProfiles = { M0: { nickname: '나', iconIdx: 0 } };
 const memberTotalScore = { M0: 150 }; // yoonchorokusan(100)은 해금, galmuri9(300)는 아직 잠김
 const STORE = {
   memberProfiles, memberTotalScore, memberFonts: {},
-  // v1.9.211: 방(room) 시스템 — 전역 board 대신 roomBoards/{roomId}. 테스트는 항상
-  // enterRoom('testRoom')으로 이 방에 들어감(로비 화면을 거쳐야 board 구독이 시작됨).
-  roomBoards: {
-    testRoom: {
-      cells: { '3,3': { ch: '가', h: true, by: 'M0' } }, // M0가 놓은 글자 — 장착 후 즉시 폰트가 바뀌는지 볼 대상
-      words: [], version: 2,
-    },
+  board: {
+    cells: { '3,3': { ch: '가', h: true, by: 'M0' } }, // M0가 놓은 글자 — 장착 후 즉시 폰트가 바뀌는지 볼 대상
+    words: [], version: 2,
   },
 };
 // v1.9.186 테스트 노트: 기존 여러 verify_*.js가 쓰던 flat "STORE[path]" 방식은 경로에 '/'가
@@ -103,8 +99,7 @@ function chainRef(path) {
       setTimeout(() => cb({ val: () => getAtPath(path), key: (path.split('/').pop() || 'k') }), 5);
       return cb;
     },
-    off() { for (let i = listeners.length - 1; i >= 0; i--) if (listeners[i].path === path) listeners.splice(i, 1); },
-    once(evt) { return Promise.resolve({ val: () => getAtPath(path), exists: () => getAtPath(path) != null }); },
+    once(evt) { return Promise.resolve({ val: () => getAtPath(path) }); },
     set(v) { setAtPath(path, v); notifyPath(path); return Promise.resolve(); },
     update(v) { setAtPath(path, Object.assign(getAtPath(path) || {}, v)); notifyPath(path); return Promise.resolve(); },
     remove() { setAtPath(path, null); notifyPath(path); return Promise.resolve(); },
@@ -132,10 +127,6 @@ const testSnippet = `
 setTimeout(async () => {
   const results = [];
   results.push(['부팅 완료, clientId 확정(기대 M0)', clientId === 'M0']);
-
-  // v1.9.211: 방 시스템 — 로비에서 testRoom으로 입장해야 board 구독(및 그 안의 cells)이 시작됨
-  enterRoom('testRoom');
-  await new Promise(r => setTimeout(r, 60));
 
   fontShopBtn.click();
   await new Promise(r => setTimeout(r, 50));

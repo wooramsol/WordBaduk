@@ -1,25 +1,12 @@
 {
   "rules": {
-    "roomMeta": {
+    "board": {
       ".read": true,
-      "$roomId": {
-        ".write": true,
-        ".validate": "newData.hasChildren(['title','createdBy','createdAt','playerCount']) && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 30 && newData.child('createdBy').isString() && (newData.child('createdBy').val() === 'system' || root.child('memberProfiles').child(newData.child('createdBy').val()).exists()) && newData.child('createdAt').isNumber() && newData.child('playerCount').isNumber() && newData.child('playerCount').val() >= 0"
-      }
+      ".write": true
     },
-    "roomBoards": {
+    "presence": {
       ".read": true,
-      "$roomId": {
-        ".write": true
-      }
-    },
-    "roomPresence": {
-      ".read": true,
-      "$roomId": {
-        "$clientId": {
-          ".write": true
-        }
-      }
+      ".write": true
     },
     "playerFruit": {
       ".read": true,
