@@ -195,6 +195,9 @@ const PRESENCE_STALE_MS = 90 * 1000;
 // v1.9.211: 방(room) 시스템 도입 — public/index.html의 BOT_ID('BOT-practice')와 반드시
 // 같은 값을 유지할 것(연습봇을 "실제 인원"에서 빼기 위한 기준).
 const ROOM_BOT_ID = 'BOT-practice';
+// v1.9.212: 비회원도 언제든 들어와 플레이할 수 있도록 항상 열려있는 방 하나(기본방)를
+// 둠 — public/index.html의 DEFAULT_ROOM_ID와 반드시 같은 값으로 유지할 것.
+const DEFAULT_ROOM_ID = 'default';
 
 /**
  * 방 시스템 — roomPresence/{roomId}/{clientId}에 뭔가 쓰일 때마다(입장/20초마다 오는
@@ -204,7 +207,9 @@ const ROOM_BOT_ID = 'BOT-practice';
  *    전환, 앱 강제 종료처럼 onDisconnect가 못 잡는 조용한 끊김 대응)를 방 단위로 함.
  * 2) 정리 후 그 방의 실제 접속 인원(연습봇 제외)을 다시 세어 roomMeta/{roomId}/playerCount에
  *    반영하고, 0명이면(마지막 사람이 나감) "방은 자동으로 사라진다" 요구사항대로 그 방
- *    전체(meta/board/presence)를 통째로 지운다.
+ *    전체(meta/board/presence)를 통째로 지운다. 단, DEFAULT_ROOM_ID(기본방)는 비회원도
+ *    언제든 들어올 방이 최소 하나는 항상 있어야 하므로 절대 지우지 않고, 대신 보드만 비워
+ *    다음 입장자가 새 판으로 시작하게 한다.
  * 이 함수 자신이 수행하는 remove()들이 같은 경로에 대해 스스로를 다시 트리거하지만(onWrite
  * 특성상), 매번 지울 게 줄어들다가 결국 지울 게 없어지면 멈추므로 무한 루프는 아님 —
  * Firebase가 문서에서도 이 패턴을 정상적인 것으로 안내함.
@@ -232,6 +237,13 @@ exports.onRoomPresenceWrite = functions.database.ref('/roomPresence/{roomId}/{cl
     }
     if (removals.length) await Promise.all(removals);
     if (realCount === 0) {
+      if (roomId === DEFAULT_ROOM_ID) {
+        await Promise.all([
+          db.ref('roomMeta/' + roomId + '/playerCount').set(0),
+          db.ref('roomBoards/' + roomId).remove(),
+        ]);
+        return null;
+      }
       await Promise.all([
         db.ref('roomMeta/' + roomId).remove(),
         db.ref('roomBoards/' + roomId).remove(),

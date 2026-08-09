@@ -111,9 +111,17 @@ setTimeout(async () => {
   results.push(['로그인 직후: 방 목록(로비)이 보임', !lobbyOverlayEl.classList.contains('hidden')]);
   results.push(['로그인 직후: 아직 어느 방에도 안 들어감(currentRoomId null)', currentRoomId === null]);
 
-  // --- 방 목록에 기존 방 2개가 정상 표시됨 ---
+  // --- 기본방(항상 열려있는 방)이 없으면 자동으로 채워짐 ---
+  await new Promise(r => setTimeout(r, 60));
+  results.push(['기본방이 없으면 자동 생성됨(roomMeta.default)',
+    !!window.__STORE.roomMeta[DEFAULT_ROOM_ID] &&
+    window.__STORE.roomMeta[DEFAULT_ROOM_ID].title === '모두의 방' &&
+    window.__STORE.roomMeta[DEFAULT_ROOM_ID].createdBy === 'system']);
+
+  // --- 방 목록에 기존 방 2개 + 자동 생성된 기본방까지 3개가 정상 표시됨 ---
   const roomLis = [...lobbyRoomListEl.querySelectorAll('li')];
-  results.push(['방 목록에 2개 표시됨(실제 ' + roomLis.length + '개)', roomLis.length === 2]);
+  results.push(['방 목록에 3개 표시됨(실제 ' + roomLis.length + '개)', roomLis.length === 3]);
+  results.push(['기본방이 항상 목록 맨 위에 고정됨', roomLis[0].querySelector('.lobbyRoomTitle').textContent === '모두의 방']);
   const roomALi = roomLis.find(li => li.querySelector('.lobbyRoomTitle').textContent === '초보만 오세요');
   const roomFullLi = roomLis.find(li => li.querySelector('.lobbyRoomTitle').textContent === '꽉찬방');
   results.push(['roomA는 "2/5"로 표시', !!roomALi && roomALi.querySelector('.lobbyRoomCount').textContent === '2/5']);

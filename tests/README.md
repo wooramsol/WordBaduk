@@ -36,6 +36,14 @@ node verify_room_system.js      # 방(room) 목록/입장/생성/나가기/인�
 `functions/index.js`의 `onRoomPresenceWrite`)에서 자동으로 삭제되는지는 Firebase 에뮬레이터가
 필요해 이 jsdom 테스트로는 검증하지 못함 — 배포 후 수동으로 확인할 것.
 
+## v1.9.212 기본방(상시 열린 방) 관련 노트
+
+비회원도 언제든 들어와 플레이할 수 있도록 `DEFAULT_ROOM_ID('default')` 방은 인원이 0명이
+돼도 절대 삭제되지 않는다(대신 보드만 비워짐). `verify_room_system.js`는 로비의 `roomMeta`에
+기본방이 없으면 클라이언트가 자동으로 채워 넣는 부분(self-heal)까지 검증하지만, "인원 0명이어도
+안 지워진다"는 서버(Cloud Function) 쪽 로직은 위와 같은 이유로 이 jsdom 테스트로는 검증하지
+못함 — 배포 후 수동으로 확인할 것.
+
 ## `verify_font_shop_css.js`가 왜 제일 중요한가
 
 v1.9.198~201에서 `<style>` 블록 안 주석 문법 실수(HTML 주석, 혹은 CSS 주석 안에 CSS 주석

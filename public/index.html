@@ -1230,7 +1230,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.211</div>
+<div id="verTagBottom">v1.9.212</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1324,7 +1324,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.211'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.212'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -5891,10 +5891,29 @@ async function boot() {
 let currentRoomId = null;         // 지금 입장해 있는 방 id — 로비에 있으면 null
 let activeBoardRefForOff = null;  // 방을 나갈 때 .off() 하기 위해 기억해두는 참조
 let activePresenceRefForOff = null;
+// v1.9.212: 비회원도 언제든 들어와 플레이할 수 있도록, 인원이 0명이 돼도 절대 사라지지 않는
+// 방이 최소 하나는 항상 있어야 함 — functions/index.js의 DEFAULT_ROOM_ID와 반드시 같은 값을
+// 유지할 것(그쪽에서 이 방만 빈방 자동삭제 대상에서 제외함).
+const DEFAULT_ROOM_ID = 'default';
+let defaultRoomEnsureTried = false; // 세션당 한 번만 자동 생성 시도(중복 방지용, 실패하면 다음 스냅샷에서 재시도)
 
 function subscribeRoomList() {
   firebase.database().ref('roomMeta').on('value', snap => {
-    renderRoomList(snap.val() || {});
+    const val = snap.val() || {};
+    renderRoomList(val);
+    // 기본방이 아직 없으면(최초 배포 직후, 혹은 무슨 이유로든 사라진 경우) 아무나(비회원
+    // 포함) 만들어서 채워 넣음 — database.rules.json에서 createdBy === 'system'인 경우
+    // 회원 여부 검증을 건너뛰도록 예외를 둠.
+    if (!defaultRoomEnsureTried && !val[DEFAULT_ROOM_ID]) {
+      defaultRoomEnsureTried = true;
+      firebase.database().ref('roomMeta/' + DEFAULT_ROOM_ID).set({
+        title: '모두의 방',
+        createdBy: 'system',
+        createdByName: '',
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        playerCount: 0,
+      }).catch(() => { defaultRoomEnsureTried = false; });
+    }
   });
 }
 
@@ -5902,10 +5921,15 @@ function renderRoomList(roomsVal) {
   const entries = Object.entries(roomsVal);
   lobbyRoomListEl.textContent = '';
   lobbyEmptyEl.classList.toggle('hidden', entries.length > 0);
-  entries.sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+  entries.sort((a, b) => {
+    if (a[0] === DEFAULT_ROOM_ID) return -1;
+    if (b[0] === DEFAULT_ROOM_ID) return 1;
+    return (b[1].createdAt || 0) - (a[1].createdAt || 0);
+  });
   for (const [roomId, meta] of entries) {
     const count = Number(meta.playerCount) || 0;
     const full = count >= 5;
+    const isDefault = roomId === DEFAULT_ROOM_ID;
     const li = document.createElement('li');
     if (full) li.classList.add('full');
     const info = document.createElement('div');
@@ -5915,7 +5939,7 @@ function renderRoomList(roomsVal) {
     titleEl.textContent = meta.title || '(제목 없음)';
     const sub = document.createElement('div');
     sub.className = 'lobbyRoomMeta';
-    sub.textContent = meta.createdByName ? (meta.createdByName + '님이 만든 방') : '';
+    sub.textContent = isDefault ? '상시 열린 방 · 누구나 입장 가능' : (meta.createdByName ? (meta.createdByName + '님이 만든 방') : '');
     info.append(titleEl, sub);
     const countEl = document.createElement('span');
     countEl.className = 'lobbyRoomCount';
