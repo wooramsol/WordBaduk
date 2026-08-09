@@ -798,14 +798,14 @@
   }
   #ghostModeCheckbox:checked + #ghostModeSlider { background: #8a7a4f; }
   #ghostModeCheckbox:checked + #ghostModeSlider::before { transform: translateX(16px); }
-  /* v1.9.211: #onlineCard 안, 방 목록/방 나가기 버튼 — #recentVisitorsBtn과 같은
-     "눈에 덜 띄는" 톤을 그대로 씀 */
-  #lobbyNavRow { display: flex; gap: 8px; margin-top: 10px; }
-  #browseRoomsBtn, #leaveRoomBtn {
-    flex: 1; padding: 8px; border-radius: 10px; border: 1px dashed #d8d2c4;
+  /* v1.9.214: #onlineCard 안 "나가기" 버튼 — #recentVisitorsBtn과 같은 "눈에 덜 띄는" 톤.
+     모두의 방(DEFAULT_ROOM_ID)엔 더 나갈 곳이 없으므로 그 방에 있을 땐 숨김(JS에서 토글) */
+  #leaveRoomBtn {
+    display: block; width: 100%; margin-top: 10px; padding: 8px;
+    border-radius: 10px; border: 1px dashed #d8d2c4;
     background: none; color: #999; font-size: 12px; cursor: pointer;
   }
-  #browseRoomsBtn:hover, #leaveRoomBtn:hover { background: #f5f1e8; }
+  #leaveRoomBtn:hover { background: #f5f1e8; }
   #leaveRoomBtn.hidden { display: none; }
   #recentBackdrop { position: fixed; inset: 0; z-index: 69; background: rgba(40,36,26,.45); }
   #recentBackdrop.hidden { display: none; }
@@ -842,29 +842,12 @@
   #recentEmpty { text-align: center; font-size: 13px; color: #999; padding: 12px 0; }
   #recentEmpty.hidden { display: none; }
 
-  /* v1.9.213: 방(room) 목록 — 이제 로그인 직후엔 곧장 "모두의 방"으로 들어가고(로비 화면
-     자체가 사라짐), 이 모달은 게임 중 "n명 접속 중" 모달의 "방 목록" 버튼을 눌렀을 때만
-     뜸. #hofBackdrop/#hofOverlay/#hofCard(랭킹 팝업)와 완전히 같은 딤 배경+가운데 카드
-     패턴으로 통일 — 배경을 눌러 닫아도 지금 있는 방에서 나가지는 것은 아님(구경만 하는
-     것 — hideLobby()만 부름). z-index는 다른 모달들보다는 위(#fontShop 80/81,
-     #copyPopup 90보다는 낮게)에 오도록 둠 */
-  #lobbyBackdrop { position: fixed; inset: 0; z-index: 75; background: rgba(40,36,26,.45); }
-  #lobbyBackdrop.hidden { display: none; }
-  #lobbyOverlay {
-    position: fixed; inset: 0; z-index: 76;
-    display: flex; align-items: center; justify-content: center;
-    padding: 16px; pointer-events: none;
-  }
-  #lobbyOverlay.hidden { display: none; }
-  #lobbyCard {
-    pointer-events: auto;
-    background: #fff; border-radius: 18px; padding: 26px 22px;
-    width: 100%; max-width: 340px; box-shadow: 0 8px 28px rgba(0,0,0,.2);
-    max-height: calc(100vh - 32px); overflow-y: auto;
-  }
-  #lobbyTitle { font-size: 18px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; text-align: center; }
-  #lobbySub { font-size: 12px; color: #888; margin-bottom: 16px; text-align: center; line-height: 1.5; }
-  #lobbyRoomList { list-style: none; margin: 0 0 12px; padding: 0; max-height: 320px; overflow-y: auto; }
+  /* v1.9.214: 방(room) 목록 — 예전엔 "방 목록" 버튼을 눌러야 따로 열리는 모달이었는데,
+     클릭 한 번 더 하지 않아도 바로 보이도록 "n명 접속 중" 모달(#onlineCard) 안에 곧장
+     이어지는 섹션으로 합침. #hofAccountSection과 같은 구분선(border-top) 톤 재사용 */
+  #lobbySection { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0ece0; }
+  #lobbySectionTitle { font-size: 12px; color: #888; font-weight: 700; margin-bottom: 8px; }
+  #lobbyRoomList { list-style: none; margin: 0 0 12px; padding: 0; max-height: 240px; overflow-y: auto; }
   #lobbyRoomList li {
     display: flex; align-items: center; gap: 8px;
     padding: 10px 8px; margin-bottom: 6px; border-radius: 12px;
@@ -1199,40 +1182,33 @@
         <span id="ghostModeSlider"></span>
       </label>
     </div>
-    <!-- v1.9.211: 방 시스템 — 지금 방 안 사람 목록과 별개로, 다른 방을 구경/이동하거나
-         (leaveRoom() 없이 로비만 열어봄) 이 방을 나갈 수 있음(leaveRoom() 호출 → 로비로) -->
-    <div id="lobbyNavRow">
-      <button id="browseRoomsBtn" type="button">🚪 방 목록</button>
-      <button id="leaveRoomBtn" type="button">나가기</button>
+    <!-- v1.9.214: 방(room) 목록 — 예전엔 "방 목록" 버튼을 따로 눌러야 열리는 모달이었는데,
+         클릭 없이 이 모달을 열자마자 바로 보이도록 이 안에 곧장 이어지는 섹션으로 합침.
+         지금 있는 방을 나가는 게 아니라 구경/이동용(다른 방을 실제로 고르면 그때
+         leaveRoom()+enterRoom()이 호출됨) -->
+    <div id="lobbySection">
+      <div id="lobbySectionTitle">방 목록</div>
+      <ul id="lobbyRoomList"></ul>
+      <div id="lobbyEmpty" class="hidden">아직 열린 방이 없어요. 새 방을 만들어보세요!</div>
+      <div id="lobbyCreateRow">
+        <button id="lobbyCreateBtn" type="button">+ 새 방 만들기</button>
+      </div>
+      <div id="lobbyCreateForm" class="hidden">
+        <input type="text" id="lobbyRoomTitleInput" placeholder="방 제목 (예: 초보만 오세요)" maxlength="20">
+        <div class="authErr" id="lobbyCreateErr"></div>
+        <button id="lobbyCreateSubmitBtn" type="button">만들기</button>
+        <button id="lobbyCreateCancelBtn" type="button">취소</button>
+      </div>
+      <!-- 비회원이 방을 만들려 할 때만 노출 — #hofGuestNotice와 같은 패턴(모달이 열릴 때마다
+           isMemberMode에 따라 hidden 토글함) -->
+      <div class="hidden" id="lobbyGuestNotice">
+        <div id="lobbyGuestNoticeLabel">비회원은 방을 만들 수 없어요</div>
+        <a href="#" id="lobbyGuestSignupLink">5초컷 회원가입</a>
+      </div>
     </div>
-  </div>
-</div>
-
-<!-- v1.9.213: 방(room) 목록 — 게임 중 #onlineCard의 "방 목록" 버튼을 눌렀을 때 다른
-     모달들(#hofOverlay, #onlineOverlay 등)과 같은 스타일로 뜸. 지금 있는 방을 나가는 게
-     아니라 그냥 구경/이동용(다른 방을 실제로 고르면 그때 leaveRoom()+enterRoom()이 호출됨) -->
-<div id="lobbyBackdrop" class="hidden"></div>
-<div id="lobbyOverlay" class="hidden">
-  <div id="lobbyCard">
-    <div id="lobbyTitle">낱말바둑 방</div>
-    <div id="lobbySub">방을 선택해서 입장하거나, 새 방을 만들어보세요.</div>
-    <ul id="lobbyRoomList"></ul>
-    <div id="lobbyEmpty" class="hidden">아직 열린 방이 없어요. 새 방을 만들어보세요!</div>
-    <div id="lobbyCreateRow">
-      <button id="lobbyCreateBtn" type="button">+ 새 방 만들기</button>
-    </div>
-    <div id="lobbyCreateForm" class="hidden">
-      <input type="text" id="lobbyRoomTitleInput" placeholder="방 제목 (예: 초보만 오세요)" maxlength="20">
-      <div class="authErr" id="lobbyCreateErr"></div>
-      <button id="lobbyCreateSubmitBtn" type="button">만들기</button>
-      <button id="lobbyCreateCancelBtn" type="button">취소</button>
-    </div>
-    <!-- 비회원이 방 목록을 열었을 때만 노출 — #hofGuestNotice와 같은 패턴(showLobby()에서
-         isMemberMode에 따라 hidden 토글함) -->
-    <div class="hidden" id="lobbyGuestNotice">
-      <div id="lobbyGuestNoticeLabel">비회원은 방을 만들 수 없어요</div>
-      <a href="#" id="lobbyGuestSignupLink">5초컷 회원가입</a>
-    </div>
+    <!-- 지금 있는 방이 모두의 방(DEFAULT_ROOM_ID)이 아닐 때만 보임(JS에서 토글) —
+         모두의 방엔 더 나갈 곳이 없으므로 -->
+    <button id="leaveRoomBtn" type="button">나가기</button>
   </div>
 </div>
 
@@ -1248,7 +1224,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.213</div>
+<div id="verTagBottom">v1.9.214</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1342,7 +1318,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.213'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.214'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4777,12 +4753,9 @@ hallOfFameBtn.addEventListener('click', async () => {
 const onlineBackdrop = document.getElementById('onlineBackdrop');
 const onlineOverlay = document.getElementById('onlineOverlay');
 const onlineListEl = document.getElementById('onlineList');
-// v1.9.211: 방(room) 시스템 — 로비/방 목록 관련 DOM. 실제 구독/입장 로직은 boot() 아래
-// "---------- 방(room) 시스템 ----------" 섹션 참고
-const browseRoomsBtnEl = document.getElementById('browseRoomsBtn');
+// v1.9.211: 방(room) 시스템 — 방 목록 관련 DOM(v1.9.214부터 #onlineCard 안에 곧장 보이는
+// 섹션). 실제 구독/입장 로직은 boot() 아래 "---------- 방(room) 시스템 ----------" 섹션 참고
 const leaveRoomBtnEl = document.getElementById('leaveRoomBtn');
-const lobbyBackdropEl = document.getElementById('lobbyBackdrop');
-const lobbyOverlayEl = document.getElementById('lobbyOverlay');
 const lobbyRoomListEl = document.getElementById('lobbyRoomList');
 const lobbyEmptyEl = document.getElementById('lobbyEmpty');
 const lobbyCreateRowEl = document.getElementById('lobbyCreateRow');
@@ -4867,6 +4840,10 @@ userCountTagEl.addEventListener('click', () => {
   renderOnlineList();
   // 모두의 방(DEFAULT_ROOM_ID)엔 더 나갈 곳이 없으므로 "나가기" 버튼은 다른 방에 있을 때만 보임
   leaveRoomBtnEl.classList.toggle('hidden', currentRoomId === DEFAULT_ROOM_ID);
+  // v1.9.214: 방 목록은 이제 클릭 없이 이 모달을 열자마자 바로 보임(lobbyRoomListEl 자체는
+  // subscribeRoomList()가 백그라운드에서 계속 최신 상태로 갱신해두므로 여기선 만들기
+  // 폼/비회원 안내만 초기 상태로 되돌리면 됨)
+  resetLobbySection();
   onlineOverlay.classList.remove('hidden');
   onlineBackdrop.classList.remove('hidden');
 });
@@ -5973,27 +5950,21 @@ function renderRoomList(roomsVal) {
   }
 }
 
-function showLobby() {
-  lobbyBackdropEl.classList.remove('hidden');
-  lobbyOverlayEl.classList.remove('hidden');
+// v1.9.214: 방 만들기 폼/비회원 안내를 초기 상태로 되돌림 — 예전 showLobby()의 역할이었는데,
+// 이제 별도 모달이 아니라 "n명 접속 중" 모달 안 섹션이라 그 모달이 열릴 때마다 같이 불림
+// (아래 userCountTagEl 클릭 핸들러 참고)
+function resetLobbySection() {
   lobbyCreateFormEl.classList.add('hidden');
   lobbyCreateRowEl.classList.remove('hidden');
   lobbyCreateBtnEl.disabled = !isMemberMode;
   lobbyGuestNoticeEl.classList.toggle('hidden', isMemberMode);
 }
-function hideLobby() {
-  lobbyBackdropEl.classList.add('hidden');
-  lobbyOverlayEl.classList.add('hidden');
-}
-// "눌러서 닫기" 힌트 문구는 뺐음(hofBackdrop과 같은 이유) — 배경을 눌러 닫아도 지금 있는
-// 방에서 나가지는 것은 아님(hideLobby()만 부름, leaveRoom()은 별도 버튼)
-lobbyBackdropEl.addEventListener('click', hideLobby);
 // 비회원이 방을 만들려다 막히면 뜨는 CTA — 랭킹/폰트상점 팝업의 "5초컷 회원가입"과 동일한
-// 흐름(openAccountUpgradeFlow)을 그대로 씀. 방 목록 모달은 먼저 닫아야 뒤에서 auth 모달이
-// 깔끔하게 겹치지 않고 보임
+// 흐름(openAccountUpgradeFlow)을 그대로 씀. "n명 접속 중" 모달은 먼저 닫아야 뒤에서 auth
+// 모달이 깔끔하게 겹치지 않고 보임
 document.getElementById('lobbyGuestSignupLink').addEventListener('click', e => {
   e.preventDefault();
-  hideLobby();
+  closeOnlineOverlay();
   openAccountUpgradeFlow();
 });
 
@@ -6035,26 +6006,21 @@ async function submitCreateRoom() {
 lobbyCreateSubmitBtnEl.addEventListener('click', submitCreateRoom);
 lobbyRoomTitleInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitCreateRoom(); } });
 
-// "n명 접속 중" 모달 안 방 목록/나가기 버튼. 방 목록은 그냥 구경용 모달(지금 있는 방에서
-// 나가지 않음 — goToRoom()에서 실제로 다른 방을 고를 때만 leaveRoom()이 불림).
-// v1.9.213: 이제 방이 없는 상태(로비)가 정상 경로로는 존재하지 않으므로("모두의 방"이
-// 항상 있음), "나가기"는 지금 있는(모두의 방이 아닌) 방에서 곧장 모두의 방으로 옮겨줌.
-// 이미 모두의 방에 있으면 더 나갈 곳이 없으므로 버튼 자체를 숨김(아래 userCountTagEl 참고).
-browseRoomsBtnEl.addEventListener('click', () => {
-  closeOnlineOverlay();
-  showLobby();
-});
+// "n명 접속 중" 모달 안 "나가기" 버튼. v1.9.214부터 방 목록은 클릭 없이 이 모달 안에 곧장
+// 보임(아래 userCountTagEl 핸들러 참고) — 방 목록 자체는 그냥 구경용이라 지금 있는 방에서
+// 나가지지 않음(goToRoom()에서 실제로 다른 방을 고를 때만 leaveRoom()이 불림).
+// "나가기"는 지금 있는(모두의 방이 아닌) 방에서 곧장 모두의 방으로 옮겨줌. 이미 모두의
+// 방에 있으면 더 나갈 곳이 없으므로 버튼 자체를 숨김(아래 userCountTagEl 참고).
 leaveRoomBtnEl.addEventListener('click', () => {
   closeOnlineOverlay();
   if (currentRoomId !== DEFAULT_ROOM_ID) goToRoom(DEFAULT_ROOM_ID);
 });
 
-// 방을 고르거나 새로 만들면(로비에 있었든, 다른 방 안에서 "방 목록"으로 구경하다 고르든)
-// 여기로 옴 — 이미 다른 방에 있었으면 먼저 그 방에서 조용히 나간 뒤(silent — 로비를 다시
-// 보여줄 필요 없이 바로 새 방으로 넘어가므로) 새 방으로 들어감
+// 방을 고르거나 새로 만들면 여기로 옴 — 이미 다른 방에 있었으면 먼저 그 방에서 조용히
+// 나간 뒤 새 방으로 들어감
 function goToRoom(roomId) {
-  if (currentRoomId === roomId) { hideLobby(); return; } // 지금 있는 방을 또 고르면 그냥 복귀
-  if (currentRoomId) leaveRoom({ silent: true });
+  if (currentRoomId === roomId) { closeOnlineOverlay(); return; } // 지금 있는 방을 또 고르면 그냥 복귀
+  if (currentRoomId) leaveRoom();
   enterRoom(roomId);
 }
 
@@ -6079,7 +6045,7 @@ function resetPerRoomState() {
 }
 
 function enterRoom(roomId) {
-  hideLobby();
+  closeOnlineOverlay();
   resetPerRoomState();
   currentRoomId = roomId;
   // 이 방의 첫 board 동기화를 기다리는 동안 로딩 화면을 다시 보여줌(connectToRoom() 안의
@@ -6089,8 +6055,7 @@ function enterRoom(roomId) {
   if (connected && !ghostMode) startPresence();
 }
 
-function leaveRoom(opts) {
-  const silent = opts && opts.silent;
+function leaveRoom() {
   stopPresence();
   botClearPresence();
   if (activeBoardRefForOff) { activeBoardRefForOff.off(); activeBoardRefForOff = null; }
@@ -6098,7 +6063,6 @@ function leaveRoom(opts) {
   currentRoomId = null;
   boardRef = null;
   botPresenceRef = null;
-  if (!silent) showLobby();
 }
 
 // v1.9.211: 예전 boot() 안에 있던 presence+board 구독 로직을 그대로 옮겨온 것(로직 자체는
