@@ -81,7 +81,7 @@ function chainRef(path) {
     set _val(v) { STORE[path] = v; },
     on(evt, cb) { ref._cb = cb; setTimeout(() => cb({ val: () => ref._val, key: 'k' }), 5); return cb; },
     off() { ref._cb = null; },
-    once(evt) { return Promise.resolve({ val: () => ref._val }); },
+    once(evt) { return Promise.resolve({ val: () => ref._val, exists: () => ref._val != null }); },
     set(v) { ref._val = v; if (ref._cb) setTimeout(() => ref._cb({ val: () => ref._val, key: 'k' }), 1); return Promise.resolve(); },
     update(v) { ref._val = Object.assign(ref._val || {}, v); if (ref._cb) setTimeout(() => ref._cb({ val: () => ref._val, key: 'k' }), 1); return Promise.resolve(); },
     remove() { ref._val = null; return Promise.resolve(); },

@@ -43,8 +43,12 @@ const STORE = {
     // v1.9.213: 인원수 제한이 없어졌으므로, 예전엔 "꽉 찬 방"으로 클릭이 막혔던 방도 이제
     // 그냥 인원이 많은 방일 뿐 정상적으로 입장 가능해야 함을 검증하는 용도로 남겨둠
     roomMany: { title: '인원많은방', createdBy: 'M9', createdByName: '누군가', createdAt: 2, playerCount: 37 },
+    // v1.9.216: 일부러 roomBoards에 대응하는 항목을 아예 안 만들어둠 — 방금 만들어진 방이나,
+    // 마지막 사람이 나가서 Cloud Function이 roomBoards를 지운 직후의 방을 흉내냄. 제일
+    // 먼저 들어가는 사람에게 씨앗 단어 1~3개가 자동으로 심어지는지 검증하는 용도.
+    roomEmpty: { title: '방금생긴방', createdBy: 'M9', createdByName: '누군가', createdAt: 3, playerCount: 0 },
   },
-  roomPresence: { roomA: {}, roomMany: {} },
+  roomPresence: { roomA: {}, roomMany: {}, roomEmpty: {} },
   roomBoards: { roomA: { cells: {}, words: [], version: 2 }, roomMany: { cells: {}, words: [], version: 2 } },
 };
 function getAtPath(p) {
@@ -78,7 +82,7 @@ function chainRef(p) {
     path: p,
     on(evt, cb) { listeners.push({ path: p, cb }); setTimeout(() => cb({ val: () => getAtPath(p), key: (p.split('/').pop() || 'k') }), 5); return cb; },
     off() { for (let i = listeners.length - 1; i >= 0; i--) if (listeners[i].path === p) listeners.splice(i, 1); },
-    once() { return Promise.resolve({ val: () => getAtPath(p) }); },
+    once() { return Promise.resolve({ val: () => getAtPath(p), exists: () => getAtPath(p) != null }); },
     set(v) { setAtPath(p, v); notifyPath(p); return Promise.resolve(); },
     update(v) { setAtPath(p, Object.assign(getAtPath(p) || {}, v)); notifyPath(p); return Promise.resolve(); },
     remove() { setAtPath(p, null); notifyPath(p); return Promise.resolve(); },
@@ -125,9 +129,9 @@ setTimeout(async () => {
   results.push(['"n명 접속 중" 모달이 열림', !onlineOverlay.classList.contains('hidden')]);
   results.push(['모두의 방에서는 "나가기" 버튼이 숨겨짐', leaveRoomBtnEl.classList.contains('hidden')]);
 
-  // --- 방 목록에 기본방 + 기존 방 2개, 총 3개가 클릭 없이 바로 표시됨 ---
+  // --- 방 목록에 기본방 + 기존 방 3개, 총 4개가 클릭 없이 바로 표시됨 ---
   const roomLis = [...lobbyRoomListEl.querySelectorAll('li')];
-  results.push(['방 목록에 3개 표시됨(실제 ' + roomLis.length + '개)', roomLis.length === 3]);
+  results.push(['방 목록에 4개 표시됨(실제 ' + roomLis.length + '개)', roomLis.length === 4]);
   results.push(['기본방이 항상 목록 맨 위에 고정됨', roomLis[0].querySelector('.lobbyRoomTitle').textContent === '모두의 방']);
   const roomALi = roomLis.find(li => li.querySelector('.lobbyRoomTitle').textContent === '초보만 오세요');
   const roomManyLi = roomLis.find(li => li.querySelector('.lobbyRoomTitle').textContent === '인원많은방');
@@ -164,7 +168,31 @@ setTimeout(async () => {
   await new Promise(r => setTimeout(r, 20));
   results.push(['모두의 방이 아니면 "나가기" 버튼이 보임', !leaveRoomBtnEl.classList.contains('hidden')]);
 
+  // --- 버그 수정 검증: roomBoards 항목이 아예 없는 방(방금 만들어졌거나, 마지막 사람이
+  // 나가서 Cloud Function이 지운 직후)에 제일 먼저 들어가면 씨앗 단어 1~3개가 자동으로
+  // 심어져야 함(예전엔 아무도 buildSeedBoard()를 안 불러서 빈 보드로 계속 남아있었음) ---
+  results.push(['roomEmpty는 처음엔 roomBoards에 항목 자체가 없음', window.__STORE.roomBoards.roomEmpty === undefined]);
+  const roomEmptyLi = [...lobbyRoomListEl.querySelectorAll('li')].find(li => li.querySelector('.lobbyRoomTitle').textContent === '방금생긴방');
+  roomEmptyLi.click();
+  await new Promise(r => setTimeout(r, 120));
+  results.push(['roomEmpty 입장 후 보드가 자동으로 생성됨', !!window.__STORE.roomBoards.roomEmpty]);
+  const seededWords = window.__STORE.roomBoards.roomEmpty ? window.__STORE.roomBoards.roomEmpty.words : [];
+  results.push(['씨앗 단어가 1~3개 놓임(실제 ' + seededWords.length + '개)', seededWords.length >= 1 && seededWords.length <= 3]);
+  const seededCellCount = window.__STORE.roomBoards.roomEmpty ? Object.keys(window.__STORE.roomBoards.roomEmpty.cells || {}).length : 0;
+  results.push(['씨앗 단어의 글자 칸도 함께 놓임', seededCellCount > 0]);
+
+  // roomA로 되돌아가서(위 씨앗 단어 검증으로 roomEmpty에 가 있었으므로) 아래 원래
+  // 시나리오("같은 방을 또 누르면 복귀")를 이어감
+  userCountTagEl.click();
+  await new Promise(r => setTimeout(r, 20));
+  const backToRoomALi = [...lobbyRoomListEl.querySelectorAll('li')].find(li => li.querySelector('.lobbyRoomTitle').textContent === '초보만 오세요');
+  backToRoomALi.click();
+  await new Promise(r => setTimeout(r, 80));
+  results.push(['roomEmpty에서 roomA로 다시 이동됨', currentRoomId === 'roomA']);
+
   // 방 목록에서 지금 있는 방(roomA)을 다시 누르면 그냥 모달만 닫힘(구경만 하다 복귀)
+  userCountTagEl.click();
+  await new Promise(r => setTimeout(r, 20));
   const roomAAgain = [...lobbyRoomListEl.querySelectorAll('li')].find(li => li.querySelector('.lobbyRoomTitle').textContent === '초보만 오세요');
   roomAAgain.click();
   await new Promise(r => setTimeout(r, 30));

@@ -75,7 +75,7 @@ function chainRef(p) {
     path: p,
     on(evt, cb) { listeners.push({ path: p, cb }); setTimeout(() => cb({ val: () => getAtPath(p), key: (p.split('/').pop() || 'k') }), 5); return cb; },
     off() { for (let i = listeners.length - 1; i >= 0; i--) if (listeners[i].path === p) listeners.splice(i, 1); },
-    once() { return Promise.resolve({ val: () => getAtPath(p) }); },
+    once() { return Promise.resolve({ val: () => getAtPath(p), exists: () => getAtPath(p) != null }); },
     set(v) { setAtPath(p, v); notifyPath(p); return Promise.resolve(); },
     update(v) { setAtPath(p, Object.assign(getAtPath(p) || {}, v)); notifyPath(p); return Promise.resolve(); },
     remove() { setAtPath(p, null); notifyPath(p); return Promise.resolve(); },

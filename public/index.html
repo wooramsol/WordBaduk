@@ -1228,7 +1228,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.215</div>
+<div id="verTagBottom">v1.9.216</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1322,7 +1322,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.215'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.216'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -6073,9 +6073,10 @@ function leaveRoom() {
 
 // v1.9.211: 예전 boot() 안에 있던 presence+board 구독 로직을 그대로 옮겨온 것(로직 자체는
 // 안 바꿈) — roomId를 받아 그 방의 roomBoards/roomPresence에 건다.
-function connectToRoom(roomId) {
+async function connectToRoom(roomId) {
   const db = firebase.database();
-  boardRef = db.ref('roomBoards/' + roomId);
+  const myBoardRef = db.ref('roomBoards/' + roomId);
+  boardRef = myBoardRef;
   botPresenceRef = db.ref('roomPresence/' + roomId + '/' + BOT_ID); // v1.9.141: 연습봇 커서/타이핑 브로드캐스트용(아래 "연습봇" 섹션)
 
   let presenceFirstSync = true;
@@ -6150,11 +6151,33 @@ function connectToRoom(roomId) {
     draw();
   });
 
+  // v1.9.216: 방에 들어갔는데 보드가 아예 없으면(완전히 새로 만든 방이거나, 모두의 방처럼
+  // 마지막 사람이 나가서 Cloud Function이 roomBoards를 지운 직후) 씨앗 단어 1~3개를 심어둠.
+  // 예전엔 게임 재시작(triggerRestart)/테스트용 초기화 버튼에서만 buildSeedBoard()를 불렀지
+  // "방에 처음 들어왔는데 보드 자체가 없는 경우"엔 아무도 이걸 부르지 않아서, 그 방에
+  // 제일 먼저 들어가는 사람 화면엔 단어가 하나도 안 뜨는 채로 계속 비어있는 버그가 있었음.
+  // 아래 board.on('value') 구독을 걸기 "전에" 끝내야, 그 구독의 첫 콜백(wasFirst)이 이미
+  // 씨앗이 심어진 상태를 보고 정상적으로 "최초 로드"로 처리됨(구독을 먼저 걸면 빈 상태로
+  // 한 번 불렸다가 씨앗이 막 도착하면서 또 불려 "누가 방금 단어를 놓은 것"처럼 오인해
+  // 완성 효과음이 나갈 수 있음). transaction으로 하는 이유: 같은 순간 여러 명이 동시에
+  // 첫 입장해도(다들 board가 없는 걸 보고) 딱 한 번만 안전하게 심어짐 — 이미 누가 심웠으면
+  // b가 더는 falsy가 아니므로 그대로 둠(undefined 리턴 시 트랜잭션이 조용히 중단됨).
+  try {
+    const snap = await myBoardRef.once('value');
+    if (!snap.exists()) await myBoardRef.transaction(b => b || buildSeedBoard());
+  } catch (e) {
+    // 실패해도 아래 board.on('value')이 빈 보드로 렌더링하는 기존 폴백으로 넘어가므로 무해함
+  }
+  // 씨앗을 심는 동안(await) 이미 다른 방으로 옮겨갔다면 여기서 멈춤 — 떠난 방의
+  // board.on('value') 구독을 걸어봤자 곧 leaveRoom()의 .off()로 끊길 것이고, 자칫
+  // activeBoardRefForOff가 새 방이 아닌 옛 방을 가리키게 돼 방을 나갈 때 꼬일 수 있음
+  if (currentRoomId !== roomId) return;
+
   // 보드 실시간 반영
   let firstSync = true;
   let prevWordCount = 0; // 단어 완성 효과음의 이전 스냅샷 기준값(포획 효과음은 captureEvents로 판단 — 아래 참고)
-  activeBoardRefForOff = boardRef;
-  boardRef.on('value', snap => {
+  activeBoardRefForOff = myBoardRef;
+  myBoardRef.on('value', snap => {
     const board = snap.val() || { cells: {}, words: [] };
     lastBoardVersionForSolo = board.version || 0;
     if (lastBoardVersionForSolo === 0) {

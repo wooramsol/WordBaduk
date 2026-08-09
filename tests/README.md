@@ -62,6 +62,18 @@ validate 및 클라이언트의 "꽉 찬 방" 로직 모두 제거). "나가기"
 전부 `closeOnlineOverlay()`(방 선택/생성 후)와 `resetLobbySection()`(모달을 열 때마다 방
 만들기 폼/비회원 안내를 초기 상태로 되돌림)으로 처리한다.
 
+## v1.9.216 방에 처음 들어갈 때 씨앗 단어가 안 뜨던 버그
+
+`connectToRoom()`이 `roomBoards/{roomId}`가 아예 없을 때(방금 만들어진 방, 또는 모두의
+방처럼 마지막 사람이 나가서 Cloud Function이 지운 직후) `board.on('value')` 구독을 걸기
+전에 `buildSeedBoard()`로 씨앗 단어 1~3개를 먼저 심어두도록 고쳤다(트랜잭션이라 여러 명이
+동시에 첫 입장해도 안전). `verify_room_system.js`의 `roomEmpty`가 이 시나리오(일부러
+`roomBoards`에 대응 항목을 안 만들어둠)를 재현해 검증한다. 이 테스트가 mock의 `.once()`가
+돌려주는 스냅샷에 `.exists()`가 있어야 동작하므로, 이 파일을 포함한 모든 테스트의 chainRef
+mock에 `exists()`를 추가해뒀다 — 새 mock을 또 만들 때도 빠뜨리지 말 것(빠뜨리면 프로덕션
+코드의 `snap.exists()` 호출이 조용히 예외로 잡혀 테스트가 그 코드 경로를 전혀 실행하지
+않은 채로 통과해버림).
+
 ## v1.9.215 관리자 전용 UI를 "n명 접속 중" 모달 밖으로 이동
 
 고스트 모드 스위치 + 최근 다녀간 사람 버튼이 "n명 접속 중" 모달(#onlineCard) 안에서 빠져,

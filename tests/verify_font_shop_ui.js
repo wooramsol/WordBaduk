@@ -104,7 +104,7 @@ function chainRef(path) {
       return cb;
     },
     off() { for (let i = listeners.length - 1; i >= 0; i--) if (listeners[i].path === path) listeners.splice(i, 1); },
-    once(evt) { return Promise.resolve({ val: () => getAtPath(path) }); },
+    once(evt) { return Promise.resolve({ val: () => getAtPath(path), exists: () => getAtPath(path) != null }); },
     set(v) { setAtPath(path, v); notifyPath(path); return Promise.resolve(); },
     update(v) { setAtPath(path, Object.assign(getAtPath(path) || {}, v)); notifyPath(path); return Promise.resolve(); },
     remove() { setAtPath(path, null); notifyPath(path); return Promise.resolve(); },
