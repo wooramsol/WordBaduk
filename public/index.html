@@ -806,6 +806,7 @@
     background: none; color: #999; font-size: 12px; cursor: pointer;
   }
   #browseRoomsBtn:hover, #leaveRoomBtn:hover { background: #f5f1e8; }
+  #leaveRoomBtn.hidden { display: none; }
   #recentBackdrop { position: fixed; inset: 0; z-index: 69; background: rgba(40,36,26,.45); }
   #recentBackdrop.hidden { display: none; }
   #recentOverlay {
@@ -841,14 +842,22 @@
   #recentEmpty { text-align: center; font-size: 13px; color: #999; padding: 12px 0; }
   #recentEmpty.hidden { display: none; }
 
-  /* v1.9.211: 방(room) 목록 — 로그인/비회원 진입 직후 뜨는 로비 화면, 그리고 게임 중
-     "n명 접속 중" 모달의 "방 목록" 버튼을 눌렀을 때도 같은 화면을 재사용함. #pageLoadingOverlay
-     처럼 완전히 불투명한 배경으로 덮어서(방 안에서 다시 열 때 뒤의 격자가 비치면 안 됨),
-     다른 어떤 모달보다도 위(z-index 75 — #fontShop 80/81, #copyPopup 90보다는 낮게 둬서
-     그쪽이 실수로 로비 밑에 깔리지 않게 함)에 오도록 함 */
-  #lobbyOverlay { position: fixed; inset: 0; z-index: 75; display: flex; align-items: center; justify-content: center; background: #f5f1e8; padding: 16px; }
+  /* v1.9.213: 방(room) 목록 — 이제 로그인 직후엔 곧장 "모두의 방"으로 들어가고(로비 화면
+     자체가 사라짐), 이 모달은 게임 중 "n명 접속 중" 모달의 "방 목록" 버튼을 눌렀을 때만
+     뜸. #hofBackdrop/#hofOverlay/#hofCard(랭킹 팝업)와 완전히 같은 딤 배경+가운데 카드
+     패턴으로 통일 — 배경을 눌러 닫아도 지금 있는 방에서 나가지는 것은 아님(구경만 하는
+     것 — hideLobby()만 부름). z-index는 다른 모달들보다는 위(#fontShop 80/81,
+     #copyPopup 90보다는 낮게)에 오도록 둠 */
+  #lobbyBackdrop { position: fixed; inset: 0; z-index: 75; background: rgba(40,36,26,.45); }
+  #lobbyBackdrop.hidden { display: none; }
+  #lobbyOverlay {
+    position: fixed; inset: 0; z-index: 76;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; pointer-events: none;
+  }
   #lobbyOverlay.hidden { display: none; }
   #lobbyCard {
+    pointer-events: auto;
     background: #fff; border-radius: 18px; padding: 26px 22px;
     width: 100%; max-width: 340px; box-shadow: 0 8px 28px rgba(0,0,0,.2);
     max-height: calc(100vh - 32px); overflow-y: auto;
@@ -862,7 +871,6 @@
     background: #f5f1e8; cursor: pointer;
   }
   #lobbyRoomList li:hover { filter: brightness(0.97); }
-  #lobbyRoomList li.full { opacity: .55; cursor: not-allowed; }
   #lobbyRoomList .lobbyRoomInfo { flex: 1; min-width: 0; }
   #lobbyRoomList .lobbyRoomTitle {
     font-weight: 700; color: #333; font-size: 14px;
@@ -873,7 +881,6 @@
     flex: none; font-size: 12px; font-weight: 800; color: #8a7a4f;
     background: #fff; border-radius: 10px; padding: 4px 8px;
   }
-  #lobbyRoomList li.full .lobbyRoomCount { color: #a23c3c; }
   #lobbyEmpty { text-align: center; color: #999; font-size: 13px; padding: 24px 0; }
   #lobbyEmpty.hidden { display: none; }
   #lobbyCreateBtn {
@@ -895,8 +902,13 @@
   }
   #lobbyCreateSubmitBtn { background: #8a7a4f; color: #fff; border-color: #8a7a4f; }
   #lobbyCreateCancelBtn { background: #fff; color: #888; }
-  #lobbyGuestNotice { margin-top: 10px; font-size: 12px; color: #999; text-align: center; }
+  /* 비회원이 방 목록에서 새 방을 만들려 할 때 보여주는 안내 — #hofGuestNotice와 같은
+     "안내 문구 + 5초컷 회원가입" 패턴 */
+  #lobbyGuestNotice { text-align: center; margin-top: 12px; }
   #lobbyGuestNotice.hidden { display: none; }
+  #lobbyGuestNoticeLabel { font-size: 12px; color: #888; margin-bottom: 4px; }
+  #lobbyGuestNotice a { color: #8a7a4f; font-weight: 700; font-size: 13px; text-decoration: none; }
+  #lobbyGuestNotice a:hover { text-decoration: underline; }
 
   /* "PC에서 플레이하기" 클릭 시 URL이 클립보드에 복사됐음을 알리는 팝업 — 토스트가
      잘 안 보인다는 피드백에 따라, 화면 정중앙에 배경(딤)과 함께 뜨는 작은 카드로 교체.
@@ -1196,12 +1208,13 @@
   </div>
 </div>
 
-<!-- v1.9.211: 방(room) 목록(로비) — 로그인/비회원 진입 직후 첫 화면으로 뜨고, 게임 중엔
-     위 #onlineCard의 "방 목록" 버튼으로도 다시 열 수 있음(그땐 아직 방을 나간 게 아니라
-     구경만 하는 것 — 다른 방을 실제로 고르면 그때 leaveRoom()+enterRoom()이 호출됨) -->
+<!-- v1.9.213: 방(room) 목록 — 게임 중 #onlineCard의 "방 목록" 버튼을 눌렀을 때 다른
+     모달들(#hofOverlay, #onlineOverlay 등)과 같은 스타일로 뜸. 지금 있는 방을 나가는 게
+     아니라 그냥 구경/이동용(다른 방을 실제로 고르면 그때 leaveRoom()+enterRoom()이 호출됨) -->
+<div id="lobbyBackdrop" class="hidden"></div>
 <div id="lobbyOverlay" class="hidden">
   <div id="lobbyCard">
-    <div id="lobbyTitle">낱말바둑 — 방 목록</div>
+    <div id="lobbyTitle">낱말바둑 방</div>
     <div id="lobbySub">방을 선택해서 입장하거나, 새 방을 만들어보세요.</div>
     <ul id="lobbyRoomList"></ul>
     <div id="lobbyEmpty" class="hidden">아직 열린 방이 없어요. 새 방을 만들어보세요!</div>
@@ -1214,7 +1227,12 @@
       <button id="lobbyCreateSubmitBtn" type="button">만들기</button>
       <button id="lobbyCreateCancelBtn" type="button">취소</button>
     </div>
-    <div id="lobbyGuestNotice" class="hidden">비회원은 방을 만들 수 없어요. 참여는 자유롭게 가능해요.</div>
+    <!-- 비회원이 방 목록을 열었을 때만 노출 — #hofGuestNotice와 같은 패턴(showLobby()에서
+         isMemberMode에 따라 hidden 토글함) -->
+    <div class="hidden" id="lobbyGuestNotice">
+      <div id="lobbyGuestNoticeLabel">비회원은 방을 만들 수 없어요</div>
+      <a href="#" id="lobbyGuestSignupLink">5초컷 회원가입</a>
+    </div>
   </div>
 </div>
 
@@ -1230,7 +1248,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.212</div>
+<div id="verTagBottom">v1.9.213</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1324,7 +1342,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.212'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.213'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -4763,6 +4781,7 @@ const onlineListEl = document.getElementById('onlineList');
 // "---------- 방(room) 시스템 ----------" 섹션 참고
 const browseRoomsBtnEl = document.getElementById('browseRoomsBtn');
 const leaveRoomBtnEl = document.getElementById('leaveRoomBtn');
+const lobbyBackdropEl = document.getElementById('lobbyBackdrop');
 const lobbyOverlayEl = document.getElementById('lobbyOverlay');
 const lobbyRoomListEl = document.getElementById('lobbyRoomList');
 const lobbyEmptyEl = document.getElementById('lobbyEmpty');
@@ -4846,6 +4865,8 @@ onlineListEl.addEventListener('click', e => {
 
 userCountTagEl.addEventListener('click', () => {
   renderOnlineList();
+  // 모두의 방(DEFAULT_ROOM_ID)엔 더 나갈 곳이 없으므로 "나가기" 버튼은 다른 방에 있을 때만 보임
+  leaveRoomBtnEl.classList.toggle('hidden', currentRoomId === DEFAULT_ROOM_ID);
   onlineOverlay.classList.remove('hidden');
   onlineBackdrop.classList.remove('hidden');
 });
@@ -5874,10 +5895,14 @@ async function boot() {
     });
   }
 
-  bootStage = 'boot:ready-for-lobby';
-  hidePageLoadingOverlay();
+  // v1.9.213: 예전 방식처럼(방 시스템 도입 전과 동일하게) 로비 선택 화면 없이 곧장 항상
+  // 열려있는 "모두의 방"으로 입장함. 방 목록은 이제 로비가 아니라 게임 중 "n명 접속 중"
+  // 모달의 "방 목록" 버튼으로 여는 모달(다른 방으로 옮기고 싶을 때만 씀) — 아래 enterRoom()이
+  // pageLoadingOverlay를 다시 보여주고, connectToRoom()의 첫 board 동기화에서 사라짐(최초
+  // 부팅 때와 동일한 흐름이라 여기서 따로 hidePageLoadingOverlay()를 부를 필요 없음).
+  bootStage = 'boot:ready';
   subscribeRoomList();
-  showLobby();
+  enterRoom(DEFAULT_ROOM_ID);
 }
 
 // ---------- 방(room) 시스템 ----------
@@ -5928,10 +5953,8 @@ function renderRoomList(roomsVal) {
   });
   for (const [roomId, meta] of entries) {
     const count = Number(meta.playerCount) || 0;
-    const full = count >= 5;
     const isDefault = roomId === DEFAULT_ROOM_ID;
     const li = document.createElement('li');
-    if (full) li.classList.add('full');
     const info = document.createElement('div');
     info.className = 'lobbyRoomInfo';
     const titleEl = document.createElement('div');
@@ -5943,17 +5966,15 @@ function renderRoomList(roomsVal) {
     info.append(titleEl, sub);
     const countEl = document.createElement('span');
     countEl.className = 'lobbyRoomCount';
-    countEl.textContent = `${count}/5`;
+    countEl.textContent = `${count}명`;
     li.append(info, countEl);
-    li.addEventListener('click', () => {
-      if (full) { showToast('방이 꽉 찼어요.'); return; }
-      goToRoom(roomId);
-    });
+    li.addEventListener('click', () => goToRoom(roomId));
     lobbyRoomListEl.appendChild(li);
   }
 }
 
 function showLobby() {
+  lobbyBackdropEl.classList.remove('hidden');
   lobbyOverlayEl.classList.remove('hidden');
   lobbyCreateFormEl.classList.add('hidden');
   lobbyCreateRowEl.classList.remove('hidden');
@@ -5961,8 +5982,20 @@ function showLobby() {
   lobbyGuestNoticeEl.classList.toggle('hidden', isMemberMode);
 }
 function hideLobby() {
+  lobbyBackdropEl.classList.add('hidden');
   lobbyOverlayEl.classList.add('hidden');
 }
+// "눌러서 닫기" 힌트 문구는 뺐음(hofBackdrop과 같은 이유) — 배경을 눌러 닫아도 지금 있는
+// 방에서 나가지는 것은 아님(hideLobby()만 부름, leaveRoom()은 별도 버튼)
+lobbyBackdropEl.addEventListener('click', hideLobby);
+// 비회원이 방을 만들려다 막히면 뜨는 CTA — 랭킹/폰트상점 팝업의 "5초컷 회원가입"과 동일한
+// 흐름(openAccountUpgradeFlow)을 그대로 씀. 방 목록 모달은 먼저 닫아야 뒤에서 auth 모달이
+// 깔끔하게 겹치지 않고 보임
+document.getElementById('lobbyGuestSignupLink').addEventListener('click', e => {
+  e.preventDefault();
+  hideLobby();
+  openAccountUpgradeFlow();
+});
 
 lobbyCreateBtnEl.addEventListener('click', () => {
   if (!isMemberMode) return;
@@ -6002,16 +6035,18 @@ async function submitCreateRoom() {
 lobbyCreateSubmitBtnEl.addEventListener('click', submitCreateRoom);
 lobbyRoomTitleInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitCreateRoom(); } });
 
-// "n명 접속 중" 모달 안 방 목록/나가기 버튼 — 방 목록은 그냥 구경(로비를 겹쳐 보여줄 뿐,
-// 아직 방을 나간 게 아님 — goToRoom()에서 실제로 다른 방을 고를 때만 leaveRoom()이 불림).
-// 나가기는 즉시 이 방에서 나가 로비로 돌아감.
+// "n명 접속 중" 모달 안 방 목록/나가기 버튼. 방 목록은 그냥 구경용 모달(지금 있는 방에서
+// 나가지 않음 — goToRoom()에서 실제로 다른 방을 고를 때만 leaveRoom()이 불림).
+// v1.9.213: 이제 방이 없는 상태(로비)가 정상 경로로는 존재하지 않으므로("모두의 방"이
+// 항상 있음), "나가기"는 지금 있는(모두의 방이 아닌) 방에서 곧장 모두의 방으로 옮겨줌.
+// 이미 모두의 방에 있으면 더 나갈 곳이 없으므로 버튼 자체를 숨김(아래 userCountTagEl 참고).
 browseRoomsBtnEl.addEventListener('click', () => {
   closeOnlineOverlay();
   showLobby();
 });
 leaveRoomBtnEl.addEventListener('click', () => {
   closeOnlineOverlay();
-  leaveRoom();
+  if (currentRoomId !== DEFAULT_ROOM_ID) goToRoom(DEFAULT_ROOM_ID);
 });
 
 // 방을 고르거나 새로 만들면(로비에 있었든, 다른 방 안에서 "방 목록"으로 구경하다 고르든)

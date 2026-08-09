@@ -24,7 +24,7 @@ node verify_font_shop_css.js    # @font-face 규칙이 CSS로 제대로 파싱�
 node verify_font_shop_ui.js     # 상점 모달 UI(해금/잠금/장착/해제)
 node verify_font_shop_draw.js   # 보드에 실제로 그 폰트로 그려지는지
 node verify_ghost_mode.js       # 관리자 전용 고스트 모드(자기 자신 오탐지 방지 포함)
-node verify_room_system.js      # 방(room) 목록/입장/생성/나가기/인원 캡
+node verify_room_system.js      # 방(room) 목록/입장/생성/나가기(인원수 제한 없음)
 ```
 
 ## v1.9.211 방(room) 시스템 관련 노트
@@ -43,6 +43,16 @@ node verify_room_system.js      # 방(room) 목록/입장/생성/나가기/인�
 기본방이 없으면 클라이언트가 자동으로 채워 넣는 부분(self-heal)까지 검증하지만, "인원 0명이어도
 안 지워진다"는 서버(Cloud Function) 쪽 로직은 위와 같은 이유로 이 jsdom 테스트로는 검증하지
 못함 — 배포 후 수동으로 확인할 것.
+
+## v1.9.213 로그인 직후 자동 입장 + 인원수 제한 해제 관련 노트
+
+로그인/비회원 진입 직후 뜨던 로비 화면이 없어지고, 이제 곧장 `DEFAULT_ROOM_ID`("모두의 방")에
+자동으로 입장한다. 방 목록은 게임 중 "n명 접속 중" 모달의 "방 목록" 버튼으로 여는, 다른
+모달들과 같은 스타일(딤 배경+카드)의 팝업으로 바뀌었다 — 배경을 눌러 닫아도 지금 있는 방에서는
+안 나가진다. 방 인원수 제한(5명 캡)도 전부 없앴다(`database.rules.json`의 `roomPresence`
+validate 및 클라이언트의 "꽉 찬 방" 로직 모두 제거). "나가기" 버튼은 지금 있는 방이 모두의
+방이 아닐 때만 보이고, 누르면 모두의 방으로 돌아간다(예전처럼 "방 없는 로비 상태"로 돌아가지
+않음).
 
 ## `verify_font_shop_css.js`가 왜 제일 중요한가
 

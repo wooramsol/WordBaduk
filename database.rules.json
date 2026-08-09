@@ -17,8 +17,7 @@
       ".read": true,
       "$roomId": {
         "$clientId": {
-          ".write": true,
-          ".validate": "$clientId === 'BOT-practice' || data.exists() || root.child('roomMeta').child($roomId).child('playerCount').val() < 5"
+          ".write": true
         }
       }
     },
