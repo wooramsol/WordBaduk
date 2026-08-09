@@ -782,13 +782,15 @@
      관리자(닉네임 '람솔')에게만 보이는 컨트롤이라 모달 밖 #topLeft의 "1명 접속 중" 알약
      바로 밑에, #brand/#userCountTag와 같은 톤의 독립된 알약으로 옮김(#topLeft가 flex
      column gap:6px라 margin 없이도 간격이 자동으로 맞음) */
+  /* v1.9.219: "1명 접속 중" 알약과 같은 줄에 나란히 두는 행 래퍼 — 텍스트 라벨 없이
+     스위치만 오른쪽에 붙임(#topLeft는 세로 flex라 이 줄 안에서만 별도로 가로 배치) */
+  #userCountRow { display: flex; align-items: center; gap: 6px; }
   #ghostModeRow {
-    display: inline-flex; align-items: center; gap: 6px;
+    display: inline-flex; align-items: center;
     background: rgba(255,255,255,.95); border: 1px solid #d8d2c4;
-    border-radius: 18px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    border-radius: 18px; padding: 4px 7px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
   }
   #ghostModeRow.hidden { display: none; }
-  #ghostModeLabel { font-size: 11px; font-weight: 700; color: #1a1a1a; }
   #ghostModeSwitch { position: relative; display: inline-block; flex: none; width: 30px; height: 17px; }
   #ghostModeSwitch input { position: absolute; opacity: 0; width: 0; height: 0; }
   #ghostModeSlider {
@@ -1025,17 +1027,18 @@
   <div id="brand"><b>낱말바둑</b><span id="brandHelpIcon">이란?</span></div>
   <!-- v1.9.187: 예전엔 우측 상단 #topRight의 폰트샵 버튼과 나란히 있었는데, 리더보드가
        넓어지면 그 알약들을 가려서 "낱말바둑이란?" 툴팁 바로 밑(좌측 상단)으로 옮김 -->
-  <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명 접속 중</span></button>
-  <!-- v1.9.218: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 — isOwnerAdmin() 참고.
-       예전엔 "n명 접속 중" 모달 안에 있었는데, "1명 접속 중" 알약 바로 밑으로 뺌(boot()에서
-       가시성 토글). 켜면 다른 사람 화면의 접속자 수/목록/등장 카드에서 나만 안 잡히고
-       봇도 평소처럼 "혼자 있음"으로 판단해 활성화됨(다른 사람 게임플레이에는 영향 없음) -->
-  <div id="ghostModeRow" class="hidden">
-    <span id="ghostModeLabel">고스트 모드</span>
-    <label id="ghostModeSwitch">
-      <input type="checkbox" id="ghostModeCheckbox">
-      <span id="ghostModeSlider"></span>
-    </label>
+  <div id="userCountRow">
+    <button id="userCountTag" type="button"><span id="userCountDot"></span><span id="userCountText">1명 접속 중</span></button>
+    <!-- v1.9.219: 관리자(닉네임 '람솔')에게만 보이는 고스트 모드 스위치 — isOwnerAdmin() 참고.
+         "1명 접속 중" 알약 오른쪽에 텍스트 라벨 없이 스위치만 나란히 둠(boot()에서 가시성
+         토글). 켜면 다른 사람 화면의 접속자 수/목록/등장 카드에서 나만 안 잡히고 봇도
+         평소처럼 "혼자 있음"으로 판단해 활성화됨(다른 사람 게임플레이에는 영향 없음) -->
+    <div id="ghostModeRow" class="hidden">
+      <label id="ghostModeSwitch">
+        <input type="checkbox" id="ghostModeCheckbox">
+        <span id="ghostModeSlider"></span>
+      </label>
+    </div>
   </div>
 </div>
 <div id="infoPanelBackdrop" class="hidden"></div>
@@ -1143,7 +1146,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.218</div>
+<div id="verTagBottom">v1.9.219</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1237,7 +1240,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.218'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.219'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
