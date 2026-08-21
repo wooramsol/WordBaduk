@@ -92,14 +92,21 @@
     position: fixed; right: 12px; z-index: 5;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     font-size: 10px; color: #a89a78; user-select: none; -webkit-user-select: none;
+    transition: opacity .15s ease;
   }
   #footerCredit {
     position: fixed; left: 50%; transform: translateX(-50%); z-index: 5;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     font-size: 12px; text-align: center; line-height: 1.6;
+    transition: opacity .15s ease;
   }
   #footerCredit a { color: #a08c5a; text-decoration: none; }
   #footerCredit a:hover { text-decoration: underline; }
+  /* v1.9.220: 모바일 소프트 키보드가 뜬 동안(칸 선택+타이핑 중)엔 이 하단 고정 푸터가
+     키보드나 격자판 마지막 줄과 겹쳐 보일 수 있어서 살짝 페이드아웃시킴 —
+     setFooterHiddenForKeyboard() 참고. 완전히 지우지 않고 opacity만 낮춰서 화면이
+     갑자기 덜컹거리는 느낌은 없앰 */
+  #footerCredit.kbHidden, #verTagBottom.kbHidden { opacity: 0; pointer-events: none; }
   /* "Created by" 링크와 저작권 문구는 기존 하단 푸터에서 빼서 격자판 바로 아래로 옮김 —
      위치는 격자판이 항상 화면 중앙에 꽉 차게 배치되는 걸 이용해, draw()가 끝날 때마다
      positionBoardCredit()이 격자판의 실제 화면상 아래 경계에 맞춰 top을 갱신함(고정값 아님).
@@ -1146,7 +1153,7 @@
   </div>
 </div>
 <div id="footerCredit"><div id="footerLegalLinks"><a href="/privacy.html">개인정보처리방침</a><span>·</span><a href="/terms.html">이용약관</a></div></div>
-<div id="verTagBottom">v1.9.219</div>
+<div id="verTagBottom">v1.9.220</div>
 
 <!-- v1.9.183: "PC에서 플레이하기" 클릭 시 URL 복사 완료를 알리는 팝업(토스트 대신) -->
 <div id="copyPopupBackdrop" class="hidden">
@@ -1240,7 +1247,7 @@
 // 이미 브라우저에 완전히 캐시돼서 네트워크를 아예 안 타는 경우) 이번 자동화로는 못 구하고
 // 예전처럼 캐시버스팅 링크를 다시 보내주거나 캐시를 지워야 함 — 대신 앞으로는(이 버전부터는)
 // 계속 최신 상태를 스스로 확인하게 됨.
-const APP_VERSION = 'v1.9.219'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
+const APP_VERSION = 'v1.9.220'; // #verTagBottom 및 public/version.txt와 항상 같은 값으로 유지할 것
 (async function selfHealStaleCache() {
   try {
     const res = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
@@ -2718,6 +2725,19 @@ canvas.addEventListener('touchend', e => {
 const wordInput = document.getElementById('wordInput');
 let submitEnabled = false; // Enter로 제출 가능한 상태인지
 
+// v1.9.220: 하단 고정 푸터(개인정보처리방침/이용약관 링크, 버전 태그) — 모바일 소프트
+// 키보드가 뜨면 이 두 엘리먼트가 화면 맨 아래 고정 위치(#footerCredit/#verTagBottom의
+// bottom: 12px)에 그대로 남아있어서 키보드 위나 격자판 마지막 줄과 겹쳐 보이는 문제가
+// 있었음. 플레이 중엔 안 봐도 되는 정보라, 칸을 선택해 타이핑 중일 때(openPopup~closePopup
+// 사이, 키보드가 떠 있는 동안)만 살짝 페이드아웃시켜 겹침 자체를 없앰(격자 카메라 로직은
+// 안 건드림 — 타이핑 중인 칸이 키보드에 가려지지 않게 하는 기존 동작은 그대로 유지)
+const footerCreditEl = document.getElementById('footerCredit');
+const verTagBottomEl = document.getElementById('verTagBottom');
+function setFooterHiddenForKeyboard(hidden) {
+  footerCreditEl.classList.toggle('kbHidden', hidden);
+  verTagBottomEl.classList.toggle('kbHidden', hidden);
+}
+
 // v1.9.129: 예전엔 여기서 터치 기기 전용 #modeBadge(가로/세로 탭 버튼) 위치를 잡았는데,
 // 그 버튼 자체가 없어짐(웹/모바일 모두 스페이스로 전환 + draw()가 캔버스에 그리는 "space"
 // 알약으로 통일) — 지금은 아무 것도 안 하는 빈 함수로 남겨둠(positionWordInput()과 같은
@@ -3017,11 +3037,13 @@ function openPopup(cx, cy, px, py) {
   // 튀어 올라가는" 것처럼 보였음. 이 옵션으로 그 자동 스크롤 자체를 막음.
   wordInput.blur();
   wordInput.focus({ preventScroll: true });
+  setFooterHiddenForKeyboard(true); // v1.9.220: 타이핑 시작 = 키보드가 뜨는 시점이므로 푸터를 페이드아웃
   draw();
   broadcastTyping();
 }
 function closePopup() {
   sel = null; preview = null; placing = false; dupHighlight = null;
+  setFooterHiddenForKeyboard(false); // v1.9.220: 선택 해제 = 키보드가 닫히는 시점이므로 푸터를 다시 보여줌
   // v1.9.167/v1.9.169: 두 안내("단어를 입력해보세요" / "Space로 방향 전환") 모두 선택을
   // 접는(다른 곳 클릭 등) 정도로는 치우지 않음 — 각각 첫 단어 완성 / 첫 Space 입력이라는
   // 실제 목표를 달성해야만 치워짐(submit() 성공 지점 / toggleDir() 참고)
